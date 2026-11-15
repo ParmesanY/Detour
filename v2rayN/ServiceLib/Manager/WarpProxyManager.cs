@@ -87,8 +87,11 @@ public sealed class WarpProxyManager
             proc.Start();
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
-            _job ??= new WindowsJobService();
-            _job.AddProcess(proc.Handle);
+            if (Utils.IsWindows())
+            {
+                _job ??= new WindowsJobService();
+                _job.AddProcess(proc.Handle);
+            }
             _process = proc;
 
             for (var i = 0; i < 20; i++)

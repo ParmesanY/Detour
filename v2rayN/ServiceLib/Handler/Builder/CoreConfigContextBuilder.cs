@@ -86,6 +86,19 @@ public class CoreConfigContextBuilder
                     }
                     continue;
                 }
+                if (ruleItem.OutboundTag == Global.ZapretOutboundRemarks)
+                {
+                    // macOS/Linux zapret rules: the tpws SOCKS proxy; direct while it isn't running (as winws off).
+                    if (ZapretManager.Instance.IsRunning)
+                    {
+                        context.AllProxiesMap[$"remark:{ruleItem.OutboundTag}"] = ZapretManager.TpwsProxyNode(config);
+                    }
+                    else
+                    {
+                        ruleItem.OutboundTag = Global.DirectTag;
+                    }
+                    continue;
+                }
                 var ruleOutboundNode = await AppManager.Instance.GetProfileItemViaRemarks(ruleItem.OutboundTag);
                 if (ruleOutboundNode == null)
                 {

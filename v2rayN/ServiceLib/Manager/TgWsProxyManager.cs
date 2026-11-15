@@ -346,7 +346,16 @@ public class TgWsProxyManager
         }
         catch
         {
-            return false;
+            // macOS has no listener table in .NET: try to connect instead.
+            try
+            {
+                using var client = new TcpClient();
+                return client.ConnectAsync(IPAddress.Loopback, port).Wait(300) && client.Connected;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 

@@ -14,6 +14,9 @@ public class ZapretItem
     /// <summary>Game filter mode, same values as Flowseal: disabled, all, tcp, udp.</summary>
     public string GameFilterMode { get; set; } = ZapretStrategyParser.GameFilterDisabled;
 
+    /// <summary>macOS/Linux: local SOCKS port of tpws on 127.0.0.1.</summary>
+    public int SocksPort { get; set; } = ZapretManager.DefaultSocksPort;
+
     /// <summary>Installed release tag, empty if zapret is not installed.</summary>
     public string? InstalledVersion { get; set; }
 }

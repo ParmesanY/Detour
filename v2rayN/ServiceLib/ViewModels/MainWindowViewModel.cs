@@ -435,7 +435,11 @@ public partial class MainWindowViewModel : MyReactiveObject
         }
 
         // zapret runs from the start, not only once a VPN core is up.
-        if (Utils.IsWindows() && _config.ZapretItem.Enabled && ZapretManager.Instance.IsInstalled)
+        if (ZapretManager.UsesTpws && _config.ZapretItem.Enabled && ZapretManager.Instance.IsInstalled)
+        {
+            _ = Task.Run(() => ConnectionRulesManager.Instance.SyncZapretAsync(_config));
+        }
+        else if (Utils.IsWindows() && _config.ZapretItem.Enabled && ZapretManager.Instance.IsInstalled)
         {
             if (!Utils.IsAdministrator())
             {

@@ -334,6 +334,11 @@ public partial class CoreConfigSingboxService
                 }
             }
         }
+        // macOS/Linux zapret (tpws) connects to sites itself: keep it out of the tunnel.
+        if (context.ProtectCoreTypeList.Count > 0 && ZapretManager.UsesTpws && File.Exists(ZapretManager.TpwsExePath))
+        {
+            directExeSet.Add(ZapretManager.TpwsExePath);
+        }
 
         return directExeSet.ToList();
     }

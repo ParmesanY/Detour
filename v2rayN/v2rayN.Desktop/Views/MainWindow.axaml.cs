@@ -1,4 +1,4 @@
-using Avalonia.Controls.Notifications;
+﻿using Avalonia.Controls.Notifications;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using DialogHostAvalonia;
@@ -37,6 +37,20 @@ public partial class MainWindow : WindowBase<MainWindowViewModel>
         menuClose.Click += MenuClose_Click;
 
         conTheme.Content ??= new ThemeSettingView();
+
+        // Detour pages. Built up front: they follow zapret/WARP state through the managers' events.
+        pageRules.Content = new ConnectionRulesView { DataContext = new ConnectionRulesViewModel() };
+        pageZapret.Content = new ZapretView { DataContext = new ZapretViewModel() };
+        pageWarp.Content = new WarpView { DataContext = new WarpViewModel() };
+        pageHelp.Content = new HelpView();
+        var pages = new Control[] { pageServers, pageRules, pageZapret, pageWarp, pageHelp };
+        navList.SelectionChanged += (_, _) =>
+        {
+            for (var i = 0; i < pages.Length; i++)
+            {
+                pages[i].IsVisible = i == Math.Max(0, navList.SelectedIndex);
+            }
+        };
 
         this.WhenActivated(disposables =>
         {
@@ -86,6 +100,11 @@ public partial class MainWindow : WindowBase<MainWindowViewModel>
             this.OneWayBind(ViewModel, vm => vm.BlNewUpdate, v => v.btnNewUpdate.IsVisible).DisposeWith(disposables);
 
             this.OneWayBind(ViewModel, vm => vm.StatusBarViewModel, v => v.contentStatusBarView.Content).DisposeWith(disposables);
+            this.WhenAnyValue(v => v.ViewModel.StatusBarViewModel)
+                .Where(sb => sb != null)
+                .Take(1)
+                .Subscribe(sb => connectionPanel.Content = new ConnectionPanelView { DataContext = new ConnectionPanelViewModel(sb!) })
+                .DisposeWith(disposables);
 
             var layoutBindings = new SingleReplaceableDisposable().DisposeWith(disposables);
             this.WhenAnyValue(v => v.ViewModel.MainGirdOrientation)
@@ -144,7 +163,7 @@ public partial class MainWindow : WindowBase<MainWindowViewModel>
 
         if (Utils.IsWindows())
         {
-            Title = $"{Utils.GetVersion()} - {(Utils.IsAdministrator() ? ResUI.RunAsAdmin : ResUI.NotRunAsAdmin)}";
+            Title = $"Detour {AppUpdateManager.CurrentVersion} - {(Utils.IsAdministrator() ? ResUI.RunAsAdmin : ResUI.NotRunAsAdmin)}";
 
             if (!Design.IsDesignMode)
             {
@@ -154,7 +173,7 @@ public partial class MainWindow : WindowBase<MainWindowViewModel>
         }
         else
         {
-            Title = $"{Utils.GetVersion()}";
+            Title = $"Detour {AppUpdateManager.CurrentVersion}";
             menuAddServerViaScan.IsVisible = false;
         }
 

@@ -144,6 +144,34 @@ public class DetourFeaturesTests
     }
 
     [Test]
+    public async Task Tpws_BuildsSocksArgumentsAndFallsBackToDefault()
+    {
+        var args = ZapretManager.TpwsArgs("oob (midsld)", 10950);
+        await Assert.That(args).Contains("--socks");
+        await Assert.That(args).Contains("--bind-addr=127.0.0.1");
+        await Assert.That(args).Contains("--port=10950");
+        await Assert.That(args).Contains("--oob");
+
+        var fallback = ZapretManager.TpwsArgs("general.bat", 1);
+        await Assert.That(fallback).Contains("--disorder");
+        await Assert.That(ZapretManager.TpwsStrategies.Select(s => s.Name).Distinct().Count()).IsEqualTo(ZapretManager.TpwsStrategies.Count);
+    }
+
+    [Test]
+    public async Task Zapret_RulesUseTheGivenOutbound()
+    {
+        var rule = ConnectionRuleParser.Parse("youtube.com +zapret", out _)!;
+        var onWindows = ConnectionRuleCompiler.Compile([rule]);
+        await Assert.That(onWindows.RoutingRules.Last().OutboundTag).IsEqualTo(Global.DirectTag);
+
+        var viaTpws = ConnectionRuleCompiler.Compile([rule], zapretOutbound: Global.ZapretOutboundRemarks);
+        await Assert.That(viaTpws.RoutingRules.Last().OutboundTag).IsEqualTo(Global.ZapretOutboundRemarks);
+        // QUIC is still blocked, so browsers fall back to TCP, which tpws handles.
+        await Assert.That(viaTpws.RoutingRules.First().OutboundTag).IsEqualTo(Global.BlockTag);
+        await Assert.That(viaTpws.ZapretDomains).Contains("youtube.com");
+    }
+
+    [Test]
     public async Task Warp_ParsesTrace()
     {
         var trace = WarpProxyManager.ParseTrace("fl=1\nip=104.28.1.1\ncolo=WAW\nloc=PL\nwarp=on\n");

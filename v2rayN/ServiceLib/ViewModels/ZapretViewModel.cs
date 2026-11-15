@@ -1,4 +1,4 @@
-namespace ServiceLib.ViewModels;
+﻿namespace ServiceLib.ViewModels;
 
 public partial class ZapretViewModel : MyReactiveObject
 {
@@ -16,6 +16,13 @@ public partial class ZapretViewModel : MyReactiveObject
         new("tcp", "TCP"),
         new("udp", "UDP"),
     ];
+
+    /// <summary>Windows engine (winws): game filter and Flowseal strategies apply.</summary>
+    public bool IsWinws => !ZapretManager.UsesTpws;
+
+    public string SourceText => ZapretManager.UsesTpws
+        ? "github.com/bol-van/zapret (tpws, MIT)"
+        : "github.com/Flowseal/zapret-discord-youtube (MIT)";
 
     [Reactive] public partial bool IsInstalled { get; set; }
     [Reactive] public partial bool IsRunning { get; set; }
@@ -99,7 +106,8 @@ public partial class ZapretViewModel : MyReactiveObject
         try
         {
             var item = _config.ZapretItem;
-            IsAdmin = Utils.IsAdministrator();
+            // tpws (macOS/Linux) runs as a plain local proxy, no admin rights needed.
+            IsAdmin = ZapretManager.UsesTpws || Utils.IsAdministrator();
             IsInstalled = ZapretManager.Instance.IsInstalled;
             Strategies.Clear();
             Strategies.AddRange(ZapretManager.Instance.GetStrategies());

@@ -23,6 +23,7 @@
         <StyleInclude Source="avares://Semi.Avalonia.DataGrid/Index.axaml" />
         <dialogHost:DialogHostStyles />
         <StyleInclude Source="Assets/GlobalStyles.axaml" />
+        <StyleInclude Source="Assets/DetourStyles.axaml" />
     </Application.Styles>
 
     <TrayIcon.Icons>

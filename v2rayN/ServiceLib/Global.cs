@@ -124,6 +124,9 @@ public class Global
     /// <summary>Outbound "remarks" that WARP connection rules point to; mapped to the WARP local proxy.</summary>
     public const string WarpOutboundRemarks = "Detour WARP";
 
+    /// <summary>Outbound "remarks" of zapret rules on macOS/Linux; mapped to the tpws SOCKS proxy (direct while it's off).</summary>
+    public const string ZapretOutboundRemarks = "Detour zapret";
+
     /// <summary>Foreign DoH by IP (no bootstrap), dialled directly: Russian resolvers drop VPN domains.</summary>
     public const string CoreDirectDoHServer = "8.8.8.8";
     public const string SingboxRemoteDNSTag = "remote-dns-1";

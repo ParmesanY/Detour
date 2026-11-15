@@ -16,6 +16,7 @@ public partial class ConnectionRulesViewModel : MyReactiveObject
 
     public List<PresetCardModel> Presets { get; }
 
+
     public BulkObservableCollection<string> ProfileNames { get; } = [];
 
     [Reactive] public partial string? SelectedProfile { get; set; }

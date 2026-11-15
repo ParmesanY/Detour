@@ -133,6 +133,12 @@ public sealed class AppManager
             await ProfileExManager.Instance.SaveTo();
             await StatisticsManager.Instance.SaveTo();
             await CoreManager.Instance.CoreStop();
+            // Windows kills helper processes through a job object; elsewhere stop them here.
+            if (!Utils.IsWindows())
+            {
+                await ZapretManager.Instance.StopAsync();
+                await WarpProxyManager.Instance.StopAsync();
+            }
             // Never leave the user without internet after quitting.
             await KillSwitchManager.Instance.ReleaseAsync();
             StatisticsManager.Instance.Close();

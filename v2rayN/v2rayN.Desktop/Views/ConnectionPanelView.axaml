@@ -1,0 +1,138 @@
+<UserControl
+    x:Class="v2rayN.Desktop.Views.ConnectionPanelView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    xmlns:vms="clr-namespace:ServiceLib.ViewModels;assembly=ServiceLib"
+    x:DataType="vms:ConnectionPanelViewModel">
+    <StackPanel>
+        <Border Margin="0" Classes="card">
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel VerticalAlignment="Center">
+                    <StackPanel Classes="row">
+                        <Ellipse
+                            Width="9"
+                            Height="9"
+                            VerticalAlignment="Center"
+                            Fill="{DynamicResource SemiColorPrimary}"
+                            IsVisible="{Binding IsConnected}" />
+                        <Ellipse
+                            Width="9"
+                            Height="9"
+                            VerticalAlignment="Center"
+                            Fill="{DynamicResource SemiColorText3}"
+                            IsVisible="{Binding !IsConnected}" />
+                        <TextBlock FontWeight="SemiBold" Text="{x:Static resx:AppText.PanelOnline}" IsVisible="{Binding IsConnected}" />
+                        <TextBlock
+                            Foreground="{DynamicResource SemiColorText2}"
+                            Text="{x:Static resx:AppText.PanelOffline}"
+                            IsVisible="{Binding !IsConnected}" />
+                    </StackPanel>
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        FontSize="17"
+                        FontWeight="SemiBold"
+                        Text="{Binding ServerName}"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTip.Tip="{Binding StatusDetail}" />
+                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal" Spacing="24">
+                        <StackPanel>
+                            <TextBlock Classes="hint" Margin="0" Text="{x:Static resx:AppText.PanelUptime}" />
+                            <TextBlock FontFamily="Cascadia Mono, Menlo, DejaVu Sans Mono, monospace" Text="{Binding UptimeText}" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Classes="hint" Margin="0" Text="{x:Static resx:AppText.PanelDown}" />
+                            <TextBlock FontFamily="Cascadia Mono, Menlo, DejaVu Sans Mono, monospace" Text="{Binding DownText}" />
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Classes="hint" Margin="0" Text="{x:Static resx:AppText.PanelUp}" />
+                            <TextBlock FontFamily="Cascadia Mono, Menlo, DejaVu Sans Mono, monospace" Text="{Binding UpText}" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel
+                    Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Spacing="8">
+                    <StackPanel HorizontalAlignment="Right" Classes="row" ToolTip.Tip="{x:Static resx:AppText.ConnModeHint}">
+                        <RadioButton
+                            Content="TUN"
+                            GroupName="connMode"
+                            IsChecked="{Binding UseTun}"
+                            ToolTip.Tip="{x:Static resx:AppText.ConnModeTun}" />
+                        <RadioButton
+                            Content="PROXY"
+                            GroupName="connMode"
+                            IsChecked="{Binding !UseTun, Mode=OneWay}"
+                            ToolTip.Tip="{x:Static resx:AppText.ConnModeProxy}" />
+                    </StackPanel>
+                    <Button
+                        MinWidth="170"
+                        MinHeight="44"
+                        HorizontalAlignment="Right"
+                        HorizontalContentAlignment="Center"
+                        Classes="Primary"
+                        Command="{Binding ToggleCmd}"
+                        Content="{Binding ButtonText}"
+                        FontSize="15"
+                        Theme="{DynamicResource SolidButton}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border
+            Margin="0,8,0,0"
+            Classes="warn"
+            IsVisible="{Binding ConflictText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Classes="body" Text="{Binding ConflictText}" />
+        </Border>
+
+        <Border Margin="0,8,0,0" Classes="warn" IsVisible="{Binding KillSwitchEngaged}">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="body" Text="{x:Static resx:AppText.KillSwitchEngaged}" />
+                <Button Command="{Binding UnblockCmd}" Content="{x:Static resx:AppText.KillSwitchUnblock}" />
+            </StackPanel>
+        </Border>
+
+        <Border Margin="0,8,0,0" Padding="12,6" Classes="card">
+            <DockPanel>
+                <StackPanel Classes="row" DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <TextBlock
+                        MaxWidth="320"
+                        VerticalAlignment="Center"
+                        Classes="hint"
+                        Margin="0"
+                        Text="{Binding IpCheckText}"
+                        TextTrimming="CharacterEllipsis" />
+                    <Button Command="{Binding CheckIpCmd}" Content="{x:Static resx:AppText.IpCheck}" />
+                </StackPanel>
+                <WrapPanel VerticalAlignment="Center">
+                    <ToggleSwitch
+                        x:Name="tglKillSwitch"
+                        Margin="0,0,20,0"
+                        IsChecked="{Binding KillSwitchEnabled}"
+                        OffContent="{x:Static resx:AppText.KillSwitch}"
+                        OnContent="{x:Static resx:AppText.KillSwitch}"
+                        ToolTip.Tip="{x:Static resx:AppText.KillSwitchHint}" />
+                    <ToggleSwitch
+                        Margin="0,0,20,0"
+                        IsChecked="{Binding AutoFailover}"
+                        OffContent="{x:Static resx:AppText.AutoFailover}"
+                        OnContent="{x:Static resx:AppText.AutoFailover}"
+                        ToolTip.Tip="{x:Static resx:AppText.AutoFailoverHint}" />
+                    <ToggleSwitch
+                        Margin="0,0,20,0"
+                        IsChecked="{Binding ConnectOnStartup}"
+                        OffContent="{x:Static resx:AppText.ConnectOnStartup}"
+                        OnContent="{x:Static resx:AppText.ConnectOnStartup}"
+                        ToolTip.Tip="{x:Static resx:AppText.ConnectOnStartupHint}" />
+                    <ToggleSwitch
+                        IsChecked="{Binding AutoRun}"
+                        OffContent="{x:Static resx:AppText.AutoRunWindows}"
+                        OnContent="{x:Static resx:AppText.AutoRunWindows}" />
+                </WrapPanel>
+            </DockPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

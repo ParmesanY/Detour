@@ -279,6 +279,12 @@ public static class AppText
         "If the active server stops passing traffic (3 checks in a row while the plain internet works), Detour switches to another server of the same subscription, best last ping first.");
     public static string AutoFailoverSwitched => T("Сервер не отвечал, переключаюсь на «{0}»", "Server stopped responding, switching to \"{0}\"");
 
+    public static string ZapretTpwsNote => T(
+        "На macOS и Linux zapret работает через tpws от автора zapret: локальный прокси без прав администратора. " +
+        "Он обрабатывает только TCP (сайты, чат Discord). Голос Discord и другой UDP по правилам «zapret → VPN» идут через VPN.",
+        "On macOS and Linux zapret runs as tpws by the zapret author: a local proxy, no admin rights. " +
+        "It handles TCP only (sites, Discord chat). Discord voice and other UDP go through the VPN with \"zapret → VPN\" rules.");
+
     // First-run wizard
     public static string WizTitle => T("Добро пожаловать в Detour", "Welcome to Detour");
     public static string WizIntro => T(

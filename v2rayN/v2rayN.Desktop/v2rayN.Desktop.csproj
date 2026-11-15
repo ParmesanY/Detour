@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
@@ -8,7 +8,16 @@
 		<AssemblyName>v2rayN</AssemblyName>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<CETCompat>false</CETCompat>
+		<Product>Detour</Product>
+		<!-- Detour's own version and repository (self-update check); CI sets them from the tag. -->
+		<DetourVersion Condition="'$(DetourVersion)' == ''">0.2.0</DetourVersion>
+		<DetourRepo Condition="'$(DetourRepo)' == ''"></DetourRepo>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<AssemblyMetadata Include="DetourVersion" Value="$(DetourVersion)" />
+		<AssemblyMetadata Include="DetourRepo" Value="$(DetourRepo)" />
+	</ItemGroup>
 
     <ItemGroup Condition="'$(RuntimeIdentifier)' == 'osx-x64' Or '$(RuntimeIdentifier)' == 'osx-arm64'">
         <RuntimeHostConfigurationOption Include="System.Net.Security.UseNetworkFramework" Value="true" />

@@ -217,7 +217,11 @@ public static class ConfigHandler
         config.ConnectionRuleProfiles ??= [];
         if (config.ZapretItem.Strategy.IsNullOrEmpty())
         {
-            config.ZapretItem.Strategy = ZapretStrategyParser.DefaultStrategy;
+            config.ZapretItem.Strategy = ZapretManager.UsesTpws ? ZapretManager.DefaultTpwsStrategy : ZapretStrategyParser.DefaultStrategy;
+        }
+        if (config.ZapretItem.SocksPort is <= 0 or > 65535)
+        {
+            config.ZapretItem.SocksPort = ZapretManager.DefaultSocksPort;
         }
 
         config.HappyEyeballs4RayItem ??= new()

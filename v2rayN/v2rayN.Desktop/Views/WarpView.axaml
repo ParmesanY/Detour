@@ -1,0 +1,113 @@
+<UserControl
+    x:Class="v2rayN.Desktop.Views.WarpView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    xmlns:vms="clr-namespace:ServiceLib.ViewModels;assembly=ServiceLib"
+    x:DataType="vms:WarpViewModel">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel MaxWidth="900" Margin="28,20">
+            <TextBlock Classes="title" Text="{x:Static resx:AppText.WarpTitle}" />
+            <TextBlock Classes="subtitle" Text="{x:Static resx:AppText.WarpSubtitle}" />
+
+            <Border Classes="warn" IsVisible="{Binding NoRulesHint}">
+                <TextBlock Classes="body" Text="{x:Static resx:AppText.WarpNoRulesHint}" />
+            </Border>
+
+            <Border Classes="card">
+                <DockPanel>
+                    <StackPanel Classes="row" DockPanel.Dock="Right" VerticalAlignment="Center">
+                        <Button
+                            Classes="Primary"
+                            Command="{Binding StartCmd}"
+                            Content="{x:Static resx:AppText.TgStart}"
+                            IsVisible="{Binding !IsRunning}"
+                            Theme="{DynamicResource SolidButton}" />
+                        <Button Command="{Binding StopCmd}" Content="{x:Static resx:AppText.TgStop}" IsVisible="{Binding IsRunning}" />
+                        <Button Command="{Binding TestCmd}" Content="{x:Static resx:AppText.WarpTest}" />
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding StateText}" />
+                        <TextBlock Classes="hint" Text="{Binding DeviceText}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Classes="card">
+                <DockPanel>
+                    <ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding Enabled}" OffContent="" OnContent="" />
+                    <TextBlock VerticalAlignment="Center" Classes="head" Text="{x:Static resx:AppText.WarpEnabled}" />
+                </DockPanel>
+            </Border>
+
+            <Border Classes="card">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" VerticalAlignment="Center">
+                        <Button Command="{Binding RegisterCmd}" Content="{x:Static resx:AppText.WarpReRegister}" IsVisible="{Binding IsRegistered}" />
+                        <Button
+                            Classes="Primary"
+                            Command="{Binding RegisterCmd}"
+                            Content="{x:Static resx:AppText.WarpRegister}"
+                            IsVisible="{Binding !IsRegistered}"
+                            Theme="{DynamicResource SolidButton}" />
+                    </StackPanel>
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Classes="head" Text="{x:Static resx:AppText.WarpRegister}" />
+                        <TextBlock Classes="hint" Text="{x:Static resx:AppText.WarpRegisterHint}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Classes="card">
+                <DockPanel>
+                    <ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding Noise}" OffContent="" OnContent="" />
+                    <StackPanel Margin="0,0,16,0">
+                        <TextBlock Classes="head" Text="{x:Static resx:AppText.WarpNoise}" />
+                        <TextBlock Classes="hint" Text="{x:Static resx:AppText.WarpNoiseHint}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Classes="head" Text="{x:Static resx:AppText.WarpEndpoint}" />
+                    <TextBlock Classes="hint" Text="{x:Static resx:AppText.WarpEndpointHint}" />
+                    <StackPanel Classes="row">
+                        <AutoCompleteBox
+                            MinWidth="200"
+                            FilterMode="None"
+                            ItemsSource="{Binding Endpoints}"
+                            Text="{Binding EndpointText}" />
+                        <Button Command="{Binding ApplyEndpointCmd}" Content="OK" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Classes="head" Text="{x:Static resx:AppText.TgPort}" />
+                    <TextBlock Classes="hint" Text="{x:Static resx:AppText.WarpPortHint}" />
+                    <StackPanel Classes="row">
+                        <TextBox MinWidth="100" Text="{Binding PortText}" />
+                        <Button Command="{Binding ApplyPortCmd}" Content="OK" />
+                        <Button Command="{Binding OpenLogCmd}" Content="{x:Static resx:AppText.TgOpenLog}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="note">
+                <TextBlock Classes="body" Text="{x:Static resx:AppText.WarpRulesNote}" />
+            </Border>
+
+            <StackPanel Margin="0,8,0,0" Classes="row">
+                <ProgressBar
+                    Width="18"
+                    Height="18"
+                    IsIndeterminate="True"
+                    IsVisible="{Binding IsBusy}"
+                    Theme="{DynamicResource ProgressRing}" />
+                <TextBlock VerticalAlignment="Center" Classes="hint" Text="{Binding ProgressText}" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

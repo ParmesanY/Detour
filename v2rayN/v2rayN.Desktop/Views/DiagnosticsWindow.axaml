@@ -1,0 +1,45 @@
+<Window
+    x:Class="v2rayN.Desktop.Views.DiagnosticsWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    Title="{x:Static resx:AppText.DiagTitle}"
+    Width="860"
+    Height="640"
+    WindowStartupLocation="CenterOwner">
+    <DockPanel Margin="16">
+        <TextBlock
+            Margin="0,0,0,8"
+            Classes="hint"
+            DockPanel.Dock="Top"
+            Text="{x:Static resx:AppText.DiagHint}" />
+        <StackPanel
+            Margin="0,12,0,0"
+            HorizontalAlignment="Right"
+            Classes="row"
+            DockPanel.Dock="Bottom">
+            <ProgressBar
+                x:Name="progress"
+                Width="20"
+                Height="20"
+                IsIndeterminate="True"
+                Theme="{DynamicResource ProgressRing}" />
+            <Button x:Name="btnRerun" Content="{x:Static resx:AppText.DiagRerun}" />
+            <Button x:Name="btnSave" Content="{x:Static resx:AppText.DiagSave}" />
+            <Button
+                x:Name="btnCopy"
+                Classes="Primary"
+                Content="{x:Static resx:AppText.DiagCopy}"
+                Theme="{DynamicResource SolidButton}" />
+        </StackPanel>
+        <TextBox
+            x:Name="txtReport"
+            AcceptsReturn="True"
+            FontFamily="Cascadia Mono, Menlo, DejaVu Sans Mono, monospace"
+            FontSize="12"
+            IsReadOnly="True"
+            ScrollViewer.HorizontalScrollBarVisibility="Auto"
+            TextWrapping="NoWrap"
+            VerticalContentAlignment="Top" />
+    </DockPanel>
+</Window>

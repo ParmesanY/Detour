@@ -14,7 +14,9 @@ public class ConnectionRulesManager
 
     public CompiledConnectionRules Compile(Config config)
     {
-        var compiled = ConnectionRuleCompiler.Compile(config.ConnectionRules, config.ConnectionRulesOverride, IsZapretExpected(config));
+        var compiled = ConnectionRuleCompiler.Compile(config.ConnectionRules, config.ConnectionRulesOverride, IsZapretExpected(config),
+            // tpws not running: zapret rules go direct, as with winws off.
+            ZapretManager.UsesTpws && ZapretManager.Instance.IsRunning ? Global.ZapretOutboundRemarks : Global.DirectTag);
         if (config.TgWsProxyItem?.Enabled == true)
         {
             compiled.RoutingRules.Insert(0, TgWsProxyManager.DirectRule());
@@ -22,13 +24,12 @@ public class ConnectionRulesManager
         return compiled;
     }
 
-    /// <summary>zapret will be running alongside the cores: enabled, installed, admin rights.</summary>
+    /// <summary>zapret will be running alongside the cores: enabled, installed, admin rights (winws only).</summary>
     public static bool IsZapretExpected(Config config)
     {
-        return Utils.IsWindows()
-               && config.ZapretItem?.Enabled == true
+        return config.ZapretItem?.Enabled == true
                && ZapretManager.Instance.IsInstalled
-               && Utils.IsAdministrator();
+               && (ZapretManager.UsesTpws || Utils.IsAdministrator());
     }
 
     #region profiles
@@ -81,9 +82,9 @@ public class ConnectionRulesManager
     /// </summary>
     public async Task<string?> SyncZapretAsync(Config config)
     {
-        if (!Utils.IsWindows())
+        if (ZapretManager.UsesTpws)
         {
-            return null;
+            return await SyncTpwsAsync(config);
         }
 
         await _syncLock.WaitAsync();
@@ -125,6 +126,49 @@ public class ConnectionRulesManager
                 Logging.SaveLog($"{_tag}: {message}");
             }
             return success ? null : message;
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+            return ex.Message;
+        }
+        finally
+        {
+            _syncLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// macOS/Linux: tpws needs no lists (the cores send it only "+zapret" traffic), just keep it
+    /// running while zapret is on.
+    /// </summary>
+    private async Task<string?> SyncTpwsAsync(Config config)
+    {
+        await _syncLock.WaitAsync();
+        try
+        {
+            var zapret = ZapretManager.Instance;
+            if (!config.ZapretItem.Enabled || !zapret.IsInstalled)
+            {
+                if (zapret.IsRunning)
+                {
+                    await zapret.StopAsync();
+                }
+                return null;
+            }
+            if (zapret.IsRunning)
+            {
+                return null;
+            }
+            var (success, message) = await zapret.StartAsync();
+            if (!success)
+            {
+                Logging.SaveLog($"{_tag}: {message}");
+                return message;
+            }
+            // Zapret rules were built as "direct" while tpws was off.
+            AppEvents.CoreReloadRequested.Publish();
+            return null;
         }
         catch (Exception ex)
         {

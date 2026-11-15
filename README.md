@@ -2,7 +2,7 @@
 
 <h1 align="center">Detour</h1>
 
-<p align="center">VPN-клиент для Windows со встроенным zapret и правилами «что через VPN, что через zapret, что напрямую».<br>
+<p align="center">VPN-клиент для Windows (а также macOS и Linux, бета) со встроенным zapret и правилами «что через VPN, что через zapret, что напрямую».<br>
 A Windows VPN client with built-in zapret and per-app / per-site routing rules.</p>
 
 ---
@@ -47,6 +47,11 @@ Detour — форк [v2rayN](https://github.com/2dust/v2rayN) для польз�
 4. Выберите сервер двойным щелчком и нажмите **Подключить**.
 
 Требования: Windows 10 или 11, x64.
+
+**macOS и Linux (бета, с 0.2.0):** архив `Detour-…-osx-arm64.tar.gz` (Mac на Apple Silicon), `…-osx-x64` (Intel)
+или `…-linux-x64.tar.gz`. Распакуйте в домашнюю папку и запустите `./Detour`. zapret там работает через `tpws`
+(локальный прокси от автора zapret, без прав администратора, только TCP). Пока нет kill switch и TG WS Proxy.
+Подробности в `README.txt` внутри архива.
 
 > [!NOTE]
 > Защитник Windows может ругаться на файлы в `bin\zapret`. Это WinDivert — драйвер перехвата пакетов,

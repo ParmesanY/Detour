@@ -1,0 +1,92 @@
+<UserControl
+    x:Class="v2rayN.Desktop.Views.ZapretView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    xmlns:vms="clr-namespace:ServiceLib.ViewModels;assembly=ServiceLib"
+    x:DataType="vms:ZapretViewModel">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel MaxWidth="900" Margin="28,20">
+            <TextBlock Classes="title" Text="{x:Static resx:AppText.ZapretTitle}" />
+            <TextBlock Classes="subtitle" Text="{x:Static resx:AppText.ZapretSubtitle}" />
+
+            <Border Classes="warn" IsVisible="{Binding !IsAdmin}">
+                <TextBlock Classes="body" Text="{x:Static resx:AppText.ZapretNeedsAdmin}" />
+            </Border>
+
+            <Border Classes="card">
+                <DockPanel>
+                    <StackPanel Classes="row" DockPanel.Dock="Right" VerticalAlignment="Center">
+                        <Button Command="{Binding InstallCmd}" Content="{x:Static resx:AppText.ZapretUpdate}" IsVisible="{Binding IsInstalled}" />
+                        <Button
+                            Classes="Primary"
+                            Command="{Binding InstallCmd}"
+                            Content="{x:Static resx:AppText.ZapretInstall}"
+                            IsVisible="{Binding !IsInstalled}"
+                            Theme="{DynamicResource SolidButton}" />
+                        <Button
+                            Classes="Primary"
+                            Command="{Binding StartCmd}"
+                            Content="{x:Static resx:AppText.ZapretStart}"
+                            IsVisible="{Binding !IsRunning}"
+                            Theme="{DynamicResource SolidButton}" />
+                        <Button Command="{Binding StopCmd}" Content="{x:Static resx:AppText.ZapretStop}" IsVisible="{Binding IsRunning}" />
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding StateText}" />
+                        <TextBlock Classes="hint" Text="{Binding VersionText}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Classes="card">
+                <DockPanel>
+                    <ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding Enabled}" OffContent="" OnContent="" />
+                    <TextBlock VerticalAlignment="Center" Classes="head" Text="{x:Static resx:AppText.ZapretEnabled}" />
+                </DockPanel>
+            </Border>
+
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Classes="head" Text="{x:Static resx:AppText.ZapretStrategy}" />
+                    <TextBlock Classes="hint" Text="{x:Static resx:AppText.ZapretStrategyHint}" />
+                    <StackPanel Classes="row">
+                        <ComboBox MinWidth="240" ItemsSource="{Binding Strategies}" SelectedItem="{Binding SelectedStrategy}" />
+                        <Button Command="{Binding AutoSelectCmd}" Content="{x:Static resx:AppText.ZapretAutoSelect}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="card" IsVisible="{Binding IsWinws}">
+                <StackPanel>
+                    <TextBlock Classes="head" Text="{x:Static resx:AppText.ZapretGameFilter}" />
+                    <TextBlock Classes="hint" Text="{x:Static resx:AppText.ZapretGameFilterHint}" />
+                    <ComboBox
+                        MinWidth="160"
+                        DisplayMemberBinding="{ReflectionBinding Value}"
+                        ItemsSource="{Binding GameFilterModes}"
+                        SelectedValue="{Binding GameFilterMode}"
+                        SelectedValueBinding="{ReflectionBinding Key}" />
+                </StackPanel>
+            </Border>
+
+            <Border Classes="note" IsVisible="{Binding !IsWinws}">
+                <TextBlock Classes="body" Text="{x:Static resx:AppText.ZapretTpwsNote}" />
+            </Border>
+
+            <StackPanel Margin="0,12,0,0" Classes="row">
+                <ProgressBar
+                    Width="18"
+                    Height="18"
+                    IsIndeterminate="True"
+                    IsVisible="{Binding IsBusy}"
+                    Theme="{DynamicResource ProgressRing}" />
+                <TextBlock VerticalAlignment="Center" Classes="hint" Text="{Binding ProgressText}" />
+            </StackPanel>
+
+            <TextBlock Margin="0,20,0,0" Classes="hint">
+                <Run Text="{x:Static resx:AppText.ZapretSource}" /><Run Text=": " /><Run Text="{Binding SourceText, Mode=OneWay}" />
+            </TextBlock>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

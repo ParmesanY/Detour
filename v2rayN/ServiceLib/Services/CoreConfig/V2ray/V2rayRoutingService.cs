@@ -274,6 +274,11 @@ public partial class CoreConfigV2rayService
         }
         //directExeSet.Add("xray/");
         directExeSet.Add("self/");
+        // macOS/Linux zapret (tpws) connects to sites itself: keep it out of the tunnel.
+        if (ZapretManager.UsesTpws && File.Exists(ZapretManager.TpwsExePath))
+        {
+            directExeSet.Add(ZapretManager.TpwsExePath);
+        }
 
         return directExeSet.ToList();
     }

@@ -1,0 +1,44 @@
+<UserControl
+    x:Class="v2rayN.Desktop.Views.HelpView"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel MaxWidth="900" Margin="28,20">
+            <TextBlock Classes="title" Text="{x:Static resx:HelpContent.Title}" />
+            <TextBlock Classes="subtitle" Text="{x:Static resx:HelpContent.Subtitle}" />
+
+            <Border Classes="card">
+                <DockPanel>
+                    <StackPanel Classes="row" DockPanel.Dock="Right" VerticalAlignment="Center">
+                        <Button x:Name="btnDiagnostics" Content="{x:Static resx:AppText.DiagButton}" />
+                        <Button
+                            x:Name="btnUpdate"
+                            Classes="Primary"
+                            Content="{x:Static resx:AppText.UpdateCheck}"
+                            Theme="{DynamicResource SolidButton}" />
+                    </StackPanel>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Classes="hint" Text="{x:Static resx:AppText.UpdateHeader}" />
+                        <TextBlock x:Name="txtVersion" FontWeight="SemiBold" />
+                        <TextBlock x:Name="txtUpdateStatus" Classes="hint" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{x:Static resx:HelpContent.Sections}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="resx:HelpSection">
+                        <Expander
+                            Margin="0,0,0,6"
+                            HorizontalAlignment="Stretch"
+                            Header="{Binding Title}"
+                            IsExpanded="{Binding Expanded, Mode=OneTime}">
+                            <TextBlock LineHeight="22" Text="{Binding Body}" TextWrapping="Wrap" />
+                        </Expander>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -40,8 +40,12 @@ public static class ConnectionRuleCompiler
     /// False when zapret is off, not installed or cannot run: "zapret then VPN" rules go straight to
     /// VPN instead of going direct with nothing to bypass DPI.
     /// </param>
+    /// <param name="zapretOutbound">
+    /// Where zapret traffic goes: direct on Windows (winws catches it on the network card), the tpws
+    /// SOCKS proxy (<see cref="Global.ZapretOutboundRemarks" />) on macOS/Linux.
+    /// </param>
     public static CompiledConnectionRules Compile(IEnumerable<ConnectionRule>? rules, EConnectionMode? overrideMode = null,
-        bool zapretAvailable = true)
+        bool zapretAvailable = true, string zapretOutbound = Global.DirectTag)
     {
         var result = new CompiledConnectionRules();
         if (overrideMode == EConnectionMode.ZapretThenVpn)
@@ -72,6 +76,7 @@ public static class ConnectionRuleCompiler
                 EConnectionMode.Block => Global.BlockTag,
                 // Resolved by CoreConfigContextBuilder to the WARP local proxy (or the VPN while it's off).
                 EConnectionMode.Warp => Global.WarpOutboundRemarks,
+                EConnectionMode.Zapret => zapretOutbound,
                 _ => Global.DirectTag,
             };
             var remarks = RemarksPrefix + (rule.Remarks.IsNullOrEmpty() ? rule.Target : rule.Remarks);

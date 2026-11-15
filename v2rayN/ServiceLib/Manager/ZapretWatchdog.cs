@@ -53,7 +53,7 @@ public class ZapretWatchdog
 
     public void Start(Config config)
     {
-        if (!Utils.IsWindows() || Interlocked.Exchange(ref _started, 1) == 1)
+        if (Interlocked.Exchange(ref _started, 1) == 1)
         {
             return;
         }
@@ -189,16 +189,26 @@ public class ZapretWatchdog
         try
         {
             var localAddress = PhysicalIPv4Address();
-            using var handler = new SocketsHttpHandler
-            {
-                UseProxy = false,
-                AllowAutoRedirect = true,
-                ConnectCallback = async (ctx, ct) =>
+            // macOS/Linux: zapret is the tpws SOCKS proxy, so the check goes through it (tpws itself
+            // connects directly: under TUN the cores route its process past the tunnel).
+            var tpwsPort = ZapretManager.UsesTpws ? AppManager.Instance.Config.ZapretItem.SocksPort : 0;
+            using var handler = tpwsPort > 0
+                ? new SocketsHttpHandler
                 {
-                    var addresses = await ResolveDirectAsync(ctx.DnsEndPoint.Host, localAddress, ct);
-                    return await ConnectBoundAsync(addresses, ctx.DnsEndPoint.Port, localAddress, ct);
-                },
-            };
+                    UseProxy = true,
+                    Proxy = new WebProxy($"socks5://127.0.0.1:{tpwsPort}"),
+                    AllowAutoRedirect = true,
+                }
+                : new SocketsHttpHandler
+                {
+                    UseProxy = false,
+                    AllowAutoRedirect = true,
+                    ConnectCallback = async (ctx, ct) =>
+                    {
+                        var addresses = await ResolveDirectAsync(ctx.DnsEndPoint.Host, localAddress, ct);
+                        return await ConnectBoundAsync(addresses, ctx.DnsEndPoint.Port, localAddress, ct);
+                    },
+                };
             using var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0 Safari/537.36");
 

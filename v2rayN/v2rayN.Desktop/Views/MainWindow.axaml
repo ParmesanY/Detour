@@ -8,7 +8,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
     xmlns:vms="clr-namespace:ServiceLib.ViewModels;assembly=ServiceLib"
-    Title="v2rayN"
+    Title="Detour"
     Width="1200"
     Height="800"
     MinWidth="600"
@@ -99,7 +99,7 @@
 
                     <MenuItem x:Name="menuReload" Header="{x:Static resx:ResUI.menuReload}" />
 
-                    <MenuItem x:Name="menuPromotion" Header="{x:Static resx:ResUI.menuPromotion}" />
+                    <MenuItem x:Name="menuPromotion" Header="{x:Static resx:ResUI.menuPromotion}" IsVisible="False" />
 
                     <MenuItem x:Name="menuClose" Header="{x:Static resx:ResUI.menuExit}" />
                 </Menu>
@@ -114,6 +114,28 @@
 
             <ContentControl x:Name="contentStatusBarView" DockPanel.Dock="Bottom" />
 
+            <!--  Detour: sidebar with the pages  -->
+            <ListBox
+                x:Name="navList"
+                Width="160"
+                Margin="8,0,0,8"
+                Classes="nav"
+                DockPanel.Dock="Left"
+                SelectedIndex="0">
+                <ListBoxItem Content="{x:Static resx:AppText.NavServers}" />
+                <ListBoxItem Content="{x:Static resx:AppText.NavRules}" />
+                <ListBoxItem Content="{x:Static resx:AppText.NavZapret}" />
+                <ListBoxItem Content="{x:Static resx:AppText.NavWarp}" />
+                <ListBoxItem Content="{x:Static resx:AppText.NavHelp}" />
+            </ListBox>
+
+            <Panel>
+            <ContentControl x:Name="pageRules" IsVisible="False" />
+            <ContentControl x:Name="pageZapret" IsVisible="False" />
+            <ContentControl x:Name="pageWarp" IsVisible="False" />
+            <ContentControl x:Name="pageHelp" IsVisible="False" />
+            <DockPanel x:Name="pageServers">
+            <ContentControl x:Name="connectionPanel" Margin="8,0,8,8" DockPanel.Dock="Top" />
             <Grid
                 x:Name="gridMain"
                 ColumnDefinitions="1*,10,1*"
@@ -148,6 +170,8 @@
                     <ContentControl x:Name="tabContent" />
                 </DockPanel>
             </Grid>
+            </DockPanel>
+            </Panel>
         </DockPanel>
     </dialogHost:DialogHost>
 </Window>

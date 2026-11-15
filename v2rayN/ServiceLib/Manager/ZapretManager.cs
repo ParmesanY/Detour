@@ -7,7 +7,7 @@ namespace ServiceLib.Manager;
 /// The release is unpacked into bin/zapret/current; winws.exe is started directly with
 /// arguments parsed from the selected strategy .bat.
 /// </summary>
-public class ZapretManager
+public partial class ZapretManager
 {
     private static readonly Lazy<ZapretManager> _instance = new(() => new());
     public static ZapretManager Instance => _instance.Value;
@@ -37,7 +37,7 @@ public class ZapretManager
     public static string BinDir => Path.Combine(ReleaseDir, "bin");
     public static string ListsDir => Path.Combine(ReleaseDir, "lists");
 
-    public bool IsInstalled => File.Exists(Path.Combine(BinDir, WinwsExe));
+    public bool IsInstalled => UsesTpws ? File.Exists(TpwsExePath) : File.Exists(Path.Combine(BinDir, WinwsExe));
 
     /// <summary>Version of the release shipped in the zip (tools/package-release.ps1 writes current/.version).</summary>
     public static string? BundledVersion
@@ -46,7 +46,7 @@ public class ZapretManager
         {
             try
             {
-                var file = Path.Combine(ReleaseDir, ".version");
+                var file = UsesTpws ? Path.Combine(TpwsDir, ".version") : Path.Combine(ReleaseDir, ".version");
                 return File.Exists(file) ? File.ReadAllText(file).Trim() : null;
             }
             catch
@@ -58,7 +58,7 @@ public class ZapretManager
 
     public bool IsRunning => _process is { HasExited: false };
 
-    public List<string> GetStrategies() => ZapretStrategyParser.ListStrategies(ReleaseDir);
+    public List<string> GetStrategies() => UsesTpws ? [.. TpwsStrategies.Select(s => s.Name)] : ZapretStrategyParser.ListStrategies(ReleaseDir);
 
     #region install / update
 
@@ -87,9 +87,9 @@ public class ZapretManager
     public async Task<(bool Success, string Message)> InstallAsync(DownloadService downloadService, string? version = null,
         Func<string, Task>? progress = null, CancellationToken cancellationToken = default)
     {
-        if (!Utils.IsWindows())
+        if (UsesTpws)
         {
-            return (false, "zapret is supported on Windows only");
+            return await InstallTpwsAsync(downloadService, version, progress, cancellationToken);
         }
 
         await _lock.WaitAsync(cancellationToken);
@@ -348,9 +348,9 @@ public class ZapretManager
 
     private async Task<(bool Success, string Message)> StartCoreAsync()
     {
-        if (!Utils.IsWindows())
+        if (UsesTpws)
         {
-            return (false, "zapret is supported on Windows only");
+            return await StartTpwsAsync();
         }
         if (!IsInstalled)
         {
@@ -463,6 +463,11 @@ public class ZapretManager
 
     private async Task StopCoreAsync()
     {
+        if (UsesTpws)
+        {
+            await StopTpwsAsync();
+            return;
+        }
         foreach (var p in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(WinwsExe)))
         {
             try

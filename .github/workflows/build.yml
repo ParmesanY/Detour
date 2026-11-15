@@ -16,10 +16,20 @@ concurrency:
   cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
-  windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, rid: win-x64, test: true }
+          - { os: ubuntu-latest, rid: linux-x64, test: false }
+          - { os: macos-latest, rid: osx-arm64, test: false }
+          - { os: macos-latest, rid: osx-x64, test: false }
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -33,10 +43,10 @@ jobs:
 
       # Tags point at commits already tested on main.
       - name: Test
-        if: github.ref_type != 'tag'
-        run: dotnet test --project v2rayN\ServiceLib.Tests\ServiceLib.Tests.csproj
+        if: matrix.test && github.ref_type != 'tag'
+        run: dotnet test --project v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj
 
-      # Full package: app + Xray + sing-box + geo files + rule sets + zapret,
+      # Full package: app + Xray + sing-box + geo files + rule sets + zapret (winws or tpws),
       # so the first start works where GitHub is blocked.
       - name: Package
         shell: pwsh
@@ -44,16 +54,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $ver = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '' }
-          ./tools/package-release.ps1 -OutDir out -Version $ver
+          ./tools/package-release.ps1 -OutDir out -Version $ver -Rid ${{ matrix.rid }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Detour-win-x64
-          path: out/Detour*.zip
+          name: Detour-${{ matrix.rid }}
+          path: |
+            out/Detour*.zip
+            out/Detour*.tar.gz
 
       - name: GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: out/Detour-*-win-x64.zip
+          files: |
+            out/Detour-*.zip
+            out/Detour-*.tar.gz
           generate_release_notes: true

@@ -1,0 +1,54 @@
+<Styles xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--  Detour pages (rules, zapret, WARP, help): cards, titles, hints. Colours come from the Semi theme.  -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{DynamicResource SemiColorFill0}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SemiColorBorder}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+    <Style Selector="Border.note">
+        <Setter Property="Background" Value="{DynamicResource SemiColorPrimaryLight}" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14,10" />
+        <Setter Property="Margin" Value="0,8,0,8" />
+    </Style>
+    <Style Selector="Border.warn">
+        <Setter Property="Background" Value="{DynamicResource SemiColorWarningLight}" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="14,10" />
+        <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+    <Style Selector="TextBlock.title">
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.subtitle">
+        <Setter Property="Margin" Value="0,6,0,18" />
+        <Setter Property="Foreground" Value="{DynamicResource SemiColorText2}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.head">
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.hint">
+        <Setter Property="Margin" Value="0,2,0,8" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{DynamicResource SemiColorText2}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.body">
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="StackPanel.row">
+        <Setter Property="Orientation" Value="Horizontal" />
+        <Setter Property="Spacing" Value="8" />
+    </Style>
+    <Style Selector="ListBox.nav ListBoxItem">
+        <Setter Property="Padding" Value="14,9" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Margin" Value="0,1" />
+    </Style>
+</Styles>
