@@ -3,12 +3,11 @@ using System.Text.Json.Nodes;
 namespace ServiceLib.Manager;
 
 /// <summary>
-/// Cloudflare WARP (experimental): registers a free WARP device and adds two servers.
-/// 1. "WARP" — a regular WireGuard profile (connection rules apply as with any server).
-/// 2. "WARP + noise" — an Xray config whose WireGuard sends random UDP noise first
-///    (streamSettings.finalmask), which gets the handshake past DPI that drops plain WireGuard.
-/// WARP hides traffic from the ISP but exits in a nearby Cloudflare location, so sites that geo-block
-/// Russia may still do so. Keys are made by sing-box (generate wg-keypair).
+/// Cloudflare WARP helpers: free device registration and the Xray config that the WARP page's local
+/// proxy runs (WireGuard to Cloudflare, optionally with random UDP noise before the handshake via
+/// streamSettings.finalmask, which gets past DPI that drops plain WireGuard). Keys are made by
+/// sing-box (generate wg-keypair). WARP hides traffic from the ISP but exits in a nearby Cloudflare
+/// location, so sites that geo-block Russia may still do so.
 /// </summary>
 public static class WarpManager
 {
@@ -18,89 +17,97 @@ public static class WarpManager
     /// <summary>Cloudflare anycast WARP endpoint by IP: the engage.* name is often blocked by DNS.</summary>
     public const string DefaultEndpoint = "162.159.192.1:2408";
 
+    /// <summary>Endpoints to offer when the default one is blocked.</summary>
+    public static readonly string[] Endpoints =
+    [
+        "162.159.192.1:2408", "162.159.192.1:500", "162.159.192.1:1701", "162.159.192.1:4500",
+        "162.159.195.1:2408", "188.114.97.1:2408", "188.114.98.1:2408",
+    ];
+
     public record Registration(string PrivateKey, string PeerPublicKey, string AddressV4, string? AddressV6, string? ClientId);
 
-    public static async Task<(int Added, string Message)> CreateProfilesAsync(Config config, string? subid)
+    /// <summary>"ip:port" (IPv4 or [IPv6]) or "host:port".</summary>
+    public static bool IsValidEndpoint(string? endpoint)
+    {
+        if (endpoint.IsNullOrEmpty())
+        {
+            return false;
+        }
+        var idx = endpoint.LastIndexOf(':');
+        if (idx <= 0 || !int.TryParse(endpoint[(idx + 1)..], out var port) || port is < 1 or > 65535)
+        {
+            return false;
+        }
+        var host = endpoint[..idx].Trim('[', ']');
+        return IPAddress.TryParse(host, out _) || Uri.CheckHostName(host) == UriHostNameType.Dns;
+    }
+
+    public static bool IsRegistered(WarpItem item) =>
+        item.PrivateKey.IsNotEmpty() && item.PeerPublicKey.IsNotEmpty() && item.AddressV4.IsNotEmpty();
+
+    public static Registration? FromItem(WarpItem item) => IsRegistered(item)
+        ? new Registration(item.PrivateKey!, item.PeerPublicKey!, item.AddressV4!, item.AddressV6, item.ClientId)
+        : null;
+
+    /// <summary>Registers a new free WARP device and stores it in <see cref="WarpItem" />.</summary>
+    public static async Task<(bool Success, string Message)> RegisterAsync(Config config)
     {
         try
         {
             var keys = await GenerateKeyPairAsync();
             if (keys is null)
             {
-                return (0, "sing-box is needed to make WireGuard keys: install the cores first");
+                return (false, AppText.WarpNoSingbox);
             }
-
-            var body = new JsonObject
-            {
-                ["key"] = keys.Value.Public,
-                ["install_id"] = "",
-                ["fcm_token"] = "",
-                ["tos"] = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'"),
-                ["model"] = "PC",
-                ["type"] = "Android",
-                ["locale"] = "en_US",
-            };
-            using var handler = HttpClientHelper.Instance.CreateFallbackHandler(true);
-            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
-            using var req = new HttpRequestMessage(HttpMethod.Post, RegUrl)
-            {
-                Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
-            };
-            req.Headers.UserAgent.ParseAdd("okhttp/3.12.1");
-            req.Headers.TryAddWithoutValidation("CF-Client-Version", "a-6.30-3596");
-            using var resp = await client.SendAsync(req);
-            var text = await resp.Content.ReadAsStringAsync();
-            if (!resp.IsSuccessStatusCode)
-            {
-                return (0, $"Cloudflare answered {(int)resp.StatusCode}");
-            }
-            var reg = ParseRegistration(text, keys.Value.Private);
+            var reg = await RegisterDeviceAsync(keys.Value);
             if (reg is null)
             {
-                return (0, "unexpected answer from Cloudflare");
+                return (false, AppText.WarpRegisterFailed);
             }
-
-            subid ??= string.Empty;
-            var added = 0;
-
-            var wg = WireguardFmt.ResolveConfig(BuildWireGuardConf(reg))?.FirstOrDefault();
-            if (wg != null)
-            {
-                wg.Remarks = "WARP";
-                wg.Subid = subid;
-                if (reg.ClientId.IsNotEmpty())
-                {
-                    wg.SetProtocolExtra(wg.GetProtocolExtra() with { WgReserved = reg.ClientId });
-                }
-                if (await ConfigHandler.AddWireguardServer(config, wg) == 0)
-                {
-                    added++;
-                }
-            }
-
-            var json = BuildXrayNoiseConfig(reg, AppManager.Instance.GetLocalPort(EInboundProtocol.socks));
-            var copy = Utils.GetTempPath($"{Utils.GetGuid(false)}.json");
-            await File.WriteAllTextAsync(copy, json);
-            var custom = new ProfileItem
-            {
-                ConfigType = EConfigType.Custom,
-                CoreType = ECoreType.Xray,
-                Address = copy,
-                Remarks = "WARP + noise",
-                Subid = subid,
-            };
-            if (await ConfigHandler.AddCustomServer(config, custom, true) == 0)
-            {
-                added++;
-            }
+            var item = config.WarpItem;
+            item.PrivateKey = reg.PrivateKey;
+            item.PeerPublicKey = reg.PeerPublicKey;
+            item.AddressV4 = reg.AddressV4;
+            item.AddressV6 = reg.AddressV6;
+            item.ClientId = reg.ClientId;
             await ConfigHandler.SaveConfig(config);
-            return (added, $"WARP: {added}");
+            return (true, AppText.WarpRegistered);
         }
         catch (Exception ex)
         {
             Logging.SaveLog(_tag, ex);
-            return (0, ex.GetBaseException().Message);
+            return (false, ex.GetBaseException().Message);
         }
+    }
+
+    private static async Task<Registration?> RegisterDeviceAsync((string Private, string Public) keys)
+    {
+        var body = new JsonObject
+        {
+            ["key"] = keys.Public,
+            ["install_id"] = "",
+            ["fcm_token"] = "",
+            ["tos"] = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'"),
+            ["model"] = "PC",
+            ["type"] = "Android",
+            ["locale"] = "en_US",
+        };
+        using var handler = HttpClientHelper.Instance.CreateFallbackHandler(true);
+        using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
+        using var req = new HttpRequestMessage(HttpMethod.Post, RegUrl)
+        {
+            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+        };
+        req.Headers.UserAgent.ParseAdd("okhttp/3.12.1");
+        req.Headers.TryAddWithoutValidation("CF-Client-Version", "a-6.30-3596");
+        using var resp = await client.SendAsync(req);
+        var text = await resp.Content.ReadAsStringAsync();
+        if (!resp.IsSuccessStatusCode)
+        {
+            Logging.SaveLog($"{_tag}: registration answered {(int)resp.StatusCode}");
+            return null;
+        }
+        return ParseRegistration(text, keys.Private);
     }
 
     public static Registration? ParseRegistration(string json, string privateKey)
@@ -118,23 +125,6 @@ public static class WarpManager
             cfg?["client_id"]?.GetValue<string>());
     }
 
-    public static string BuildWireGuardConf(Registration r, string endpoint = DefaultEndpoint)
-    {
-        var address = r.AddressV6.IsNullOrEmpty() ? $"{r.AddressV4}/32" : $"{r.AddressV4}/32, {r.AddressV6}/128";
-        return $"""
-            [Interface]
-            PrivateKey = {r.PrivateKey}
-            Address = {address}
-            DNS = 1.1.1.1
-            MTU = 1280
-
-            [Peer]
-            PublicKey = {r.PeerPublicKey}
-            AllowedIPs = 0.0.0.0/0, ::/0
-            Endpoint = {endpoint}
-            """;
-    }
-
     /// <summary>"base64 client_id" → its first 3 bytes, Xray's "reserved".</summary>
     public static int[] ReservedBytes(string? clientId)
     {
@@ -149,16 +139,52 @@ public static class WarpManager
         }
     }
 
-    public static string BuildXrayNoiseConfig(Registration r, int socksPort, string endpoint = DefaultEndpoint)
+    /// <summary>Xray config of the WARP local proxy: SOCKS on 127.0.0.1:port → WireGuard to Cloudflare.</summary>
+    public static string BuildXrayConfig(Registration r, int socksPort, string endpoint = DefaultEndpoint, bool noise = true)
     {
         var addresses = new JsonArray($"{r.AddressV4}/32");
         if (r.AddressV6.IsNotEmpty())
         {
             addresses.Add((JsonNode)$"{r.AddressV6}/128");
         }
-        var noise = new JsonArray(
-            new JsonObject { ["rand"] = "50-100", ["delay"] = "1-5" },
-            new JsonObject { ["rand"] = "50-100", ["delay"] = "1-5" });
+        var warp = new JsonObject
+        {
+            ["tag"] = "warp",
+            ["protocol"] = "wireguard",
+            ["settings"] = new JsonObject
+            {
+                ["secretKey"] = r.PrivateKey,
+                ["address"] = addresses,
+                ["peers"] = new JsonArray(new JsonObject
+                {
+                    ["publicKey"] = r.PeerPublicKey,
+                    ["endpoint"] = endpoint,
+                    ["allowedIPs"] = new JsonArray("0.0.0.0/0", "::/0"),
+                }),
+                ["reserved"] = new JsonArray(ReservedBytes(r.ClientId).Select(b => (JsonNode)b).ToArray()),
+                ["mtu"] = 1280,
+                ["domainStrategy"] = "ForceIPv4",
+            },
+        };
+        if (noise)
+        {
+            warp["streamSettings"] = new JsonObject
+            {
+                ["finalmask"] = new JsonObject
+                {
+                    ["udp"] = new JsonArray(new JsonObject
+                    {
+                        ["type"] = "noise",
+                        ["settings"] = new JsonObject
+                        {
+                            ["noise"] = new JsonArray(
+                                new JsonObject { ["rand"] = "50-100", ["delay"] = "1-5" },
+                                new JsonObject { ["rand"] = "50-100", ["delay"] = "1-5" }),
+                        },
+                    }),
+                },
+            };
+        }
         var root = new JsonObject
         {
             ["log"] = new JsonObject { ["loglevel"] = "warning" },
@@ -175,40 +201,10 @@ public static class WarpManager
                     {
                         ["enabled"] = true,
                         ["destOverride"] = new JsonArray("http", "tls", "quic"),
+                        ["routeOnly"] = true,
                     },
                 }),
-            ["outbounds"] = new JsonArray(
-                new JsonObject
-                {
-                    ["tag"] = "warp",
-                    ["protocol"] = "wireguard",
-                    ["settings"] = new JsonObject
-                    {
-                        ["secretKey"] = r.PrivateKey,
-                        ["address"] = addresses,
-                        ["peers"] = new JsonArray(new JsonObject
-                        {
-                            ["publicKey"] = r.PeerPublicKey,
-                            ["endpoint"] = endpoint,
-                            ["allowedIPs"] = new JsonArray("0.0.0.0/0", "::/0"),
-                        }),
-                        ["reserved"] = new JsonArray(ReservedBytes(r.ClientId).Select(b => (JsonNode)b).ToArray()),
-                        ["mtu"] = 1280,
-                        ["domainStrategy"] = "ForceIPv4",
-                    },
-                    ["streamSettings"] = new JsonObject
-                    {
-                        ["finalmask"] = new JsonObject
-                        {
-                            ["udp"] = new JsonArray(new JsonObject
-                            {
-                                ["type"] = "noise",
-                                ["settings"] = new JsonObject { ["noise"] = noise },
-                            }),
-                        },
-                    },
-                },
-                new JsonObject { ["tag"] = "direct", ["protocol"] = "freedom" }),
+            ["outbounds"] = new JsonArray(warp),
         };
         return root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
     }

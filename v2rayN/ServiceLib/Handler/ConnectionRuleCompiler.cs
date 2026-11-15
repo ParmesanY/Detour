@@ -70,6 +70,8 @@ public static class ConnectionRuleCompiler
             {
                 EConnectionMode.Vpn => Global.ProxyTag,
                 EConnectionMode.Block => Global.BlockTag,
+                // Resolved by CoreConfigContextBuilder to the WARP local proxy (or the VPN while it's off).
+                EConnectionMode.Warp => Global.WarpOutboundRemarks,
                 _ => Global.DirectTag,
             };
             var remarks = RemarksPrefix + (rule.Remarks.IsNullOrEmpty() ? rule.Target : rule.Remarks);
@@ -110,7 +112,7 @@ public static class ConnectionRuleCompiler
             {
                 AddZapretTargets(rule, domains, ips, processes, result);
             }
-            else if (mode is EConnectionMode.Vpn or EConnectionMode.Block)
+            else if (mode is EConnectionMode.Vpn or EConnectionMode.Block or EConnectionMode.Warp)
             {
                 // Keep zapret's hands off traffic the user sent elsewhere if it ever goes direct.
                 result.ZapretExcludeDomains.AddRange(domains.Where(IsPlainDomain));

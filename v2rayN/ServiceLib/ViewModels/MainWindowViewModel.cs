@@ -456,6 +456,22 @@ public partial class MainWindowViewModel : MyReactiveObject
                 }
             });
         }
+        if (Utils.IsWindows() && _config.WarpItem.Enabled && WarpManager.IsRegistered(_config.WarpItem))
+        {
+            _ = Task.Run(async () =>
+            {
+                var (ok, msg) = await WarpProxyManager.Instance.StartAsync();
+                if (ok)
+                {
+                    // +warp rules were built for "WARP off" (via VPN) if the core came up first.
+                    AppEvents.CoreReloadRequested.Publish();
+                }
+                else
+                {
+                    NoticeManager.Instance.Enqueue($"WARP: {msg}");
+                }
+            });
+        }
 
         // Self-update: drop files the previous update renamed, then look for a newer release once the
         // connection is up (GitHub is often reachable only through the VPN).
@@ -660,21 +676,6 @@ public partial class MainWindowViewModel : MyReactiveObject
             await RefreshServersDispatcherAsync();
         }
         NoticeManager.Instance.Enqueue(string.Join(Environment.NewLine, messages));
-    }
-
-    public async Task AddWarpAsync()
-    {
-        NoticeManager.Instance.Enqueue(AppText.WarpRegistering);
-        var (added, message) = await Task.Run(() => WarpManager.CreateProfilesAsync(_config, _config.SubIndexId));
-        if (added > 0)
-        {
-            await RefreshServersDispatcherAsync();
-            NoticeManager.Instance.Enqueue(AppText.WarpAdded);
-        }
-        else
-        {
-            NoticeManager.Instance.Enqueue(string.Format(AppText.WarpFailed, message));
-        }
     }
 
     public async Task AddServerViaClipboardAsync(string? clipboardData)

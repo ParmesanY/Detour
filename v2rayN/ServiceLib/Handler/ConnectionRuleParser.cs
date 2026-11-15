@@ -31,6 +31,8 @@ public static class ConnectionRuleParser
         ["block"] = "block",
         ["блок"] = "block",
         ["блокировать"] = "block",
+        ["warp"] = "warp",
+        ["варп"] = "warp",
     };
 
     public static ConnectionRule? Parse(string? line, out string error)
@@ -52,7 +54,7 @@ public static class ConnectionRuleParser
         }
         if (plusIdx <= 0)
         {
-            error = "no mode given, add +vpn, +zapret, +zapret+vpn, +direct or +block";
+            error = "no mode given, add +vpn, +zapret, +zapret+vpn, +warp, +direct or +block";
             return null;
         }
 
@@ -115,6 +117,10 @@ public static class ConnectionRuleParser
         {
             return EConnectionMode.Block;
         }
+        if (modes.SetEquals(["warp"]))
+        {
+            return EConnectionMode.Warp;
+        }
         error = $"modes cannot be combined: +{string.Join("+", modes)}";
         return null;
     }
@@ -129,6 +135,7 @@ public static class ConnectionRuleParser
             EConnectionMode.ZapretThenVpn => "+zapret+vpn",
             EConnectionMode.Direct => "+direct",
             EConnectionMode.Block => "+block",
+            EConnectionMode.Warp => "+warp",
             _ => "+vpn",
         };
         var target = rule.Target.Contains(' ') ? $"\"{rule.Target}\"" : rule.Target;

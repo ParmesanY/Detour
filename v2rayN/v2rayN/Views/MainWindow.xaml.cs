@@ -30,7 +30,6 @@ public partial class MainWindow
         menuBackupAndRestore.Click += MenuBackupAndRestore_Click;
 
         // Servers from files: menu, or drop .conf / .json files anywhere on the window.
-        menuAddWarp.Click += async (_, _) => await ViewModel!.AddWarpAsync();
         menuAddServerViaFile.Click += (_, _) =>
         {
             var dlg = new Microsoft.Win32.OpenFileDialog { Filter = AppText.ImportFileFilter, Multiselect = true };
@@ -64,10 +63,12 @@ public partial class MainWindow
         pageRules.Content = new ConnectionRulesView { ViewModel = new ConnectionRulesViewModel() };
         pageZapret.Content = new ZapretView { ViewModel = new ZapretViewModel() };
         pageTelegram.Content = new TgWsProxyView { ViewModel = new TgWsProxyViewModel() };
+        pageWarp.Content = new WarpView { ViewModel = new WarpViewModel() };
         pageHelp.Content = new HelpView();
         foreach (var (nav, page) in new (RadioButton, FrameworkElement)[]
                  {
                      (navServers, pageServers), (navRules, pageRules), (navZapret, pageZapret), (navTelegram, pageTelegram),
+                     (navWarp, pageWarp),
                      (navConnections, pageConnections), (navGroups, pageGroups), (navLog, pageLog),
                      (navHelp, pageHelp),
                  })
@@ -406,7 +407,7 @@ public partial class MainWindow
 
     private void ShowPage(FrameworkElement page)
     {
-        foreach (var p in new FrameworkElement[] { pageServers, pageRules, pageZapret, pageTelegram, pageConnections, pageGroups, pageLog, pageHelp })
+        foreach (var p in new FrameworkElement[] { pageServers, pageRules, pageZapret, pageTelegram, pageWarp, pageConnections, pageGroups, pageLog, pageHelp })
         {
             p.Visibility = p == page ? Visibility.Visible : Visibility.Collapsed;
         }

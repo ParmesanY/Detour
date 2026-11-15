@@ -56,6 +56,8 @@ public static partial class DiagnosticsReport
           $"strategy={config.ZapretItem.Strategy} version={config.ZapretItem.InstalledVersion ?? ZapretManager.BundledVersion}");
         W($"tgwsproxy={config.TgWsProxyItem.Enabled} running={TgWsProxyManager.Instance.IsRunning} killswitch={config.KillSwitchEnabled} " +
           $"protectLocalProxy={config.ProtectLocalProxy}");
+        W($"warp={config.WarpItem?.Enabled} registered={config.WarpItem != null && WarpManager.IsRegistered(config.WarpItem)} " +
+          $"running={WarpProxyManager.Instance.IsRunning} noise={config.WarpItem?.Noise} port={config.WarpItem?.Port}");
         W($"dns remote={Mask(config.SimpleDNSItem.RemoteDNS)} direct={Mask(config.SimpleDNSItem.DirectDNS)} fakeip={config.SimpleDNSItem.FakeIP}");
         var profile = config.IndexId.IsNullOrEmpty() ? null : await AppManager.Instance.GetProfileItem(config.IndexId);
         W(profile == null

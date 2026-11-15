@@ -121,6 +121,9 @@ public class Global
     /// <summary>Resolver for the cores' own lookups (VPN server names) under TUN; see SingboxDnsService.</summary>
     public const string SingboxCoreDNSTag = "core-dns";
 
+    /// <summary>Outbound "remarks" that WARP connection rules point to; mapped to the WARP local proxy.</summary>
+    public const string WarpOutboundRemarks = "Detour WARP";
+
     /// <summary>Foreign DoH by IP (no bootstrap), dialled directly: Russian resolvers drop VPN domains.</summary>
     public const string CoreDirectDoHServer = "8.8.8.8";
     public const string SingboxRemoteDNSTag = "remote-dns-1";

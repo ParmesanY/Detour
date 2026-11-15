@@ -73,6 +73,19 @@ public class CoreConfigContextBuilder
                     ruleItem.OutboundTag = Global.ProxyTag;
                     continue;
                 }
+                if (ruleItem.OutboundTag == Global.WarpOutboundRemarks)
+                {
+                    // WARP rules: the WARP page's local SOCKS proxy; through the VPN while it isn't running.
+                    if (WarpProxyManager.Instance.IsRunning)
+                    {
+                        context.AllProxiesMap[$"remark:{ruleItem.OutboundTag}"] = WarpProxyManager.LocalProxyNode(config);
+                    }
+                    else
+                    {
+                        ruleItem.OutboundTag = Global.ProxyTag;
+                    }
+                    continue;
+                }
                 var ruleOutboundNode = await AppManager.Instance.GetProfileItemViaRemarks(ruleItem.OutboundTag);
                 if (ruleOutboundNode == null)
                 {

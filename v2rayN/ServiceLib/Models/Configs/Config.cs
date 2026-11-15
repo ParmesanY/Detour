@@ -36,6 +36,7 @@ public class Config
     public HappyEyeballs4RayItem HappyEyeballs4RayItem { get; set; }
     public ZapretItem ZapretItem { get; set; }
     public TgWsProxyItem TgWsProxyItem { get; set; }
+    public WarpItem WarpItem { get; set; }
     public List<ConnectionRule> ConnectionRules { get; set; }
     public List<ConnectionRuleProfile> ConnectionRuleProfiles { get; set; }
 

@@ -250,6 +250,12 @@
                             <TextBlock Text="{x:Static resx:AppText.NavTelegram}" />
                         </StackPanel>
                     </RadioButton>
+                    <RadioButton x:Name="navWarp" Style="{StaticResource NavItem}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Style="{StaticResource NavIcon}" Symbol="WeatherCloudy24" />
+                            <TextBlock Text="{x:Static resx:AppText.NavWarp}" />
+                        </StackPanel>
+                    </RadioButton>
                     <TextBlock Style="{StaticResource NavSection}" Text="{x:Static resx:AppText.NavSectionMonitor}" />
                     <RadioButton x:Name="navConnections" Style="{StaticResource NavItem}">
                         <StackPanel Orientation="Horizontal">
@@ -313,9 +319,7 @@
                                             Header="{x:Static resx:ResUI.menuAddServerViaScan}"
                                             InputGestureText="Ctrl+S" />
                                         <MenuItem x:Name="menuAddServerViaImage" Header="{x:Static resx:ResUI.menuAddServerViaImage}" />
-                                        <MenuItem x:Name="menuAddServerViaFile" Header="{x:Static resx:AppText.ImportFromFile}" />
-                                        <MenuItem x:Name="menuAddWarp" Header="{x:Static resx:AppText.WarpMenu}" ToolTip="{x:Static resx:AppText.WarpHint}" />
-                                        <Separator />
+                                        <MenuItem x:Name="menuAddServerViaFile" Header="{x:Static resx:AppText.ImportFromFile}" />                                        <Separator />
                                         <MenuItem x:Name="menuAddVlessServer" Header="{x:Static resx:ResUI.menuAddVlessServer}" />
                                         <MenuItem x:Name="menuAddHysteria2Server" Header="{x:Static resx:ResUI.menuAddHysteria2Server}" />
                                         <MenuItem x:Name="menuAddTrojanServer" Header="{x:Static resx:ResUI.menuAddTrojanServer}" />
@@ -369,6 +373,7 @@
                         <ContentControl x:Name="pageRules" Visibility="Collapsed" />
                         <ContentControl x:Name="pageZapret" Visibility="Collapsed" />
                         <ContentControl x:Name="pageTelegram" Visibility="Collapsed" />
+                        <ContentControl x:Name="pageWarp" Visibility="Collapsed" />
                         <ContentControl x:Name="pageHelp" Visibility="Collapsed" />
 
                         <DockPanel x:Name="pageConnections" Visibility="Collapsed">

@@ -132,6 +132,7 @@ public static class AppText
         "chatgpt.com +vpn          — через VPN\n" +
         "1.2.3.0/24 +direct        — напрямую\n" +
         "ads.example.com +block    — заблокировать\n" +
+        "spotify.com +warp         — через Cloudflare WARP (страница WARP)\n" +
         "@telegram +vpn            — готовый набор\n" +
         "# строка                  — выключенное правило или комментарий",
         "Discord.exe +zapret+vpn   — app: zapret first, VPN if it doesn't work\n" +
@@ -139,6 +140,7 @@ public static class AppText
         "chatgpt.com +vpn          — through VPN\n" +
         "1.2.3.0/24 +direct        — directly\n" +
         "ads.example.com +block    — block\n" +
+        "spotify.com +warp         — through Cloudflare WARP (WARP page)\n" +
         "@telegram +vpn            — preset\n" +
         "# line                    — switched-off rule or comment");
     public static string RulesPresets => T("Готовые наборы", "Presets");
@@ -189,6 +191,7 @@ public static class AppText
         EConnectionMode.ZapretThenVpn => ModeZapretThenVpn,
         EConnectionMode.Direct => ModeDirect,
         EConnectionMode.Block => ModeBlock,
+        EConnectionMode.Warp => "WARP",
         _ => mode.ToString(),
     };
 
@@ -276,14 +279,55 @@ public static class AppText
         "If the active server stops passing traffic (3 checks in a row while the plain internet works), Detour switches to another server of the same subscription, best last ping first.");
     public static string AutoFailoverSwitched => T("Сервер не отвечал, переключаюсь на «{0}»", "Server stopped responding, switching to \"{0}\"");
 
-    public static string WarpMenu => T("Cloudflare WARP (эксперимент)", "Cloudflare WARP (experimental)");
-    public static string WarpHint => T(
-        "Бесплатно регистрирует устройство WARP и добавляет два сервера: «WARP» (обычный WireGuard) и «WARP + noise» (с шумом против DPI, через Xray). Выход в ближайшем городе Cloudflare: от провайдера скрывает, но гео-блокировки сайтов может не обойти.",
-        "Registers a free WARP device and adds two servers: \"WARP\" (plain WireGuard) and \"WARP + noise\" (UDP noise against DPI, via Xray). Exits in a nearby Cloudflare city: hides traffic from the ISP but may not bypass site geo-blocks.");
-    public static string WarpRegistering => T("Регистрирую WARP…", "Registering WARP…");
-    public static string WarpAdded => T("Добавлены серверы WARP. Если обычный не подключается, выберите «WARP + noise».",
-        "WARP servers added. If the plain one doesn't connect, pick \"WARP + noise\".");
-    public static string WarpFailed => T("WARP не добавлен: {0}", "WARP not added: {0}");
+    // WARP page
+    public static string NavWarp => "WARP";
+    public static string WarpTitle => "Cloudflare WARP";
+    public static string WarpSubtitle => T(
+        "Бесплатный WARP от Cloudflare как отдельный канал. Detour запускает свой локальный прокси (на встроенном Xray), " +
+        "а что через него пойдёт, решают правила с +warp. Выход в ближайшем городе Cloudflare: от провайдера трафик скрыт, " +
+        "но сайты, закрытые для России, могут остаться закрытыми.",
+        "Free Cloudflare WARP as a separate route. Detour runs its own local proxy (on the bundled Xray), " +
+        "and rules with +warp decide what goes through it. Exits in a nearby Cloudflare city: hidden from the ISP, " +
+        "but sites closed to Russia may stay closed.");
+    public static string WarpRegister => T("Зарегистрировать", "Register");
+    public static string WarpReRegister => T("Новая регистрация", "Register again");
+    public static string WarpRegisterHint => T(
+        "Создаёт бесплатное устройство WARP. Делается один раз, ключи хранятся в настройках.",
+        "Creates a free WARP device. Needed once; the keys are kept in the settings.");
+    public static string WarpRegistering => T("Регистрирую устройство в Cloudflare…", "Registering a device with Cloudflare…");
+    public static string WarpRegistered => T("Устройство WARP зарегистрировано", "WARP device registered");
+    public static string WarpNotRegistered => T("Устройство не зарегистрировано", "No device registered");
+    public static string WarpRegisterFailed => T(
+        "Cloudflare не ответил на регистрацию. Попробуйте ещё раз при подключённом VPN.",
+        "Cloudflare did not answer the registration. Try again with the VPN connected.");
+    public static string WarpNoSingbox => T("Для ключей WireGuard нужен sing-box: скачайте ядра.", "sing-box is needed for WireGuard keys: download the cores.");
+    public static string WarpNoXray => T("Не найден Xray: скачайте ядра.", "Xray not found: download the cores.");
+    public static string WarpPortBusy => T("Порт {0} занят другой программой. Укажите другой порт.",
+        "Port {0} is used by another program. Choose another port.");
+    public static string WarpExited => T("Прокси WARP завершился с кодом {0}. Смотрите журнал.", "The WARP proxy exited with code {0}. See the log.");
+    public static string WarpRunning => T("Работает", "Running");
+    public static string WarpStopped => T("Остановлен", "Stopped");
+    public static string WarpDevice => T("Устройство {0}", "Device {0}");
+    public static string WarpEnabled => T("Запускать вместе с клиентом", "Start with the client");
+    public static string WarpNoise => T("Шум перед рукопожатием", "Noise before the handshake");
+    public static string WarpNoiseHint => T(
+        "Случайные UDP-пакеты перед WireGuard: помогают пройти DPI, который режет обычный WireGuard.",
+        "Random UDP packets before WireGuard: help get past DPI that drops plain WireGuard.");
+    public static string WarpEndpoint => T("Адрес Cloudflare", "Cloudflare endpoint");
+    public static string WarpEndpointHint => T(
+        "Если WARP не подключается, попробуйте другой адрес или порт. Формат ip:порт.",
+        "If WARP doesn't connect, try another address or port. Format ip:port.");
+    public static string WarpEndpointInvalid => T("Нужен адрес вида 162.159.192.1:2408", "Expected an address like 162.159.192.1:2408");
+    public static string WarpPortHint => T("Локальный SOCKS-порт на 127.0.0.1. Им можно пользоваться и в других программах.",
+        "Local SOCKS port on 127.0.0.1. Other programs can use it too.");
+    public static string WarpTest => T("Проверить", "Test");
+    public static string WarpTesting => T("Проверяю через WARP…", "Testing through WARP…");
+    public static string WarpTestOk => T("WARP работает: {0}, {1}, {2} мс", "WARP works: {0}, {1}, {2} ms");
+    public static string WarpTestNotWarp => T("Ответ получен, но не через WARP", "Got an answer, but not through WARP");
+    public static string WarpTestFailed => T("Не удалось: {0}", "Failed: {0}");
+    public static string WarpRulesNote => T(
+        "Пока WARP выключен, правила с +warp идут через VPN. Пример правила: spotify.com +warp",
+        "While WARP is off, +warp rules go through the VPN. Example rule: spotify.com +warp");
 
     public static string DiagButton =>T("Диагностика", "Diagnostics");
     public static string DiagTitle => T("Диагностика Detour", "Detour diagnostics");

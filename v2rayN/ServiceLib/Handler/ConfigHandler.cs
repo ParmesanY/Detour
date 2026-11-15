@@ -200,6 +200,15 @@ public static class ConfigHandler
         {
             config.TgWsProxyItem.Port = TgWsProxyManager.DefaultPort;
         }
+        config.WarpItem ??= new();
+        if (config.WarpItem.Port is <= 0 or > 65535)
+        {
+            config.WarpItem.Port = WarpProxyManager.DefaultPort;
+        }
+        if (config.WarpItem.Endpoint.IsNullOrEmpty())
+        {
+            config.WarpItem.Endpoint = WarpManager.DefaultEndpoint;
+        }
         config.ConnectionRules ??= ConnectionPresets.DefaultRules();
         // "zapret then VPN" starts on VPN each run; the watchdog moves it to zapret once verified.
         ZapretWatchdog.ResetToVpn(config.ConnectionRules);

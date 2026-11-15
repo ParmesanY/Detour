@@ -87,14 +87,50 @@ public class DetourFeaturesTests
         await Assert.That(reg).IsNotNull();
         await Assert.That(WarpManager.ReservedBytes(reg!.ClientId)).IsEquivalentTo(new[] { 1, 2, 3 });
 
-        var wg = WireguardFmt.ResolveConfig(WarpManager.BuildWireGuardConf(reg));
-        await Assert.That(wg!.Count).IsEqualTo(1);
-        await Assert.That(wg[0].Port).IsEqualTo(2408);
+        var xray = JsonNode.Parse(WarpManager.BuildXrayConfig(reg, 40000))!;
+        await Assert.That(xray["inbounds"]![0]!["port"]!.GetValue<int>()).IsEqualTo(40000);
+        await Assert.That(xray["inbounds"]![0]!["listen"]!.GetValue<string>()).IsEqualTo("127.0.0.1");
+        var outbound = xray["outbounds"]![0]!;
+        await Assert.That(outbound["protocol"]!.GetValue<string>()).IsEqualTo("wireguard");
+        await Assert.That(outbound["settings"]!["peers"]![0]!["endpoint"]!.GetValue<string>()).IsEqualTo(WarpManager.DefaultEndpoint);
+        await Assert.That(outbound["streamSettings"]!["finalmask"]!["udp"]![0]!["type"]!.GetValue<string>()).IsEqualTo("noise");
 
-        var xray = JsonNode.Parse(WarpManager.BuildXrayNoiseConfig(reg, 10808))!;
-        await Assert.That(xray["inbounds"]![0]!["port"]!.GetValue<int>()).IsEqualTo(10808);
-        await Assert.That(xray["outbounds"]![0]!["streamSettings"]!["finalmask"]!["udp"]![0]!["type"]!.GetValue<string>()).IsEqualTo("noise");
-        await Assert.That(ServerFileImporter.Detect("warp.json", xray.ToJsonString())).IsEqualTo(ServerFileImporter.EKind.XrayJson);
+        var plain = JsonNode.Parse(WarpManager.BuildXrayConfig(reg, 40000, "188.114.97.1:500", noise: false))!;
+        await Assert.That(plain["outbounds"]![0]!["streamSettings"]).IsNull();
+        await Assert.That(plain["outbounds"]![0]!["settings"]!["peers"]![0]!["endpoint"]!.GetValue<string>()).IsEqualTo("188.114.97.1:500");
+    }
+
+    [Test]
+    [Arguments("162.159.192.1:2408", true)]
+    [Arguments("engage.cloudflareclient.com:2408", true)]
+    [Arguments("[2606:4700:d0::a29f:c001]:2408", true)]
+    [Arguments("162.159.192.1", false)]
+    [Arguments("162.159.192.1:99999", false)]
+    [Arguments("", false)]
+    public async Task Warp_ValidatesEndpoint(string endpoint, bool valid)
+    {
+        await Assert.That(WarpManager.IsValidEndpoint(endpoint)).IsEqualTo(valid);
+    }
+
+    [Test]
+    public async Task Warp_RulesRouteToWarpOutbound()
+    {
+        var rule = ConnectionRuleParser.Parse("spotify.com +варп", out var error);
+        await Assert.That(error).IsEmpty();
+        await Assert.That(rule!.Mode).IsEqualTo(EConnectionMode.Warp);
+        await Assert.That(ConnectionRuleParser.Format(rule)).IsEqualTo("spotify.com +warp");
+
+        var compiled = ConnectionRuleCompiler.Compile([rule]);
+        await Assert.That(compiled.RoutingRules.Single().OutboundTag).IsEqualTo(Global.WarpOutboundRemarks);
+        await Assert.That(compiled.ZapretExcludeDomains).Contains("spotify.com");
+    }
+
+    [Test]
+    public async Task Warp_ParsesTrace()
+    {
+        var trace = WarpProxyManager.ParseTrace("fl=1\nip=104.28.1.1\ncolo=WAW\nloc=PL\nwarp=on\n");
+        await Assert.That(trace["warp"]).IsEqualTo("on");
+        await Assert.That(trace["colo"]).IsEqualTo("WAW");
     }
 
     [Test]

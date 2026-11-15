@@ -17,6 +17,9 @@ public enum EConnectionMode
 
     /// <summary>Dropped.</summary>
     Block = 4,
+
+    /// <summary>Through Cloudflare WARP (the WARP page's local proxy); VPN while WARP is off.</summary>
+    Warp = 5,
 }
 
 /// <summary>What a connection rule target refers to.</summary>
