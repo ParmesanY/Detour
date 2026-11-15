@@ -79,7 +79,16 @@ function Test-Https([string]$ip, [string]$sni, [string]$hostHeader, [string]$pat
         $ssl = New-Object Net.Security.SslStream($tcp.GetStream(), $false, $cb)
         $ssl.ReadTimeout = $TimeoutMs; $ssl.WriteTimeout = $TimeoutMs
         try { $ssl.AuthenticateAsClient($sni, $null, [Security.Authentication.SslProtocols]::Tls12, $false) }
-        catch { $e = $_.Exception; while ($e.InnerException) { $e = $e.InnerException }; $res.Error = 'TLS: ' + $e.Message; return $res }
+        catch {
+            $e = $_.Exception; while ($e.InnerException) { $e = $e.InnerException }
+            # A server refusing an unknown name answers with a TLS alert; DPI resets the connection or goes silent.
+            $kind = if ($e -is [Net.Sockets.SocketException] -and $e.SocketErrorCode -eq 'ConnectionReset') { 'СБРОС (RST, похоже на DPI)' }
+                    elseif ($e -is [Net.Sockets.SocketException] -and $e.SocketErrorCode -eq 'TimedOut') { 'ТИШИНА (таймаут, похоже на DPI)' }
+                    elseif ($e.Message -match 'closed the transport stream') { 'закрыто без ответа' }
+                    elseif ($e -is [ComponentModel.Win32Exception] -or $e.Message -match 'unexpected|badly formatted|alert') { 'сервер отказал (TLS alert, это не DPI)' }
+                    else { 'ошибка' }
+            $res.Error = "TLS: $kind - $($e.Message)"; return $res
+        }
         $res.Tls = $true
         $req = "GET $path HTTP/1.1`r`nHost: $hostHeader`r`nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/142.0`r`nAccept: */*`r`nConnection: close`r`n`r`n"
         $bytes = [Text.Encoding]::ASCII.GetBytes($req)
