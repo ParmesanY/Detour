@@ -1,4 +1,4 @@
-﻿namespace ServiceLib.ViewModels;
+namespace ServiceLib.ViewModels;
 
 public partial class ZapretViewModel : MyReactiveObject
 {
@@ -98,6 +98,7 @@ public partial class ZapretViewModel : MyReactiveObject
             await ConfigHandler.SaveConfig(_config);
             await RestartIfRunning();
         });
+        InitVpnStrategy();
     }
 
     private void Refresh()

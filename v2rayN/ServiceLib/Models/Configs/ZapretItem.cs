@@ -17,6 +17,9 @@ public class ZapretItem
     /// <summary>macOS/Linux: local SOCKS port of tpws on 127.0.0.1.</summary>
     public int SocksPort { get; set; } = ZapretManager.DefaultSocksPort;
 
+    /// <summary>Fragmentation strategy for the VPN connection itself (VpnStrategyManager), "" = off.</summary>
+    public string VpnStrategy { get; set; } = string.Empty;
+
     /// <summary>Installed release tag, empty if zapret is not installed.</summary>
     public string? InstalledVersion { get; set; }
 }

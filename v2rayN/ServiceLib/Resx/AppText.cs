@@ -158,6 +158,37 @@ public static class AppText
     public static string RulesLearnStart => T("Слушать 60 секунд", "Listen for 60 seconds");
     public static string RulesLearnNoProcess => T("В правилах нет приложений (*.exe).", "There are no app (*.exe) rules.");
     public static string RulesLearnDone => T("{0}: найдено доменов {1}, IP {2}.", "{0}: found {1} domains, {2} IPs.");
+    // VPN strategies (zapret page): fragmentation of the VPN connection itself + server diagnosis
+    public static string VpnStrategyTitle => T("Дробление VPN-трафика", "VPN traffic fragmentation");
+    public static string VpnStrategyHint => T(
+        "Как zapret, только для самого VPN: начало соединения с сервером уходит мелкими кусками, и DPI провайдера не узнаёт протокол. " +
+        "«Подобрать» по очереди пробует стратегии на текущем сервере и объясняет, почему он не работает.",
+        "Like zapret, but for the VPN itself: the start of the connection to the server goes out in small pieces, so the ISP's DPI can't recognise the protocol. " +
+        "\"Pick\" tries the strategies one by one on the current server and explains why it doesn't work.");
+    public static string VpnStrategyOff => T("без дробления", "off");
+    public static string VpnStrategyPick => T("Подобрать для сервера", "Pick for this server");
+    public static string VpnStrategyApplied => T("Стратегия «{0}» включена.", "Strategy \"{0}\" is on.");
+    public static string VpnStrategyResultLine => T("{0}: {1}", "{0}: {1}");
+    public static string VpnStrategyOk => T("работает, {0} мс", "works, {0} ms");
+    public static string VpnStrategyFreeze => T("рукопожатие есть, большие данные зависают", "handshake OK, big transfers freeze");
+    public static string VpnStrategyFail => T("не работает", "doesn't work");
+    public static string VpnDiagReach => T("Проверяю, отвечает ли адрес сервера…", "Checking whether the server address answers…");
+    public static string VpnDiagTrying => T("Пробую стратегию: {0}…", "Trying strategy: {0}…");
+    public static string VpnDiagNotTestable => T("Не выбран сервер, или это сервер из готового JSON-конфига: его проверить нельзя.",
+        "No server selected, or it's a full JSON config server, which can't be tested.");
+    public static string VpnDiagWorks => T("Сервер работает и без дробления. Если бывают обрывы, можно оставить «general» для подстраховки.",
+        "The server works without fragmentation. If it drops sometimes, keep \"general\" as a safeguard.");
+    public static string VpnDiagNeedsStrategy => T("DPI узнаёт рукопожатие и рвёт соединение. С дроблением «{0}» сервер работает: включена.",
+        "DPI recognises the handshake and drops the connection. With \"{0}\" fragmentation the server works: turned on.");
+    public static string VpnDiagFreezeFixed => T("Соединение замирает после первых ~16 КБ (DPI-блокировка «16 КБ»). С дроблением «{0}» проходит: включена.",
+        "The connection freezes after the first ~16 KB (the \"16 KB\" DPI block). With \"{0}\" fragmentation it gets through: turned on.");
+    public static string VpnDiagFreeze => T("Соединение замирает после первых ~16 КБ, и дробление не помогает. Попросите у провайдера VPN другой транспорт (XHTTP, gRPC) или сервер.",
+        "The connection freezes after the first ~16 KB and fragmentation doesn't help. Ask your VPN provider for another transport (XHTTP, gRPC) or server.");
+    public static string VpnDiagUnreachable => T("Адрес сервера не отвечает даже на простое подключение: IP заблокирован или сервер выключен. Дробление тут не поможет, нужен другой сервер.",
+        "The server address doesn't answer even a plain connection: the IP is blocked or the server is down. Fragmentation won't help, use another server.");
+    public static string VpnDiagBlocked => T("Сервер отвечает, но через него ничего не проходит ни с одной стратегией. Возможно, истекла подписка или сервер заблокирован по протоколу.",
+        "The server answers, but nothing gets through with any strategy. The subscription may have expired, or the protocol is blocked.");
+
     // Block check and list updates (rules page)
     public static string CheckTitle => T("Проверка блокировок", "Block check");
     public static string CheckHint => T(

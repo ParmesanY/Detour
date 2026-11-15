@@ -217,6 +217,37 @@ public class DetourFeaturesTests
     }
 
     [Test]
+    public async Task VpnStrategy_DiagnosisAndApply()
+    {
+        var general = VpnStrategyManager.Find("general")!;
+        var fine = VpnStrategyManager.Find("FINE")!;
+        VpnStrategyResult R(VpnStrategy? s, bool hs, bool big, int ms = 100) => new(s, hs, big, ms);
+
+        await Assert.That(VpnStrategyManager.Summarize(true, [R(null, true, true)]).Diagnosis).IsEqualTo(VpnDiagnosis.Works);
+
+        var needs = VpnStrategyManager.Summarize(true, [R(null, false, false), R(general, true, true, 300), R(fine, true, true, 150)]);
+        await Assert.That(needs.Diagnosis).IsEqualTo(VpnDiagnosis.NeedsStrategy);
+        await Assert.That(needs.Best).IsEqualTo(fine);
+
+        var freezeFixed = VpnStrategyManager.Summarize(true, [R(null, true, false), R(general, true, true)]);
+        await Assert.That(freezeFixed.Diagnosis).IsEqualTo(VpnDiagnosis.FreezesAfterHandshake);
+        await Assert.That(freezeFixed.Best).IsEqualTo(general);
+
+        await Assert.That(VpnStrategyManager.Summarize(true, [R(null, true, false), R(general, true, false)]).Best).IsNull();
+        await Assert.That(VpnStrategyManager.Summarize(false, [R(null, false, false), R(general, false, false)]).Diagnosis).IsEqualTo(VpnDiagnosis.Unreachable);
+        await Assert.That(VpnStrategyManager.Summarize(true, [R(null, false, false), R(general, false, false)]).Diagnosis).IsEqualTo(VpnDiagnosis.Blocked);
+
+        var config = new Config { ZapretItem = new(), CoreBasicItem = new() };
+        VpnStrategyManager.Apply(config, fine);
+        await Assert.That(config.CoreBasicItem.EnableFragment).IsTrue();
+        await Assert.That(config.Fragment4RayItem!.Lengths).IsEquivalentTo(new[] { "10-30" });
+        await Assert.That(config.ZapretItem.VpnStrategy).IsEqualTo("fine");
+        VpnStrategyManager.Apply(config, null);
+        await Assert.That(config.CoreBasicItem.EnableFragment).IsFalse();
+        await Assert.That(config.ZapretItem.VpnStrategy).IsEmpty();
+    }
+
+    [Test]
     public async Task Warp_ParsesTrace()
     {
         var trace = WarpProxyManager.ParseTrace("fl=1\nip=104.28.1.1\ncolo=WAW\nloc=PL\nwarp=on\n");

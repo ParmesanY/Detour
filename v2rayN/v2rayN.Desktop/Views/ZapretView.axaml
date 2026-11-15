@@ -84,6 +84,41 @@
                 <TextBlock VerticalAlignment="Center" Classes="hint" Text="{Binding ProgressText}" />
             </StackPanel>
 
+            <Border Margin="0,12,0,0" Classes="card">
+                <StackPanel>
+                    <TextBlock Classes="head" Text="{x:Static resx:AppText.VpnStrategyTitle}" />
+                    <TextBlock Classes="hint" Text="{x:Static resx:AppText.VpnStrategyHint}" />
+                    <StackPanel Classes="row">
+                        <ComboBox
+                            Width="260"
+                            DisplayMemberBinding="{ReflectionBinding Value}"
+                            ItemsSource="{Binding VpnStrategies}"
+                            SelectedValue="{Binding VpnStrategy}"
+                            SelectedValueBinding="{ReflectionBinding Key}" />
+                        <Button Command="{Binding PickVpnStrategyCmd}" Content="{x:Static resx:AppText.VpnStrategyPick}" />
+                    </StackPanel>
+                    <StackPanel Margin="0,8,0,0" Classes="row" IsVisible="{Binding IsDiagnosing}">
+                        <ProgressBar
+                            Width="16"
+                            Height="16"
+                            IsIndeterminate="True"
+                            Theme="{DynamicResource ProgressRing}" />
+                        <TextBlock VerticalAlignment="Center" Classes="hint" Text="{Binding VpnDiagStatus}" />
+                    </StackPanel>
+                    <TextBlock
+                        Margin="0,6,0,0"
+                        FontWeight="SemiBold"
+                        Text="{Binding VpnDiagText}"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        Margin="0,4,0,0"
+                        FontFamily="Cascadia Mono, Menlo, DejaVu Sans Mono, monospace"
+                        FontSize="12"
+                        Foreground="{DynamicResource SemiColorText2}"
+                        Text="{Binding VpnDiagDetails}" />
+                </StackPanel>
+            </Border>
+
             <TextBlock Margin="0,20,0,0" Classes="hint">
                 <Run Text="{x:Static resx:AppText.ZapretSource}" /><Run Text=": " /><Run Text="{Binding SourceText, Mode=OneWay}" />
             </TextBlock>

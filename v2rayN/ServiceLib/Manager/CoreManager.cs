@@ -159,7 +159,8 @@ public class CoreManager
         return await RunProcess(coreInfo, fileName, true, false);
     }
 
-    public async Task<ProcessService?> LoadCoreConfigSpeedtest(ServerTestItem testItem)
+    /// <param name="configOverride">A modified copy of the settings (e.g. another fragmentation strategy) for this test only.</param>
+    public async Task<ProcessService?> LoadCoreConfigSpeedtest(ServerTestItem testItem, Config? configOverride = null)
     {
         var node = await AppManager.Instance.GetProfileItem(testItem.IndexId);
         if (node is null)
@@ -169,8 +170,9 @@ public class CoreManager
 
         var fileName = string.Format(Global.CoreSpeedtestConfigFileName, Utils.GetGuid(false));
         var configPath = Utils.GetBinConfigPath(fileName);
-        var (context, _) = await CoreConfigContextBuilder.Build(_config, node);
-        var result = await CoreConfigHandler.GenerateClientSpeedtestConfig(_config, context, testItem, configPath);
+        var config = configOverride ?? _config;
+        var (context, _) = await CoreConfigContextBuilder.Build(config, node);
+        var result = await CoreConfigHandler.GenerateClientSpeedtestConfig(config, context, testItem, configPath);
         if (result.Success != true)
         {
             return null;

@@ -147,6 +147,62 @@
                     TextWrapping="Wrap" />
             </StackPanel>
 
+            <!--  Fragmentation of the VPN connection itself + server diagnosis  -->
+            <ui:CardControl Margin="0,16,0,4" Icon="{ui:SymbolIcon ShieldLock24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Text="{x:Static resx:AppText.VpnStrategyTitle}" />
+                        <TextBlock
+                            Margin="0,2,24,0"
+                            FontSize="12"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            Text="{x:Static resx:AppText.VpnStrategyHint}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <StackPanel Orientation="Horizontal">
+                    <ComboBox
+                        Width="220"
+                        ItemsSource="{Binding VpnStrategies}"
+                        SelectedValue="{Binding VpnStrategy}"
+                        SelectedValuePath="Key">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock
+                                    MaxWidth="420"
+                                    Text="{Binding Value}"
+                                    TextTrimming="CharacterEllipsis"
+                                    ToolTip="{Binding Value}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <ui:Button
+                        Margin="8,0,0,0"
+                        Command="{Binding PickVpnStrategyCmd}"
+                        Content="{x:Static resx:AppText.VpnStrategyPick}"
+                        Icon="{ui:SymbolIcon Search24}" />
+                </StackPanel>
+            </ui:CardControl>
+            <StackPanel Margin="0,6,0,0" Orientation="Horizontal" Visibility="{Binding IsDiagnosing, Converter={StaticResource BoolToVis}}">
+                <ui:ProgressRing
+                    Width="16"
+                    Height="16"
+                    Margin="0,0,10,0"
+                    IsIndeterminate="True" />
+                <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}" Text="{Binding VpnDiagStatus}" />
+            </StackPanel>
+            <TextBlock
+                Margin="0,6,0,0"
+                FontWeight="SemiBold"
+                Text="{Binding VpnDiagText}"
+                TextWrapping="Wrap" />
+            <TextBlock
+                Margin="0,4,0,0"
+                FontFamily="Cascadia Mono, Consolas"
+                FontSize="12"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                Text="{Binding VpnDiagDetails}" />
+
             <TextBlock
                 Margin="0,24,0,0"
                 FontSize="12"

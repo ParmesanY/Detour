@@ -249,7 +249,7 @@ public class ZapretWatchdog
         }
     }
 
-    private static async Task<Stream> ConnectBoundAsync(IPAddress[] addresses, int port, IPAddress? localAddress, CancellationToken ct)
+    internal static async Task<Stream> ConnectBoundAsync(IPAddress[] addresses, int port, IPAddress? localAddress, CancellationToken ct)
     {
         var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
         try
@@ -343,7 +343,7 @@ public class ZapretWatchdog
     }
 
     /// <summary>IPv4 address of the default physical network card (not the TUN adapter).</summary>
-    private static IPAddress? PhysicalIPv4Address()
+    internal static IPAddress? PhysicalIPv4Address()
     {
         var name = NetworkUtils.GetDefaultPhysicalInterfaceName();
         if (name.IsNullOrEmpty())
