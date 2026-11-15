@@ -313,6 +313,7 @@
                                             Header="{x:Static resx:ResUI.menuAddServerViaScan}"
                                             InputGestureText="Ctrl+S" />
                                         <MenuItem x:Name="menuAddServerViaImage" Header="{x:Static resx:ResUI.menuAddServerViaImage}" />
+                                        <MenuItem x:Name="menuAddServerViaFile" Header="{x:Static resx:AppText.ImportFromFile}" />
                                         <Separator />
                                         <MenuItem x:Name="menuAddVlessServer" Header="{x:Static resx:ResUI.menuAddVlessServer}" />
                                         <MenuItem x:Name="menuAddHysteria2Server" Header="{x:Static resx:ResUI.menuAddHysteria2Server}" />

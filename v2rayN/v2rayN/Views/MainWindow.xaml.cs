@@ -29,6 +29,29 @@ public partial class MainWindow
         btnNewUpdate.Click += MenuCheckUpdate_Click;
         menuBackupAndRestore.Click += MenuBackupAndRestore_Click;
 
+        // Servers from files: menu, or drop .conf / .json files anywhere on the window.
+        menuAddServerViaFile.Click += (_, _) =>
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog { Filter = AppText.ImportFileFilter, Multiselect = true };
+            if (dlg.ShowDialog() == true)
+            {
+                _ = ViewModel?.ImportServerFilesAsync(dlg.FileNames);
+            }
+        };
+        AllowDrop = true;
+        DragOver += (_, e) =>
+        {
+            e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+            e.Handled = true;
+        };
+        Drop += (_, e) =>
+        {
+            if (e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
+            {
+                _ = ViewModel?.ImportServerFilesAsync(files);
+            }
+        };
+
         pbTheme.Content ??= new ThemeSettingView();
         btnAppearance.Click += (_, _) => popAppearance.IsOpen = !popAppearance.IsOpen;
         btnSettings.Click += (_, _) =>

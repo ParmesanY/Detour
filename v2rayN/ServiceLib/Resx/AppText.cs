@@ -241,6 +241,24 @@ public static class AppText
     public static string NavSectionMonitor => T("НАБЛЮДЕНИЕ", "MONITOR");
     public static string NavSectionSystem => T("СИСТЕМА", "SYSTEM");
 
+    // Import servers from files
+    public static string ImportFromFile => T("Из файла (.conf, .json)…", "From file (.conf, .json)…");
+    public static string ImportFileFilter => T(
+        "Конфигурации серверов (*.conf;*.json;*.txt)|*.conf;*.json;*.txt|Все файлы (*.*)|*.*",
+        "Server configs (*.conf;*.json;*.txt)|*.conf;*.json;*.txt|All files (*.*)|*.*");
+    public static string ImportAdded => T("Добавлено серверов: {0} ({1})", "Servers added: {0} ({1})");
+    public static string ImportFailed => T("Не удалось разобрать {0}", "Could not read {0}");
+    public static string ImportUnknown => T(
+        "{0}: формат не распознан. Поддерживаются WireGuard .conf, полный JSON-конфиг Xray или sing-box и файл со ссылками.",
+        "{0}: unknown format. Supported: WireGuard .conf, full Xray or sing-box JSON config, a file with links.");
+    public static string ImportOpenVpn => T(
+        "{0}: это OpenVPN, его ядра не поддерживают. У Proton VPN и многих других сервисов можно скачать WireGuard-конфиг (.conf) — он подойдёт.",
+        "{0}: OpenVPN is not supported by the cores. Proton VPN and many others offer a WireGuard config (.conf) instead.");
+    public static string ImportAmneziaNote => T(
+        "В файле есть параметры AmneziaWG (Jc, S1, H1…): ядра их не понимают, сервер добавлен как обычный WireGuard и в России может не подключиться.",
+        "The file has AmneziaWG settings (Jc, S1, H1…): the cores ignore them, the server is added as plain WireGuard and may be blocked.");
+    public static string ImportDropHint => T("Отпустите, чтобы добавить серверы из файлов", "Drop to add servers from files");
+
     public static string CorePortBusy => T(
         "Не подключаюсь: порт {0} занят другой программой — {1}. Скорее всего, это второй VPN-клиент или старая копия программы. Закройте её и подключитесь снова.",
         "Not connecting: port {0} is used by another program, {1}. Most likely another VPN client or an old copy of this app. Close it and connect again.");

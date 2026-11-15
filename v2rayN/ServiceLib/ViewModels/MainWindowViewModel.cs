@@ -598,6 +598,28 @@ public partial class MainWindowViewModel : MyReactiveObject
         }
     }
 
+    /// <summary>Adds servers from files (menu "From file" or drag and drop onto the window).</summary>
+    public async Task ImportServerFilesAsync(IEnumerable<string> paths)
+    {
+        var messages = new List<string>();
+        var added = 0;
+        foreach (var path in paths.Where(File.Exists))
+        {
+            var result = await ServerFileImporter.ImportAsync(_config, path, _config.SubIndexId);
+            added += result.Added;
+            messages.Add(result.Message);
+        }
+        if (messages.Count == 0)
+        {
+            return;
+        }
+        if (added > 0)
+        {
+            await RefreshServersDispatcherAsync();
+        }
+        NoticeManager.Instance.Enqueue(string.Join(Environment.NewLine, messages));
+    }
+
     public async Task AddServerViaClipboardAsync(string? clipboardData)
     {
         var stringData = clipboardData;
