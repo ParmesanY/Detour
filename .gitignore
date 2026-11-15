@@ -405,3 +405,8 @@ FodyWeavers.xsd
 
 # release packaging output
 /out/
+
+# local notes
+/CLAUDE.md
+/docs/PLAN.md
+/.claude/
