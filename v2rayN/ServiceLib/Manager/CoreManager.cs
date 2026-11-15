@@ -140,6 +140,15 @@ public class CoreManager
         }
     }
 
+    /// <summary>Runs a ready test config (e.g. a modified custom JSON) as a separate core process.</summary>
+    public async Task<ProcessService?> RunTestConfigAsync(string json, ECoreType coreType)
+    {
+        var fileName = string.Format(Global.CoreSpeedtestConfigFileName, Utils.GetGuid(false));
+        await File.WriteAllTextAsync(Utils.GetBinConfigPath(fileName), json);
+        var coreInfo = CoreInfoManager.Instance.GetCoreInfo(coreType);
+        return await RunProcess(coreInfo, fileName, true, false);
+    }
+
     public async Task<ProcessService?> LoadCoreConfigSpeedtest(List<ServerTestItem> selecteds)
     {
         var coreType = selecteds.FirstOrDefault()?.CoreType == ECoreType.sing_box ? ECoreType.sing_box : ECoreType.Xray;

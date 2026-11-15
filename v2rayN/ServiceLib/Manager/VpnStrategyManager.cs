@@ -80,20 +80,35 @@ public static class VpnStrategyManager
         CancellationToken ct = default)
     {
         var profile = config.IndexId.IsNullOrEmpty() ? null : await AppManager.Instance.GetProfileItem(config.IndexId);
-        if (profile == null || profile.ConfigType.IsComplexType() || profile.Address.IsNullOrEmpty() || profile.Port <= 0)
+        // Custom (full JSON) Xray configs are tested as a copy with their own inbounds replaced.
+        var customJson = profile?.ConfigType == EConfigType.Custom && profile.CoreType is null or ECoreType.Xray
+            ? ReadCustomConfig(profile.Address)
+            : null;
+        var customServer = CustomConfigFragment.FirstServer(customJson);
+        string host;
+        int port;
+        if (customJson != null && customServer is { } cs && CustomConfigFragment.IsXray(customJson))
+        {
+            (host, port) = cs;
+        }
+        else if (profile != null && !profile.ConfigType.IsComplexType() && profile.Address.IsNotEmpty() && profile.Port > 0)
+        {
+            (host, port, customJson) = (profile.Address, profile.Port, null);
+        }
+        else
         {
             return new(VpnDiagnosis.NotTestable, null, [], AppText.VpnDiagNotTestable);
         }
 
         progress?.Report(AppText.VpnDiagReach);
-        var reachable = await TcpReachableAsync(profile.Address, profile.Port, ct);
+        var reachable = await TcpReachableAsync(host, port, ct);
 
         var results = new List<VpnStrategyResult>();
         foreach (var strategy in new VpnStrategy?[] { null }.Concat(Strategies))
         {
             ct.ThrowIfCancellationRequested();
             progress?.Report(string.Format(AppText.VpnDiagTrying, strategy?.Name ?? AppText.VpnStrategyOff));
-            var result = await TestAsync(config, profile, strategy, ct);
+            var result = customJson != null ? await TestCustomAsync(customJson, strategy, ct) : await TestAsync(config, profile!, strategy, ct);
             results.Add(result);
             // Without a strategy it already works: nothing to pick.
             if (strategy == null && result.Works)
@@ -176,6 +191,59 @@ public static class VpnStrategyManager
             {
                 await process.StopAsync();
             }
+        }
+    }
+
+    private static string? ReadCustomConfig(string? address)
+    {
+        if (address.IsNullOrEmpty())
+        {
+            return null;
+        }
+        var path = File.Exists(address) ? address : Utils.GetConfigPath(address);
+        return File.Exists(path) ? File.ReadAllText(path) : null;
+    }
+
+    private static async Task<VpnStrategyResult> TestCustomAsync(string json, VpnStrategy? strategy, CancellationToken ct)
+    {
+        var port = Utils.GetFreePort(AppManager.Instance.GetLocalPort(EInboundProtocol.speedtest));
+        var testJson = CustomConfigFragment.BuildTestConfig(json, port, strategy);
+        if (testJson == null)
+        {
+            return new(strategy, false, false, -1);
+        }
+        ProcessService? process = null;
+        try
+        {
+            process = await CoreManager.Instance.RunTestConfigAsync(testJson, ECoreType.Xray);
+            return process == null ? new(strategy, false, false, -1) : await MeasureAsync(port, strategy, ct);
+        }
+        finally
+        {
+            if (process != null)
+            {
+                await process.StopAsync();
+            }
+        }
+    }
+
+    /// <summary>Through the test core's local SOCKS port: a small request, then a 64 KB download.</summary>
+    private static async Task<VpnStrategyResult> MeasureAsync(int port, VpnStrategy? strategy, CancellationToken ct)
+    {
+        try
+        {
+            await Task.Delay(1000, ct);
+            using var handler = HttpClientHelper.CreateProxySocketsHttpHandler(port, new());
+            handler.ConnectTimeout = TimeSpan.FromSeconds(8);
+            using var client = new HttpClient(handler, false) { Timeout = Timeout.InfiniteTimeSpan };
+            var delay = await ConnectionHandler.GetRealPingTime(client, ct);
+            var big = delay > 0 && await BigTransferAsync(client, ct);
+            return new(strategy, delay > 0, big, delay);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            Logging.SaveLog($"{_tag}: {strategy?.Name ?? "off"}: {ex.Message}");
+            return new(strategy, false, false, -1);
         }
     }
 

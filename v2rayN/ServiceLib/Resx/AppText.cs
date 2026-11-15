@@ -174,8 +174,8 @@ public static class AppText
     public static string VpnStrategyFail => T("не работает", "doesn't work");
     public static string VpnDiagReach => T("Проверяю, отвечает ли адрес сервера…", "Checking whether the server address answers…");
     public static string VpnDiagTrying => T("Пробую стратегию: {0}…", "Trying strategy: {0}…");
-    public static string VpnDiagNotTestable => T("Не выбран сервер, или это сервер из готового JSON-конфига: его проверить нельзя.",
-        "No server selected, or it's a full JSON config server, which can't be tested.");
+    public static string VpnDiagNotTestable => T("Не выбран сервер, или это готовый конфиг sing-box / Clash: такой проверить нельзя.",
+        "No server selected, or it's a full sing-box / Clash config, which can't be tested.");
     public static string VpnDiagWorks => T("Сервер работает и без дробления. Если бывают обрывы, можно оставить «general» для подстраховки.",
         "The server works without fragmentation. If it drops sometimes, keep \"general\" as a safeguard.");
     public static string VpnDiagNeedsStrategy => T("DPI узнаёт рукопожатие и рвёт соединение. С дроблением «{0}» сервер работает: включена.",

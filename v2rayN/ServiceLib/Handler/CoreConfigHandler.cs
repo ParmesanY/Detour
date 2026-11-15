@@ -71,6 +71,18 @@ public static class CoreConfigHandler
             File.Copy(addressFileName, fileName);
             File.SetAttributes(fileName, FileAttributes.Normal); //Copy will keep the attributes of addressFileName, so we need to add write permissions to fileName just in case of addressFileName is a read-only file.
 
+            // Detour: the chosen VPN fragmentation strategy also applies to custom Xray configs.
+            if (VpnStrategyManager.Find(AppManager.Instance.Config.ZapretItem.VpnStrategy) is { } strategy
+                && node.CoreType is null or ECoreType.Xray)
+            {
+                var json = await File.ReadAllTextAsync(fileName);
+                var fragmented = CustomConfigFragment.Apply(json, strategy);
+                if (!ReferenceEquals(fragmented, json))
+                {
+                    await File.WriteAllTextAsync(fileName, fragmented);
+                }
+            }
+
             //check again
             if (!File.Exists(fileName))
             {

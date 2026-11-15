@@ -247,6 +247,52 @@ public class DetourFeaturesTests
         await Assert.That(config.ZapretItem.VpnStrategy).IsEmpty();
     }
 
+    private const string CustomXray = """
+        {
+          // provider comment
+          "log": {"loglevel": "debug"},
+          "metrics": {"listen": "127.0.0.1:11111"},
+          "inbounds": [{"tag": "socks-in", "port": 10808, "protocol": "mixed"}],
+          "outbounds": [
+            {"tag": "proxy", "protocol": "vless",
+             "settings": {"vnext": [{"address": "vpn.example.net", "port": 8443, "users": [{"id": "x"}]}]},
+             "streamSettings": {"network": "tcp", "security": "reality"}},
+            {"tag": "cdn", "protocol": "trojan",
+             "settings": {"servers": [{"address": "1.2.3.4", "port": 443}]},
+             "streamSettings": {"security": "tls", "finalmask": {"tcp": [{"type": "own"}]}}},
+            {"tag": "direct", "protocol": "freedom"}
+          ],
+        }
+        """;
+
+    [Test]
+    public async Task CustomConfig_FragmentAndTestCopy()
+    {
+        var fine = VpnStrategyManager.Find("fine")!;
+        await Assert.That(CustomConfigFragment.IsXray(CustomXray)).IsTrue();
+        await Assert.That(CustomConfigFragment.FirstServer(CustomXray)).IsEqualTo(("vpn.example.net", 8443));
+
+        var applied = JsonNode.Parse(CustomConfigFragment.Apply(CustomXray, fine))!;
+        var mask = applied["outbounds"]![0]!["streamSettings"]!["finalmask"]!["tcp"]![0]!;
+        await Assert.That(mask["type"]!.GetValue<string>()).IsEqualTo("fragment");
+        // REALITY: tlshello becomes the first writes.
+        await Assert.That(mask["settings"]!["packets"]!.GetValue<string>()).IsEqualTo("1-3");
+        await Assert.That(mask["settings"]!["lengths"]![0]!.GetValue<string>()).IsEqualTo("10-30");
+        // The provider's own mask stays.
+        await Assert.That(applied["outbounds"]![1]!["streamSettings"]!["finalmask"]!["tcp"]![0]!["type"]!.GetValue<string>()).IsEqualTo("own");
+        await Assert.That(applied["outbounds"]![2]!["streamSettings"]).IsNull();
+
+        var test = JsonNode.Parse(CustomConfigFragment.BuildTestConfig(CustomXray, 23456, null)!)!;
+        await Assert.That(test["inbounds"]!.AsArray().Count).IsEqualTo(1);
+        await Assert.That(test["inbounds"]![0]!["port"]!.GetValue<int>()).IsEqualTo(23456);
+        await Assert.That(test["inbounds"]![0]!["tag"]!.GetValue<string>()).IsEqualTo("socks-in");
+        await Assert.That(test["metrics"]).IsNull();
+        await Assert.That(test["outbounds"]![0]!["streamSettings"]!["finalmask"]).IsNull();
+
+        await Assert.That(CustomConfigFragment.IsXray("""{"outbounds":[{"type":"vless","server":"a"}]}""")).IsFalse();
+        await Assert.That(CustomConfigFragment.Apply("not json", fine)).IsEqualTo("not json");
+    }
+
     [Test]
     public async Task Warp_ParsesTrace()
     {
