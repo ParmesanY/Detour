@@ -269,6 +269,7 @@ public static class AppText
         "Download {0} and restart Detour? Servers, rules and settings are kept.");
     public static string UpdateFailed => T("Не удалось обновить: {0}", "Update failed: {0}");
 
+    public static string AutoPickCoreSwitched => T("«{0}» лучше работает на ядре {1}: переподключаюсь", "\"{0}\" works better on {1}: reconnecting");
     public static string AutoFailover => T("Авто-смена сервера", "Auto failover");
     public static string AutoFailoverHint => T(
         "Если текущий сервер перестал пропускать трафик (3 проверки подряд, а обычный интернет есть), Detour переключится на другой сервер той же подписки: сначала с лучшим последним пингом.",

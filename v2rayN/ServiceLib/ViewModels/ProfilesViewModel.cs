@@ -592,6 +592,15 @@ public partial class ProfilesViewModel : MyReactiveObject
             Logging.SaveLog($"SetDefaultServer: switching to {item.Remarks}");
             await RefreshServers();
             Reload();
+            if (_config.AutoPickCore != false && item.CoreType is null && item.ConfigType != EConfigType.Custom)
+            {
+                _ = Task.Run(async () =>
+                {
+                    // let the regular reload finish first
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                    await AutoPickCoreAsync(item);
+                });
+            }
         }
     }
 
@@ -781,7 +790,13 @@ public partial class ProfilesViewModel : MyReactiveObject
             return;
         }
 
-        _speedtestService ??= new SpeedtestService(_config, async (SpeedTestResult result) =>
+        await EnsureSpeedtestService().PickCoreLoop(lstSelected);
+        await RefreshServers();
+    }
+
+    private SpeedtestService EnsureSpeedtestService()
+    {
+        return _speedtestService ??= new SpeedtestService(_config, async (SpeedTestResult result) =>
         {
             RxSchedulers.MainThreadScheduler.Schedule(() =>
             {
@@ -789,8 +804,49 @@ public partial class ProfilesViewModel : MyReactiveObject
             });
             await Task.CompletedTask;
         });
-        await _speedtestService.PickCoreLoop(lstSelected);
-        await RefreshServers();
+    }
+
+    /// <summary>
+    /// A server picked for the first time gets its core chosen automatically: both cores are tried on
+    /// it in the background (the same test as "Pick core") and the faster working one is stored on the
+    /// server. If that differs from the core it was started on, the connection is reloaded once.
+    /// Custom (full JSON) configs carry their own core and are left alone.
+    /// </summary>
+    /// <summary>At start: the active server too, if its core was never picked.</summary>
+    public async Task AutoPickCoreForActiveAsync()
+    {
+        if (_config.AutoPickCore == false || _config.IndexId.IsNullOrEmpty())
+        {
+            return;
+        }
+        var item = await AppManager.Instance.GetProfileItem(_config.IndexId);
+        if (item is { CoreType: null } && item.ConfigType != EConfigType.Custom)
+        {
+            await AutoPickCoreAsync(item);
+        }
+    }
+
+    private async Task AutoPickCoreAsync(ProfileItem item)
+    {
+        try
+        {
+            var before = AppManager.Instance.GetCoreType(item, item.ConfigType);
+            Logging.SaveLog($"AutoPickCore: testing cores for {item.Remarks} (started on {before})");
+            await EnsureSpeedtestService().PickCoreLoop([item]);
+            var after = await AppManager.Instance.GetProfileItem(item.IndexId);
+            await RefreshServers();
+            if (after?.CoreType is { } picked && picked != before && _config.IndexId == item.IndexId)
+            {
+                Logging.SaveLog($"AutoPickCore: {item.Remarks} works better on {picked}, reloading");
+                NoticeManager.Instance.Enqueue(string.Format(AppText.AutoPickCoreSwitched, item.Remarks,
+                    picked == ECoreType.sing_box ? "sing-box" : picked.ToString()));
+                Reload();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog("AutoPickCore", ex);
+        }
     }
 
     public void ServerSpeedtestStop()

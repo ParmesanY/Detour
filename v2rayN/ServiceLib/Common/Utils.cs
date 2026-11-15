@@ -926,7 +926,7 @@ public class Utils
         try
         {
             return blFull
-                ? $"{Global.AppName} - V{GetVersionInfo()} - {RuntimeInformation.ProcessArchitecture}"
+                ? $"{Global.AppName} - V{AppUpdateManager.CurrentVersion} - {RuntimeInformation.ProcessArchitecture}"
                 : $"{Global.CompatClientName}/{GetVersionInfo()}";
         }
         catch (Exception ex)

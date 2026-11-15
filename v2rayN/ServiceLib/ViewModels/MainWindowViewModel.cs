@@ -490,6 +490,15 @@ public partial class MainWindowViewModel : MyReactiveObject
         await RefreshServersDispatcherAsync();
 
         await Reload();
+
+        if (ProfilesViewModel != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                await ProfilesViewModel.AutoPickCoreForActiveAsync();
+            });
+        }
     }
 
     #endregion Init

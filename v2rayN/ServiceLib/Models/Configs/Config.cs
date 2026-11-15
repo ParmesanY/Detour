@@ -45,6 +45,9 @@ public class Config
     /// <summary>Switch to another server of the group when the active one stops passing traffic.</summary>
     public bool AutoFailover { get; set; }
 
+    /// <summary>Test both cores on a server the first time it is picked and keep the better one (null = on).</summary>
+    public bool? AutoPickCore { get; set; }
+
     /// <summary>Password-protect the local proxy port in TUN mode (null = on).</summary>
     public bool? ProtectLocalProxy { get; set; }
 

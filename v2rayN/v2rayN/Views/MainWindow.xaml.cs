@@ -196,7 +196,7 @@ public partial class MainWindow
         });
 
         Title = $"{Utils.GetVersion()} - {(Utils.IsAdministrator() ? ResUI.RunAsAdmin : ResUI.NotRunAsAdmin)}";
-        txtAppSubtitle.Text = $"v{Utils.GetVersionInfo()} · {(Utils.IsAdministrator() ? "ADMIN" : "USER")}";
+        txtAppSubtitle.Text = $"v{AppUpdateManager.CurrentVersion} ·{(Utils.IsAdministrator() ? "ADMIN" : "USER")}";
         txtAppSubtitle.ToolTip = Utils.IsAdministrator() ? ResUI.RunAsAdmin : ResUI.NotRunAsAdmin;
         if (_config.UiItem.AutoHideStartup)
         {

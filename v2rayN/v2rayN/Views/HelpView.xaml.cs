@@ -12,7 +12,7 @@ public partial class HelpView
     public HelpView()
     {
         InitializeComponent();
-        txtVersion.Text = $"Detour {AppUpdateManager.CurrentVersion} · v2rayN {Utils.GetVersionInfo()}";
+        txtVersion.Text = $"Detour {AppUpdateManager.CurrentVersion}";
         IsVisibleChanged += (_, _) =>
         {
             if (IsVisible)
