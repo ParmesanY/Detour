@@ -118,6 +118,32 @@ public sealed class WarpProxyManager
         }
     }
 
+    /// <summary>
+    /// Turns WARP on or off the way the page's switch does: remembers it for the next start, starts or
+    /// stops the proxy and reloads the core so "+warp" rules follow.
+    /// </summary>
+    public async Task<(bool Success, string Message)> SetEnabledAsync(bool enabled)
+    {
+        var config = AppManager.Instance.Config;
+        if (enabled && !WarpManager.IsRegistered(config.WarpItem))
+        {
+            return (false, AppText.WarpRegisterFirst);
+        }
+        config.WarpItem.Enabled = enabled;
+        await ConfigHandler.SaveConfig(config);
+        var result = (true, string.Empty);
+        if (enabled && !IsRunning)
+        {
+            result = await StartAsync();
+        }
+        else if (!enabled && IsRunning)
+        {
+            await StopAsync();
+        }
+        AppEvents.CoreReloadRequested.Publish();
+        return result;
+    }
+
     public async Task StopAsync()
     {
         await _lock.WaitAsync();

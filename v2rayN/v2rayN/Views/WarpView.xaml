@@ -26,6 +26,13 @@
                 Text="{x:Static resx:AppText.WarpSubtitle}"
                 TextWrapping="Wrap" />
 
+            <ui:InfoBar
+                Margin="0,0,0,12"
+                IsClosable="False"
+                IsOpen="{Binding NoRulesHint}"
+                Message="{x:Static resx:AppText.WarpNoRulesHint}"
+                Severity="Warning" />
+
             <!--  Status  -->
             <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon WeatherCloudy24}">
                 <ui:CardControl.Header>

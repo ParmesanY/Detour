@@ -42,6 +42,12 @@ public static class WarpManager
         return IPAddress.TryParse(host, out _) || Uri.CheckHostName(host) == UriHostNameType.Dns;
     }
 
+    /// <summary>Any enabled rule sends traffic to WARP (directly or through the "all via …" switch).</summary>
+    public static bool HasWarpRules(Config config) =>
+        config.ConnectionRulesOverride == EConnectionMode.Warp
+        || (config.ConnectionRulesOverride is null
+            && (config.ConnectionRules ?? []).Any(r => r.Enabled && r.Mode == EConnectionMode.Warp));
+
     public static bool IsRegistered(WarpItem item) =>
         item.PrivateKey.IsNotEmpty() && item.PeerPublicKey.IsNotEmpty() && item.AddressV4.IsNotEmpty();
 

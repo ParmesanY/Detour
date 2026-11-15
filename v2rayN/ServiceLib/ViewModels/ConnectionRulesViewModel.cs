@@ -1,4 +1,4 @@
-namespace ServiceLib.ViewModels;
+﻿namespace ServiceLib.ViewModels;
 
 /// <summary>One preset card on the rules page.</summary>
 public record PresetCardModel(string Target, string Name, string Mode, string Why, string Line);
@@ -53,7 +53,7 @@ public partial class ConnectionRulesViewModel : MyReactiveObject
     {
         _config = AppManager.Instance.Config;
 
-        Presets = ConnectionPresets.All
+        Presets = ConnectionPresets.AllWithComposite
             .Select(p => new PresetCardModel(p.Target, p.Name, AppText.ModeName(p.RecommendedMode), p.Why,
                 ConnectionRuleParser.Format(new ConnectionRule { Target = p.Target, Mode = p.RecommendedMode })))
             .ToList();

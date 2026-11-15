@@ -52,6 +52,21 @@ public partial class MainWindow
             }
         };
 
+        // First-run wizard, the first time the window is actually shown (the app may start in the tray).
+        var wizardChecked = false;
+        IsVisibleChanged += async (_, e) =>
+        {
+            if (wizardChecked || e.NewValue is not true || ViewModel is null)
+            {
+                return;
+            }
+            wizardChecked = true;
+            if (await FirstRunWindow.ShouldShowAsync(_config))
+            {
+                new FirstRunWindow(text => ViewModel.AddServerViaClipboardAsync(text)) { Owner = this }.ShowDialog();
+            }
+        };
+
         pbTheme.Content ??= new ThemeSettingView();
         btnAppearance.Click += (_, _) => popAppearance.IsOpen = !popAppearance.IsOpen;
         btnSettings.Click += (_, _) =>

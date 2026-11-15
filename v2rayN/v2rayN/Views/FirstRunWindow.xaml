@@ -1,0 +1,128 @@
+<ui:FluentWindow
+    x:Class="v2rayN.Views.FirstRunWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="{x:Static resx:AppText.WizTitle}"
+    Width="640"
+    SizeToContent="Height"
+    ExtendsContentIntoTitleBar="True"
+    ResizeMode="NoResize"
+    WindowBackdropType="None"
+    WindowStartupLocation="CenterOwner">
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar
+            Title="Detour"
+            ShowMaximize="False"
+            ShowMinimize="False" />
+        <StackPanel Grid.Row="1" Margin="28,8,28,24">
+            <ui:TextBlock FontTypography="Title" Text="{x:Static resx:AppText.WizTitle}" />
+            <TextBlock
+                Margin="0,6,0,20"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                Text="{x:Static resx:AppText.WizIntro}"
+                TextWrapping="Wrap" />
+
+            <!--  Step 1: subscription  -->
+            <ui:Card Margin="0,0,0,8" Padding="16">
+                <StackPanel>
+                    <DockPanel>
+                        <ui:SymbolIcon
+                            x:Name="icoStep1"
+                            Margin="0,0,8,0"
+                            DockPanel.Dock="Left"
+                            Symbol="CheckmarkCircle24"
+                            Visibility="Collapsed" />
+                        <TextBlock FontWeight="SemiBold" Text="{x:Static resx:AppText.WizStep1}" />
+                    </DockPanel>
+                    <TextBlock
+                        Margin="0,4,0,10"
+                        FontSize="12"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                        Text="{x:Static resx:AppText.WizStep1Hint}"
+                        TextWrapping="Wrap" />
+                    <DockPanel>
+                        <ui:Button
+                            x:Name="btnAdd"
+                            Margin="8,0,0,0"
+                            Appearance="Primary"
+                            Content="{x:Static resx:AppText.WizAdd}"
+                            DockPanel.Dock="Right" />
+                        <ui:Button
+                            x:Name="btnPaste"
+                            Margin="8,0,0,0"
+                            Content="{x:Static resx:AppText.WizPaste}"
+                            DockPanel.Dock="Right"
+                            Icon="{ui:SymbolIcon ClipboardPaste24}" />
+                        <ui:TextBox x:Name="txtLink" PlaceholderText="https://…" />
+                    </DockPanel>
+                    <TextBlock
+                        x:Name="txtStep1Status"
+                        Margin="0,8,0,0"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </ui:Card>
+
+            <!--  Step 2: zapret  -->
+            <ui:Card Margin="0,0,0,8" Padding="16">
+                <StackPanel>
+                    <DockPanel>
+                        <ui:SymbolIcon
+                            x:Name="icoStep2"
+                            Margin="0,0,8,0"
+                            DockPanel.Dock="Left"
+                            Symbol="CheckmarkCircle24"
+                            Visibility="Collapsed" />
+                        <TextBlock FontWeight="SemiBold" Text="{x:Static resx:AppText.WizStep2}" />
+                    </DockPanel>
+                    <TextBlock
+                        Margin="0,4,0,10"
+                        FontSize="12"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                        Text="{x:Static resx:AppText.WizStep2Hint}"
+                        TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button
+                            x:Name="btnZapret"
+                            Appearance="Primary"
+                            Icon="{ui:SymbolIcon ShieldLock24}" />
+                        <ui:ProgressRing
+                            x:Name="progress"
+                            Width="18"
+                            Height="18"
+                            Margin="12,0,0,0"
+                            IsIndeterminate="True"
+                            Visibility="Collapsed" />
+                    </StackPanel>
+                    <TextBlock
+                        x:Name="txtStep2Status"
+                        Margin="0,8,0,0"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </ui:Card>
+
+            <TextBlock
+                Margin="0,12,0,0"
+                FontSize="12"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                Text="{x:Static resx:AppText.WizFinishHint}"
+                TextWrapping="Wrap" />
+            <StackPanel
+                Margin="0,16,0,0"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal">
+                <ui:Button
+                    x:Name="btnDone"
+                    Appearance="Primary"
+                    Content="{x:Static resx:AppText.WizDone}" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

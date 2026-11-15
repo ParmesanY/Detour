@@ -12,6 +12,16 @@ public partial class StatusBarView
         _config = AppManager.Instance.Config;
 
         menuExit.Click += menuExit_Click;
+
+        // WARP on/off from the tray: shows the real state each time the menu opens.
+        tbNotify.TrayPopupOpen += (_, _) => menuWarp.IsChecked = WarpProxyManager.Instance.IsRunning;
+        menuWarp.Click += async (_, _) =>
+        {
+            var on = menuWarp.IsChecked;
+            var (ok, msg) = await WarpProxyManager.Instance.SetEnabledAsync(on);
+            menuWarp.IsChecked = WarpProxyManager.Instance.IsRunning;
+            NoticeManager.Instance.Enqueue(ok ? $"WARP: {(on ? AppText.WarpRunning : AppText.WarpStopped)}" : $"WARP: {msg}");
+        };
         txtRunningServerDisplay.PreviewMouseDown += txtRunningInfoDisplay_MouseDoubleClick;
         txtRunningInfoDisplay.PreviewMouseDown += txtRunningInfoDisplay_MouseDoubleClick;
 

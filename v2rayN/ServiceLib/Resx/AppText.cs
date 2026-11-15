@@ -279,6 +279,37 @@ public static class AppText
         "If the active server stops passing traffic (3 checks in a row while the plain internet works), Detour switches to another server of the same subscription, best last ping first.");
     public static string AutoFailoverSwitched => T("Сервер не отвечал, переключаюсь на «{0}»", "Server stopped responding, switching to \"{0}\"");
 
+    // First-run wizard
+    public static string WizTitle => T("Добро пожаловать в Detour", "Welcome to Detour");
+    public static string WizIntro => T(
+        "Два шага, и всё заработает. Любой шаг можно пропустить и сделать позже.",
+        "Two steps and you're set. Any step can be skipped and done later.");
+    public static string WizStep1 => T("1. Подписка или сервер", "1. Subscription or server");
+    public static string WizStep1Hint => T(
+        "Вставьте ссылку на подписку от вашего VPN-провайдера (https://…) или ссылку на сервер (vless://, vmess://, trojan://…).",
+        "Paste the subscription link from your VPN provider (https://…) or a server link (vless://, vmess://, trojan://…).");
+    public static string WizPaste => T("Вставить", "Paste");
+    public static string WizAdd => T("Добавить", "Add");
+    public static string WizAdding => T("Загружаю серверы…", "Loading servers…");
+    public static string WizAdded => T("Готово: серверов — {0}", "Done: {0} servers");
+    public static string WizAddFailed => T("Серверы не добавились. Проверьте ссылку или включите другой VPN на время загрузки.",
+        "No servers were added. Check the link, or turn on another VPN while it loads.");
+    public static string WizStep2 => T("2. zapret для YouTube и Discord", "2. zapret for YouTube and Discord");
+    public static string WizStep2Hint => T(
+        "zapret открывает YouTube и Discord без VPN: быстрее и без нагрузки на сервер. Detour сам переберёт стратегии и оставит ту, что работает у вашего провайдера (1–3 минуты).",
+        "zapret opens YouTube and Discord without the VPN: faster and with no load on the server. Detour tries the strategies and keeps the one that works with your ISP (1–3 minutes).");
+    public static string WizZapretAdmin => T("Нужны права администратора: Detour перезапустится и продолжит с этого шага.",
+        "Administrator rights are needed: Detour restarts and continues from this step.");
+    public static string WizZapretRestart => T("Перезапустить от администратора", "Restart as administrator");
+    public static string WizZapretPick => T("Подобрать стратегию", "Find a strategy");
+    public static string WizZapretNotInstalled => T("zapret не установлен: его можно скачать позже на странице zapret.",
+        "zapret is not installed: download it later on the zapret page.");
+    public static string WizDone => T("Готово", "Done");
+    public static string WizSkip => T("Пропустить", "Skip");
+    public static string WizFinishHint => T(
+        "Дальше: выберите сервер в списке и нажмите «Подключить». Что идёт через VPN, а что напрямую, настраивается на странице «Правила».",
+        "Next: pick a server in the list and press Connect. What goes through the VPN and what goes direct is set on the Rules page.");
+
     // WARP page
     public static string NavWarp => "WARP";
     public static string WarpTitle => "Cloudflare WARP";
@@ -325,6 +356,13 @@ public static class AppText
     public static string WarpTestOk => T("WARP работает: {0}, {1}, {2} мс", "WARP works: {0}, {1}, {2} ms");
     public static string WarpTestNotWarp => T("Ответ получен, но не через WARP", "Got an answer, but not through WARP");
     public static string WarpTestFailed => T("Не удалось: {0}", "Failed: {0}");
+    public static string WarpTrayItem => "Cloudflare WARP";
+    public static string WarpRegisterFirst => T("Сначала зарегистрируйте устройство на странице WARP", "Register a device on the WARP page first");
+    public static string WarpNoRulesHint => T(
+        "WARP запущен, но через него сейчас ничего не идёт: нет ни одного правила с +warp. " +
+        "Добавьте на странице «Правила» набор @warp или своё правило, например example.com +warp.",
+        "WARP is running, but nothing goes through it: there is no +warp rule. " +
+        "Add the @warp preset on the Rules page or a rule of your own, e.g. example.com +warp.");
     public static string WarpRulesNote => T(
         "Пока WARP выключен, правила с +warp идут через VPN. Пример правила: spotify.com +warp",
         "While WARP is off, +warp rules go through the VPN. Example rule: spotify.com +warp");

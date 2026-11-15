@@ -126,6 +126,24 @@ public class DetourFeaturesTests
     }
 
     [Test]
+    public async Task Warp_PresetCombinesBlockedServicesAndCountsAsWarpRule()
+    {
+        var preset = ConnectionPresets.Find("@warp");
+        await Assert.That(preset).IsNotNull();
+        await Assert.That(preset!.RecommendedMode).IsEqualTo(EConnectionMode.Warp);
+        await Assert.That(preset.Domains).Contains("instagram.com");
+        await Assert.That(preset.Domains).Contains("rutracker.org");
+        await Assert.That(preset.Domains).DoesNotContain("chatgpt.com");
+
+        var config = new Config { ConnectionRules = [new() { Target = "@youtube", Mode = EConnectionMode.Zapret }] };
+        await Assert.That(WarpManager.HasWarpRules(config)).IsFalse();
+        config.ConnectionRules.Add(ConnectionRuleParser.Parse("@warp +warp", out _)!);
+        await Assert.That(WarpManager.HasWarpRules(config)).IsTrue();
+        config.ConnectionRulesOverride = EConnectionMode.Vpn;
+        await Assert.That(WarpManager.HasWarpRules(config)).IsFalse();
+    }
+
+    [Test]
     public async Task Warp_ParsesTrace()
     {
         var trace = WarpProxyManager.ParseTrace("fl=1\nip=104.28.1.1\ncolo=WAW\nloc=PL\nwarp=on\n");

@@ -49,6 +49,12 @@ public class Config
     /// <summary>Test both cores on a server the first time it is picked and keep the better one (null = on).</summary>
     public bool? AutoPickCore { get; set; }
 
+    /// <summary>
+    /// First-run wizard: null = not shown yet (shown when there are no servers), false = in progress
+    /// (it restarted the app as administrator and shows again), true = closed, never shown again.
+    /// </summary>
+    public bool? FirstRunDone { get; set; }
+
     /// <summary>Password-protect the local proxy port in TUN mode (null = on).</summary>
     public bool? ProtectLocalProxy { get; set; }
 

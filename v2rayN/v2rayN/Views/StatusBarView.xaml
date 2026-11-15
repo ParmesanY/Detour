@@ -221,6 +221,11 @@
                         Header="{x:Static resx:ResUI.menuSubUpdateViaProxy}" />
                     <Separator />
                     <MenuItem
+                        x:Name="menuWarp"
+                        Height="{StaticResource MenuItemHeight}"
+                        Header="{x:Static resx:AppText.WarpTrayItem}"
+                        IsCheckable="True" />
+                    <MenuItem
                         x:Name="menuCopyProxyCmdToClipboard"
                         Height="{StaticResource MenuItemHeight}"
                         Header="{x:Static resx:ResUI.menuCopyProxyCmdToClipboard}" />

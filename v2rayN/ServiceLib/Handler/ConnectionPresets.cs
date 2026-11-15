@@ -176,12 +176,29 @@ public static class ConnectionPresets
             ["qbittorrent.exe", "uTorrent.exe", "BitTorrent.exe", "transmission-qt.exe", "tixati.exe"]),
     ];
 
+    /// <summary>
+    /// "@warp": services blocked by the ISP (Roskomnadzor) that don't refuse Russian users themselves.
+    /// WARP hides the traffic from the ISP, which is all they need; its exit may still look Russian,
+    /// so services that refuse Russia (OpenAI, Spotify…) stay on VPN. Built from the presets above.
+    /// </summary>
+    private static readonly string[] _warpPresetIds = ["instagram", "twitter", "linkedin", "rutracker", "signal", "viber"];
+
+    public static ConnectionPreset Warp { get; } = new("warp", "Через WARP: заблокированные в РФ", EConnectionMode.Warp,
+        "Сайты, которые блокирует провайдер, но сами пускают россиян: Instagram, X, LinkedIn, Rutracker, Signal, Viber. " +
+        "WARP скрывает трафик от провайдера и не нагружает ваш VPN-сервер. Нужна включённая страница WARP, без неё — через VPN.",
+        [.. _warpPresetIds.SelectMany(id => All.First(p => p.Id == id).Domains)],
+        [],
+        [.. _warpPresetIds.SelectMany(id => All.First(p => p.Id == id).Processes)]);
+
+    /// <summary>All presets, including the composite ones.</summary>
+    public static IEnumerable<ConnectionPreset> AllWithComposite => All.Append(Warp);
+
     public static ConnectionPreset? Find(string target)
     {
         var id = target.StartsWith(ConnectionRuleParser.PresetPrefix, StringComparison.Ordinal)
             ? target[ConnectionRuleParser.PresetPrefix.Length..]
             : target;
-        return All.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+        return AllWithComposite.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Rules a new user starts with.</summary>

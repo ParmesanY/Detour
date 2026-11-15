@@ -44,7 +44,18 @@ public partial class ZapretViewModel : MyReactiveObject
         Refresh();
 
         // winws is usually started at app start, after this page was built; follow its real state.
-        ZapretManager.Instance.StateChanged += () => RxSchedulers.MainThreadScheduler.Schedule(RefreshState);
+        // Full refresh: the first-run wizard can switch zapret on and pick a strategy from outside this page.
+        ZapretManager.Instance.StateChanged += () => RxSchedulers.MainThreadScheduler.Schedule(() =>
+        {
+            if (!IsBusy)
+            {
+                Refresh();
+            }
+            else
+            {
+                RefreshState();
+            }
+        });
 
         this.WhenAnyValue(x => x.Enabled).Skip(1).SubscribeAsync(async v =>
         {

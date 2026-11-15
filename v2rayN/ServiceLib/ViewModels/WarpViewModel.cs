@@ -18,6 +18,7 @@ public partial class WarpViewModel : MyReactiveObject
     [Reactive] public partial bool IsBusy { get; set; }
     [Reactive] public partial bool Enabled { get; set; }
     [Reactive] public partial bool Noise { get; set; }
+    [Reactive] public partial bool NoRulesHint { get; set; }
     [Reactive] public partial string PortText { get; set; } = string.Empty;
     [Reactive] public partial string EndpointText { get; set; } = string.Empty;
     [Reactive] public partial string StateText { get; set; } = string.Empty;
@@ -48,8 +49,13 @@ public partial class WarpViewModel : MyReactiveObject
 
         Refresh();
 
-        // The proxy is usually started at app start, after this page was built; follow its real state.
-        WarpProxyManager.Instance.StateChanged += () => RxSchedulers.MainThreadScheduler.Schedule(RefreshState);
+        // The proxy is started at app start (after this page was built) and from the tray menu;
+        // follow its real state and the saved switch.
+        WarpProxyManager.Instance.StateChanged += () => RxSchedulers.MainThreadScheduler.Schedule(Refresh);
+        // Rules are edited on another page: re-check whether any of them use WARP.
+        AppEvents.CoreReloadRequested.AsObservable()
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
+            .Subscribe(_ => RefreshRulesHint());
 
         this.WhenAnyValue(x => x.Enabled).Skip(1).SubscribeAsync(async v =>
         {
@@ -57,16 +63,12 @@ public partial class WarpViewModel : MyReactiveObject
             {
                 return;
             }
-            _config.WarpItem.Enabled = v;
-            await ConfigHandler.SaveConfig(_config);
-            if (v && IsRegistered && !WarpProxyManager.Instance.IsRunning)
+            await RunBusy(async () =>
             {
-                await StartAsync();
-            }
-            else if (!v && WarpProxyManager.Instance.IsRunning)
-            {
-                await StopAsync();
-            }
+                var (_, msg) = await WarpProxyManager.Instance.SetEnabledAsync(v);
+                ProgressText = msg;
+                Refresh();
+            });
         });
 
         this.WhenAnyValue(x => x.Noise).Skip(1).SubscribeAsync(async v =>
@@ -105,6 +107,13 @@ public partial class WarpViewModel : MyReactiveObject
     {
         IsRunning = WarpProxyManager.Instance.IsRunning;
         StateText = IsRunning ? AppText.WarpRunning : AppText.WarpStopped;
+        RefreshRulesHint();
+    }
+
+    /// <summary>WARP running with no "+warp" rule: nothing goes through it, say so.</summary>
+    private void RefreshRulesHint()
+    {
+        NoRulesHint = IsRunning && !WarpManager.HasWarpRules(_config);
     }
 
     private async Task RunBusy(Func<Task> action)
