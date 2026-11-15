@@ -13,6 +13,43 @@
                 Text="{x:Static resx:HelpContent.Subtitle}"
                 TextWrapping="Wrap" />
 
+            <ui:Card Margin="0,0,0,16" Padding="16,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            FontFamily="{DynamicResource DetourMonoFont}"
+                            FontSize="11"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            Text="{x:Static resx:AppText.UpdateHeader}" />
+                        <TextBlock x:Name="txtVersion" Margin="0,2,0,0" FontFamily="{DynamicResource DetourMonoFont}" />
+                        <TextBlock
+                            x:Name="txtUpdateStatus"
+                            Margin="0,4,0,0"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:Button
+                        x:Name="btnDiagnostics"
+                        Grid.Column="1"
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        Click="BtnDiagnostics_Click"
+                        Content="{x:Static resx:AppText.DiagButton}" />
+                    <ui:Button
+                        x:Name="btnUpdate"
+                        Grid.Column="2"
+                        VerticalAlignment="Center"
+                        Appearance="Primary"
+                        Click="BtnUpdate_Click"
+                        Content="{x:Static resx:AppText.UpdateCheck}" />
+                </Grid>
+            </ui:Card>
+
             <ItemsControl ItemsSource="{x:Static resx:HelpContent.Sections}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>

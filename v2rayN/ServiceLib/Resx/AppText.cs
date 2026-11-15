@@ -257,6 +257,44 @@ public static class AppText
     public static string ImportAmneziaNote => T(
         "В файле есть параметры AmneziaWG (Jc, S1, H1…): ядра их не понимают, сервер добавлен как обычный WireGuard и в России может не подключиться.",
         "The file has AmneziaWG settings (Jc, S1, H1…): the cores ignore them, the server is added as plain WireGuard and may be blocked.");
+    public static string UpdateAvailableNotice => T("Доступна новая версия Detour {0}: Справка → Обновить", "Detour {0} is available: Help → Update");
+    public static string UpdateHeader => T("ВЕРСИЯ", "VERSION");
+    public static string UpdateCheck => T("Проверить обновления", "Check for updates");
+    public static string UpdateInstall => T("Обновить до {0}", "Update to {0}");
+    public static string UpdateChecking => T("Проверяю…", "Checking…");
+    public static string UpdateLatest => T("Установлена последняя версия", "You have the latest version");
+    public static string UpdateUnreachable => T("GitHub недоступен или релизов нет. Попробуйте при включённом VPN.", "GitHub unreachable or no releases. Try with the VPN on.");
+    public static string UpdateNotConfigured => T("Локальная сборка: самообновление отключено", "Local build: self-update is off");
+    public static string UpdateConfirm => T("Скачать {0} и перезапустить Detour? Серверы, правила и настройки сохранятся.",
+        "Download {0} and restart Detour? Servers, rules and settings are kept.");
+    public static string UpdateFailed => T("Не удалось обновить: {0}", "Update failed: {0}");
+
+    public static string AutoFailover => T("Авто-смена сервера", "Auto failover");
+    public static string AutoFailoverHint => T(
+        "Если текущий сервер перестал пропускать трафик (3 проверки подряд, а обычный интернет есть), Detour переключится на другой сервер той же подписки: сначала с лучшим последним пингом.",
+        "If the active server stops passing traffic (3 checks in a row while the plain internet works), Detour switches to another server of the same subscription, best last ping first.");
+    public static string AutoFailoverSwitched => T("Сервер не отвечал, переключаюсь на «{0}»", "Server stopped responding, switching to \"{0}\"");
+
+    public static string WarpMenu => T("Cloudflare WARP (эксперимент)", "Cloudflare WARP (experimental)");
+    public static string WarpHint => T(
+        "Бесплатно регистрирует устройство WARP и добавляет два сервера: «WARP» (обычный WireGuard) и «WARP + noise» (с шумом против DPI, через Xray). Выход в ближайшем городе Cloudflare: от провайдера скрывает, но гео-блокировки сайтов может не обойти.",
+        "Registers a free WARP device and adds two servers: \"WARP\" (plain WireGuard) and \"WARP + noise\" (UDP noise against DPI, via Xray). Exits in a nearby Cloudflare city: hides traffic from the ISP but may not bypass site geo-blocks.");
+    public static string WarpRegistering => T("Регистрирую WARP…", "Registering WARP…");
+    public static string WarpAdded => T("Добавлены серверы WARP. Если обычный не подключается, выберите «WARP + noise».",
+        "WARP servers added. If the plain one doesn't connect, pick \"WARP + noise\".");
+    public static string WarpFailed => T("WARP не добавлен: {0}", "WARP not added: {0}");
+
+    public static string DiagButton =>T("Диагностика", "Diagnostics");
+    public static string DiagTitle => T("Диагностика Detour", "Detour diagnostics");
+    public static string DiagRunning => T("Проверяю процессы, порты, DNS и доступ к сайтам (до минуты)…",
+        "Checking processes, ports, DNS and site access (up to a minute)…");
+    public static string DiagHint => T("Адреса серверов, IP и имя пользователя скрыты. Отчёт можно приложить к issue на GitHub.",
+        "Server addresses, IPs and the user name are masked. Attach the report to a GitHub issue.");
+    public static string DiagCopy => T("Копировать", "Copy");
+    public static string DiagSave => T("Сохранить…", "Save…");
+    public static string DiagRerun => T("Повторить", "Run again");
+    public static string DiagCopied => T("Отчёт скопирован", "Report copied");
+
     public static string ImportDropHint => T("Отпустите, чтобы добавить серверы из файлов", "Drop to add servers from files");
 
     public static string CorePortBusy => T(

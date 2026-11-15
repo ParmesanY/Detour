@@ -1,0 +1,66 @@
+<ui:FluentWindow
+    x:Class="v2rayN.Views.DiagnosticsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="{x:Static resx:AppText.DiagTitle}"
+    Width="860"
+    Height="640"
+    ExtendsContentIntoTitleBar="True"
+    WindowBackdropType="None"
+    WindowStartupLocation="CenterOwner">
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Title="{x:Static resx:AppText.DiagTitle}" ShowMaximize="True" ShowMinimize="False" />
+        <TextBlock
+            Grid.Row="1"
+            Margin="16,4,16,8"
+            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+            Text="{x:Static resx:AppText.DiagHint}"
+            TextWrapping="Wrap" />
+        <TextBox
+            x:Name="txtReport"
+            Grid.Row="2"
+            Margin="16,0,16,0"
+            AcceptsReturn="True"
+            FontFamily="{DynamicResource DetourMonoFont}"
+            FontSize="12"
+            HorizontalScrollBarVisibility="Auto"
+            IsReadOnly="True"
+            TextWrapping="NoWrap"
+            VerticalScrollBarVisibility="Auto" />
+        <StackPanel
+            Grid.Row="3"
+            Margin="16,12,16,16"
+            HorizontalAlignment="Right"
+            Orientation="Horizontal">
+            <ui:ProgressRing
+                x:Name="progress"
+                Width="20"
+                Height="20"
+                Margin="0,0,12,0"
+                IsIndeterminate="True" />
+            <ui:Button
+                x:Name="btnRerun"
+                Margin="0,0,8,0"
+                Click="BtnRerun_Click"
+                Content="{x:Static resx:AppText.DiagRerun}" />
+            <ui:Button
+                x:Name="btnSave"
+                Margin="0,0,8,0"
+                Click="BtnSave_Click"
+                Content="{x:Static resx:AppText.DiagSave}" />
+            <ui:Button
+                x:Name="btnCopy"
+                Appearance="Primary"
+                Click="BtnCopy_Click"
+                Content="{x:Static resx:AppText.DiagCopy}" />
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

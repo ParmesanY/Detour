@@ -285,6 +285,16 @@
                     <StackPanel
                         Margin="0,0,20,0"
                         Orientation="Horizontal"
+                        ToolTip="{x:Static resx:AppText.AutoFailoverHint}">
+                        <ui:ToggleSwitch IsChecked="{Binding AutoFailover}" />
+                        <TextBlock
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            Text="{x:Static resx:AppText.AutoFailover}" />
+                    </StackPanel>
+                    <StackPanel
+                        Margin="0,0,20,0"
+                        Orientation="Horizontal"
                         ToolTip="{x:Static resx:AppText.ConnectOnStartupHint}">
                         <ui:ToggleSwitch IsChecked="{Binding ConnectOnStartup}" />
                         <TextBlock

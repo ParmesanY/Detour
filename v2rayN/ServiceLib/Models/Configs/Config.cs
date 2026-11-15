@@ -42,6 +42,9 @@ public class Config
     /// <summary>Block internet if the VPN core dies while connected.</summary>
     public bool KillSwitchEnabled { get; set; }
 
+    /// <summary>Switch to another server of the group when the active one stops passing traffic.</summary>
+    public bool AutoFailover { get; set; }
+
     /// <summary>Password-protect the local proxy port in TUN mode (null = on).</summary>
     public bool? ProtectLocalProxy { get; set; }
 

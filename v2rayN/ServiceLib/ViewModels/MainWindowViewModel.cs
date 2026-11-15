@@ -410,6 +410,13 @@ public partial class MainWindowViewModel : MyReactiveObject
         TaskManager.Instance.RegUpdateTask(_config, UpdateTaskHandler);
         ZapretWatchdog.Instance.Start(_config);
         KillSwitchManager.Instance.Start(_config);
+        FailoverManager.Instance.SwitchRequested += (indexId, remarks) =>
+            RxSchedulers.MainThreadScheduler.Schedule(async () =>
+            {
+                NoticeManager.Instance.Enqueue(string.Format(AppText.AutoFailoverSwitched, remarks));
+                await ProfilesViewModel.SetDefaultServer(indexId);
+            });
+        FailoverManager.Instance.Start();
         if (Utils.IsWindows())
         {
             // An autorun entry of an earlier build starts a second client at logon: two cores on the
@@ -449,6 +456,32 @@ public partial class MainWindowViewModel : MyReactiveObject
                 }
             });
         }
+
+        // Self-update: drop files the previous update renamed, then look for a newer release once the
+        // connection is up (GitHub is often reachable only through the VPN).
+        _ = Task.Run(async () =>
+        {
+            AppUpdateManager.CleanupOldFiles();
+            if (!AppUpdateManager.IsConfigured)
+            {
+                return;
+            }
+            await Task.Delay(TimeSpan.FromSeconds(45));
+            try
+            {
+                using var ds = DownloadService.CreateDownloadServiceWithFallback();
+                var release = await AppUpdateManager.Instance.CheckAsync(ds);
+                if (release != null)
+                {
+                    AppUpdateManager.Instance.Available = release;
+                    NoticeManager.Instance.Enqueue(string.Format(AppText.UpdateAvailableNotice, release.Tag));
+                }
+            }
+            catch (Exception ex)
+            {
+                Logging.SaveLog("AppUpdate", ex);
+            }
+        });
 
         if (_config.GuiItem.EnableStatistics || _config.GuiItem.DisplayRealTimeSpeed)
         {
@@ -618,6 +651,21 @@ public partial class MainWindowViewModel : MyReactiveObject
             await RefreshServersDispatcherAsync();
         }
         NoticeManager.Instance.Enqueue(string.Join(Environment.NewLine, messages));
+    }
+
+    public async Task AddWarpAsync()
+    {
+        NoticeManager.Instance.Enqueue(AppText.WarpRegistering);
+        var (added, message) = await Task.Run(() => WarpManager.CreateProfilesAsync(_config, _config.SubIndexId));
+        if (added > 0)
+        {
+            await RefreshServersDispatcherAsync();
+            NoticeManager.Instance.Enqueue(AppText.WarpAdded);
+        }
+        else
+        {
+            NoticeManager.Instance.Enqueue(string.Format(AppText.WarpFailed, message));
+        }
     }
 
     public async Task AddServerViaClipboardAsync(string? clipboardData)
@@ -934,6 +982,7 @@ public partial class MainWindowViewModel : MyReactiveObject
         }
         finally
         {
+            FailoverManager.Instance.NotifyReloaded();
             Logging.SaveLog($"Reload: done in {reloadWatch.ElapsedMilliseconds} ms{(_hasNextReloadJob ? ", running the queued one" : "")}");
             SetReloadEnabled(true);
             _reloadSemaphore.Release();

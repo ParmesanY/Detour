@@ -18,7 +18,16 @@
 		<SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<CETCompat>false</CETCompat>
+		<!-- Detour's own version (the assembly Version stays upstream's: subscriptions key on it).
+		     CI sets both from the tag / repository: -p:DetourVersion=1.2.0 -p:DetourRepo=owner/name -->
+		<DetourVersion Condition="'$(DetourVersion)' == ''">0.1.0</DetourVersion>
+		<DetourRepo Condition="'$(DetourRepo)' == ''"></DetourRepo>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<AssemblyMetadata Include="DetourVersion" Value="$(DetourVersion)" />
+		<AssemblyMetadata Include="DetourRepo" Value="$(DetourRepo)" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="MaterialDesignThemes" />

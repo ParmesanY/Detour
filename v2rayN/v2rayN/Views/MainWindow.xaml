@@ -314,6 +314,7 @@
                                             InputGestureText="Ctrl+S" />
                                         <MenuItem x:Name="menuAddServerViaImage" Header="{x:Static resx:ResUI.menuAddServerViaImage}" />
                                         <MenuItem x:Name="menuAddServerViaFile" Header="{x:Static resx:AppText.ImportFromFile}" />
+                                        <MenuItem x:Name="menuAddWarp" Header="{x:Static resx:AppText.WarpMenu}" ToolTip="{x:Static resx:AppText.WarpHint}" />
                                         <Separator />
                                         <MenuItem x:Name="menuAddVlessServer" Header="{x:Static resx:ResUI.menuAddVlessServer}" />
                                         <MenuItem x:Name="menuAddHysteria2Server" Header="{x:Static resx:ResUI.menuAddHysteria2Server}" />

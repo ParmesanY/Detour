@@ -24,6 +24,7 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
 
     [Reactive] public partial bool KillSwitchEnabled { get; set; }
     [Reactive] public partial bool KillSwitchEngaged { get; set; }
+    [Reactive] public partial bool AutoFailover { get; set; }
 
     [Reactive] public partial bool IsConnected { get; set; }
 
@@ -71,6 +72,13 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
         this.WhenAnyValue(x => x.KillSwitchEnabled).Skip(1).SubscribeAsync(async v =>
         {
             _config.KillSwitchEnabled = v;
+            await ConfigHandler.SaveConfig(_config);
+        });
+        AutoFailover = _config.AutoFailover;
+        this.WhenAnyValue(x => x.AutoFailover).Skip(1).SubscribeAsync(async v =>
+        {
+            _config.AutoFailover = v;
+            FailoverManager.Instance.NotifyReloaded();
             await ConfigHandler.SaveConfig(_config);
         });
         var ticks = 0;

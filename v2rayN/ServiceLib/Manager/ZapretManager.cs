@@ -39,6 +39,23 @@ public class ZapretManager
 
     public bool IsInstalled => File.Exists(Path.Combine(BinDir, WinwsExe));
 
+    /// <summary>Version of the release shipped in the zip (tools/package-release.ps1 writes current/.version).</summary>
+    public static string? BundledVersion
+    {
+        get
+        {
+            try
+            {
+                var file = Path.Combine(ReleaseDir, ".version");
+                return File.Exists(file) ? File.ReadAllText(file).Trim() : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
+
     public bool IsRunning => _process is { HasExited: false };
 
     public List<string> GetStrategies() => ZapretStrategyParser.ListStrategies(ReleaseDir);

@@ -95,7 +95,7 @@ public partial class ZapretViewModel : MyReactiveObject
             SelectedStrategy = item.Strategy;
             GameFilterMode = item.GameFilterMode;
             Enabled = item.Enabled;
-            VersionText = IsInstalled ? string.Format(AppText.ZapretInstalled, item.InstalledVersion ?? "?") : AppText.ZapretNotInstalled;
+            VersionText = IsInstalled ? string.Format(AppText.ZapretInstalled, item.InstalledVersion ?? ZapretManager.BundledVersion ?? "?") : AppText.ZapretNotInstalled;
             RefreshState();
         }
         finally

@@ -30,6 +30,7 @@ public partial class MainWindow
         menuBackupAndRestore.Click += MenuBackupAndRestore_Click;
 
         // Servers from files: menu, or drop .conf / .json files anywhere on the window.
+        menuAddWarp.Click += async (_, _) => await ViewModel!.AddWarpAsync();
         menuAddServerViaFile.Click += (_, _) =>
         {
             var dlg = new Microsoft.Win32.OpenFileDialog { Filter = AppText.ImportFileFilter, Multiselect = true };
