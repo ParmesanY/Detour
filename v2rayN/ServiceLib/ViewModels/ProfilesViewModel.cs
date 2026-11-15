@@ -70,6 +70,7 @@ public partial class ProfilesViewModel : MyReactiveObject
 
     public ReactiveCommand<RxVoid, RxVoid> TcpingServerCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> RealPingServerCmd { get; }
+    public ReactiveCommand<RxVoid, RxVoid> PickCoreCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> UdpTestServerCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> SpeedServerCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> SortServerResultCmd { get; }
@@ -186,6 +187,7 @@ public partial class ProfilesViewModel : MyReactiveObject
         {
             await ServerSpeedtest(ESpeedActionType.Realping);
         }, canEditRemove);
+        PickCoreCmd = ReactiveCommand.CreateFromTask(PickCore);
         UdpTestServerCmd = ReactiveCommand.CreateFromTask(async () =>
         {
             await ServerSpeedtest(ESpeedActionType.UdpTest);
@@ -574,17 +576,20 @@ public partial class ProfilesViewModel : MyReactiveObject
         }
         if (indexId == _config.IndexId)
         {
+            Logging.SaveLog($"SetDefaultServer: {indexId} is already the active server");
             return;
         }
         var item = await AppManager.Instance.GetProfileItem(indexId);
         if (item is null)
         {
+            Logging.SaveLog($"SetDefaultServer: server {indexId} not found");
             NoticeManager.Instance.Enqueue(ResUI.PleaseSelectServer);
             return;
         }
 
         if (await ConfigHandler.SetDefaultServerIndex(_config, indexId) == 0)
         {
+            Logging.SaveLog($"SetDefaultServer: switching to {item.Remarks}");
             await RefreshServers();
             Reload();
         }
@@ -739,7 +744,10 @@ public partial class ProfilesViewModel : MyReactiveObject
                 actionType = ESpeedActionType.Realping;
             }
 
-            lstSelected = JsonUtils.Deserialize<List<ProfileItem>>(JsonUtils.Serialize(ProfileItems?.OrderBy(t => t.Sort).ToList()));
+            // Several servers selected: test just those; otherwise the whole list as before.
+            lstSelected = SelectedProfiles?.Count > 1
+                ? await GetProfileItems(false)
+                : JsonUtils.Deserialize<List<ProfileItem>>(JsonUtils.Serialize(ProfileItems?.OrderBy(t => t.Sort).ToList()));
         }
         else
         {
@@ -760,6 +768,29 @@ public partial class ProfilesViewModel : MyReactiveObject
             await Task.CompletedTask;
         });
         _speedtestService?.RunLoop(actionType, lstSelected);
+    }
+
+    public async Task PickCore()
+    {
+        // Several keys selected: just those; otherwise the whole list (toolbar button).
+        var lstSelected = SelectedProfiles?.Count > 1
+            ? await GetProfileItems(false)
+            : JsonUtils.Deserialize<List<ProfileItem>>(JsonUtils.Serialize(ProfileItems?.OrderBy(t => t.Sort).ToList()));
+        if (lstSelected is null || lstSelected.Count <= 0)
+        {
+            return;
+        }
+
+        _speedtestService ??= new SpeedtestService(_config, async (SpeedTestResult result) =>
+        {
+            RxSchedulers.MainThreadScheduler.Schedule(() =>
+            {
+                _ = SetSpeedTestResult(result);
+            });
+            await Task.CompletedTask;
+        });
+        await _speedtestService.PickCoreLoop(lstSelected);
+        await RefreshServers();
     }
 
     public void ServerSpeedtestStop()

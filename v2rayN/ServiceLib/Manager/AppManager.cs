@@ -97,7 +97,7 @@ public sealed class AppManager
 
     public bool InitComponents()
     {
-        Logging.SaveLog($"v2rayN start up | {Utils.GetRuntimeInfo()}");
+        Logging.SaveLog($"{Global.AppName} start up |{Utils.GetRuntimeInfo()}");
         Logging.LoggingEnabled(_config.GuiItem.EnableLog);
 
         //First determine the port value
@@ -133,6 +133,8 @@ public sealed class AppManager
             await ProfileExManager.Instance.SaveTo();
             await StatisticsManager.Instance.SaveTo();
             await CoreManager.Instance.CoreStop();
+            // Never leave the user without internet after quitting.
+            await KillSwitchManager.Instance.ReleaseAsync();
             StatisticsManager.Instance.Close();
 
             Logging.SaveLog("AppExitAsync End");

@@ -1,0 +1,9 @@
+Flag images in this folder are from Twemoji (https://github.com/jdecked/twemoji), version 15.1.0.
+
+Copyright 2019 Twitter, Inc and other contributors.
+Copyright 2024 jdecked and other contributors.
+
+Graphics licensed under CC-BY 4.0: https://creativecommons.org/licenses/by/4.0/
+
+Files are renamed from Unicode code points to ISO 3166-1 alpha-2 codes (e.g. fi.png);
+the images themselves are unchanged.

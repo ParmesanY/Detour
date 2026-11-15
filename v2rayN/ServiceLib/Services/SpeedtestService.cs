@@ -85,6 +85,158 @@ public class SpeedtestService(Config config, Func<SpeedTestResult, Task> updateF
         }
     }
 
+    /// <summary>
+    ///     Cores a regular (non-custom) key can run on. The same key often works on one core and
+    ///     fails on another (different protocol support, Reality/uTLS quirks, versions), which is why
+    ///     "it works in app X but not in Y".
+    /// </summary>
+    public static readonly ECoreType[] PickableCores = [ECoreType.Xray, ECoreType.sing_box];
+
+    /// <summary>
+    ///     Tests every selected key on every pickable core and saves the core with the best real
+    ///     delay into the key itself (ProfileItem.CoreType). Keys that fail everywhere keep their core.
+    /// </summary>
+    public Task PickCoreLoop(List<ProfileItem> selecteds, CancellationToken ct = default)
+    {
+        CancellationTokenSource runCts;
+        lock (_runLock)
+        {
+            runCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            _runCtsList.Add(runCts);
+        }
+        return PickCoreLoopAsync(selecteds, runCts);
+    }
+
+    private async Task PickCoreLoopAsync(List<ProfileItem> selecteds, CancellationTokenSource runCts)
+    {
+        try
+        {
+            await PickCoreAsync(selecteds, runCts.Token);
+        }
+        catch (OperationCanceledException) when (runCts.IsCancellationRequested)
+        {
+            // Ignored
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+            _ = UpdateFunc("", ex.Message);
+        }
+        finally
+        {
+            await ProfileExManager.Instance.SaveTo();
+            lock (_runLock)
+            {
+                _runCtsList.Remove(runCts);
+            }
+            runCts.Dispose();
+        }
+    }
+
+    private async Task PickCoreAsync(List<ProfileItem> selecteds, CancellationToken ct)
+    {
+        var lstSelected = await GetClearItem(ESpeedActionType.Realping, selecteds);
+        if (lstSelected.Count == 0)
+        {
+            return;
+        }
+
+        // indexId -> (core -> delay)
+        var results = lstSelected.ToDictionary(it => it.IndexId, _ => new Dictionary<ECoreType, int>());
+        foreach (var core in PickableCores)
+        {
+            ct.ThrowIfCancellationRequested();
+            await UpdateFunc("", string.Format(AppText.PickCoreTesting, core));
+            var items = lstSelected.Select(it => new ServerTestItem
+            {
+                IndexId = it.IndexId,
+                Address = it.Address,
+                Port = it.Port,
+                ConfigType = it.ConfigType,
+                QueueNum = it.QueueNum,
+                Profile = it.Profile,
+                CoreType = core,
+            }).ToList();
+
+            foreach (var batch in GetTestBatchItem(items, Math.Min(items.Count, _speedTestPageSize)))
+            {
+                ProcessService? processService = null;
+                try
+                {
+                    processService = await CoreManager.Instance.LoadCoreConfigSpeedtest(batch);
+                    if (processService is null)
+                    {
+                        continue; // this core cannot build a config for these keys at all
+                    }
+                    await Task.Delay(1000, ct);
+                    await Parallel.ForEachAsync(batch, new ParallelOptions { MaxDegreeOfParallelism = batch.Count, CancellationToken = ct }, async (it, innerCt) =>
+                    {
+                        var delay = -1;
+                        if (it.AllowTest)
+                        {
+                            try
+                            {
+                                using var handler = HttpClientHelper.CreateProxySocketsHttpHandler(it.Port, new());
+                                handler.ConnectTimeout = Global.LocalFetch;
+                                using var client = new HttpClient(handler, false);
+                                delay = await ConnectionHandler.GetRealPingTime(client, innerCt);
+                            }
+                            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                            {
+                                throw;
+                            }
+                            catch
+                            {
+                                // failed on this core
+                            }
+                        }
+                        lock (results)
+                        {
+                            results[it.IndexId][core] = delay;
+                        }
+                    });
+                }
+                finally
+                {
+                    if (processService != null)
+                    {
+                        await processService.StopAsync();
+                    }
+                }
+                await Task.Delay(_delayInterval, ct);
+            }
+        }
+
+        var changed = 0;
+        foreach (var it in lstSelected)
+        {
+            var byCore = results[it.IndexId];
+            var best = byCore.Where(kv => kv.Value > 0).OrderBy(kv => kv.Value).Select(kv => (ECoreType?)kv.Key).FirstOrDefault();
+            var summary = string.Join("  ", PickableCores.Select(c => $"{CoreLabel(c)}: {(byCore.TryGetValue(c, out var d) && d > 0 ? d + " ms" : "✕")}"));
+            if (best is null)
+            {
+                ProfileExManager.Instance.SetTestDelay(it.IndexId, -1);
+                await UpdateFunc(it.IndexId, "-1", summary);
+                continue;
+            }
+
+            var delay = byCore[best.Value];
+            ProfileExManager.Instance.SetTestDelay(it.IndexId, delay);
+            await UpdateFunc(it.IndexId, delay.ToString(), $"→ {CoreLabel(best.Value)} ({summary})");
+
+            var profile = await AppManager.Instance.GetProfileItem(it.IndexId);
+            if (profile != null && profile.CoreType != best)
+            {
+                profile.CoreType = best;
+                await SQLiteHelper.Instance.UpdateAsync(profile);
+                changed++;
+            }
+        }
+        await UpdateFunc("", string.Format(AppText.PickCoreDone, changed));
+    }
+
+    private static string CoreLabel(ECoreType core) => core == ECoreType.sing_box ? "sing-box" : core.ToString();
+
     private async Task RunAsync(ESpeedActionType actionType, List<ProfileItem> selecteds, CancellationToken ct = default)
     {
         var lstSelected = await GetClearItem(actionType, selecteds);

@@ -1,0 +1,37 @@
+name: Сообщить об ошибке
+description: Что-то не работает или работает не так
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Не прикладывайте ключи, ссылки на подписки и адреса своих серверов.
+        Отчёт `tools\diag-live.ps1` скрывает адреса сам, его можно прикладывать целиком.
+  - type: input
+    id: version
+    attributes:
+      label: Версия Detour и Windows
+      placeholder: "Detour 7.25.6, Windows 11 24H2"
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Режим
+      options:
+        - TUN (весь компьютер)
+        - Системный прокси
+        - Не подключено (только zapret)
+  - type: textarea
+    id: what
+    attributes:
+      label: Что случилось
+      description: Что делали, что ожидали, что произошло.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Журнал
+      description: Фрагмент из guiLogs (core-<дата>.txt и <дата>.txt) или отчёт diag-live.
+      render: text

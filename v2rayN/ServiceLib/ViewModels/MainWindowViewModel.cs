@@ -7,6 +7,75 @@ public partial class MainWindowViewModel : MyReactiveObject
     public Interaction<RxVoid, string?> BrowseImageFileInteraction { get; } = new();
     public Interaction<bool?, RxVoid> ShowHideWindowInteraction { get; } = new();
 
+    /// <summary>Asks the user for a text (input: (prompt, initial value)); null = cancelled.</summary>
+    public Interaction<(string Prompt, string Initial), string?> AskTextInteraction { get; } = new();
+
+    /// <summary>Asks for a yes/no confirmation.</summary>
+    public Interaction<string, bool> ConfirmInteraction { get; } = new();
+
+    public ReactiveCommand<RxVoid, RxVoid> NewGroupCmd { get; private set; }
+    public ReactiveCommand<RxVoid, RxVoid> RenameGroupCmd { get; private set; }
+    public ReactiveCommand<RxVoid, RxVoid> DeleteGroupCmd { get; private set; }
+
+    private void InitGroupCommands()
+    {
+        NewGroupCmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            var name = await AskTextInteraction.HandleSafe((AppText.GroupNewPrompt, string.Empty));
+            if (name.IsNullOrEmpty())
+            {
+                return;
+            }
+            await ConfigHandler.AddSubItem(_config, new SubItem { Id = string.Empty, Remarks = name!.Trim(), Url = string.Empty });
+            await RefreshSubscriptions();
+        });
+
+        RenameGroupCmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            var sub = await CurrentGroupAsync();
+            if (sub == null)
+            {
+                return;
+            }
+            var name = await AskTextInteraction.HandleSafe((AppText.GroupRenamePrompt, sub.Remarks));
+            if (name.IsNullOrEmpty() || name == sub.Remarks)
+            {
+                return;
+            }
+            sub.Remarks = name!.Trim();
+            await ConfigHandler.AddSubItem(_config, sub);
+            await RefreshSubscriptions();
+        });
+
+        DeleteGroupCmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            var sub = await CurrentGroupAsync();
+            if (sub == null)
+            {
+                return;
+            }
+            var count = (await AppManager.Instance.ProfileItems(sub.Id))?.Count ?? 0;
+            if (!await ConfirmInteraction.HandleSafe(string.Format(AppText.GroupDeleteConfirm, sub.Remarks, count)))
+            {
+                return;
+            }
+            await ConfigHandler.DeleteSubItem(_config, sub.Id);
+            await RefreshSubscriptions();
+            await RefreshServersDispatcherAsync();
+        });
+    }
+
+    /// <summary>The group selected in the server list filter; null (with a notice) for "All".</summary>
+    private async Task<SubItem?> CurrentGroupAsync()
+    {
+        var sub = _config.SubIndexId.IsNullOrEmpty() ? null : await AppManager.Instance.GetSubItem(_config.SubIndexId);
+        if (sub == null)
+        {
+            NoticeManager.Instance.Enqueue(AppText.GroupSelectFirst);
+        }
+        return sub;
+    }
+
     public bool DesignMode { get; set; }
 
     public ProfilesViewModel ProfilesViewModel { get; } = new();
@@ -180,6 +249,7 @@ public partial class MainWindowViewModel : MyReactiveObject
             await SubSettingAsync();
         });
 
+        InitGroupCommands();
         SubUpdateCmd = ReactiveCommand.CreateFromTask(async () =>
         {
             await UpdateSubscriptionProcess("", false);
@@ -281,6 +351,7 @@ public partial class MainWindowViewModel : MyReactiveObject
             ProfilesViewModel.ReloadRequested.AsObservable(),
             StatusBarViewModel.ReloadRequested.AsObservable(),
             CheckUpdateViewModel.ReloadRequested.AsObservable(),
+            AppEvents.CoreReloadRequested.AsObservable(),
         };
 
         foreach (var reloadRequested in vmReloadRequestedList)
@@ -337,6 +408,47 @@ public partial class MainWindowViewModel : MyReactiveObject
         await CoreManager.Instance.Init(_config, UpdateHandler);
         await CertPemManager.Instance.Init(_config);
         TaskManager.Instance.RegUpdateTask(_config, UpdateTaskHandler);
+        ZapretWatchdog.Instance.Start(_config);
+        KillSwitchManager.Instance.Start(_config);
+        if (Utils.IsWindows())
+        {
+            // An autorun entry of an earlier build starts a second client at logon: two cores on the
+            // same ports, two TUNs, two winws, and the reload loop that follows.
+            _ = Task.Run(async () =>
+            {
+                if (_config.GuiItem.AutoRun)
+                {
+                    await AutoStartupHandler.UpdateTask(_config);
+                }
+                else
+                {
+                    AutoStartupHandler.RemoveLegacyAutoRuns();
+                }
+            });
+        }
+
+        // zapret runs from the start, not only once a VPN core is up.
+        if (Utils.IsWindows() && _config.ZapretItem.Enabled && ZapretManager.Instance.IsInstalled)
+        {
+            if (!Utils.IsAdministrator())
+            {
+                NoticeManager.Instance.Enqueue(AppText.ZapretNeedsAdminRestart);
+                await AppManager.Instance.RebootAsAdmin();
+                return;
+            }
+            _ = ConnectionRulesManager.Instance.SyncZapretAsync(_config);
+        }
+        if (Utils.IsWindows() && _config.TgWsProxyItem.Enabled && TgWsProxyManager.Instance.IsInstalled)
+        {
+            _ = Task.Run(async () =>
+            {
+                var (ok, msg) = await TgWsProxyManager.Instance.StartAsync();
+                if (!ok)
+                {
+                    NoticeManager.Instance.Enqueue($"TG WS Proxy: {msg}");
+                }
+            });
+        }
 
         if (_config.GuiItem.EnableStatistics || _config.GuiItem.DisplayRealTimeSpeed)
         {
@@ -499,6 +611,14 @@ public partial class MainWindowViewModel : MyReactiveObject
             }
             stringData = result;
         }
+
+        // A pasted subscription link (https://...) becomes a subscription and is fetched right away,
+        // like in Happ and similar clients, instead of failing as a "server link".
+        if (await TryAddSubscriptionUrlAsync(stringData))
+        {
+            return;
+        }
+
         var ret = await ConfigHandler.AddBatchServers(_config, stringData, _config.SubIndexId, false);
         if (ret > 0)
         {
@@ -510,6 +630,40 @@ public partial class MainWindowViewModel : MyReactiveObject
         {
             NoticeManager.Instance.Enqueue(ResUI.OperationFailed);
         }
+    }
+
+    /// <summary>True if <paramref name="text" /> is a single http(s) URL; it is then added as a subscription and updated.</summary>
+    private async Task<bool> TryAddSubscriptionUrlAsync(string? text)
+    {
+        var url = text?.Trim();
+        if (url.IsNullOrEmpty() || url.Contains('\n') || url.Contains(' ')
+            || !(url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            || Utils.TryUri(url) is not { } uri)
+        {
+            return false;
+        }
+
+        var existing = await SQLiteHelper.Instance.TableAsync<SubItem>().FirstOrDefaultAsync(e => e.Url == url);
+        if (existing == null)
+        {
+            var queryVars = Utils.ParseQueryString(uri.Query);
+            await ConfigHandler.AddSubItem(_config, new SubItem
+            {
+                Id = string.Empty,
+                Url = url,
+                Remarks = queryVars["remarks"] ?? uri.Host,
+            });
+            existing = await SQLiteHelper.Instance.TableAsync<SubItem>().FirstOrDefaultAsync(e => e.Url == url);
+        }
+        if (existing == null)
+        {
+            NoticeManager.Instance.Enqueue(ResUI.OperationFailed);
+            return true;
+        }
+
+        await RefreshSubscriptions();
+        await UpdateSubscriptionProcess(existing.Id, false);
+        return true;
     }
 
     public async Task AddServerViaScanAsync()
@@ -676,8 +830,10 @@ public partial class MainWindowViewModel : MyReactiveObject
         if (!await _reloadSemaphore.WaitAsync(0))
         {
             _hasNextReloadJob = true;
+            Logging.SaveLog("Reload: another reload is running, queued");
             return;
         }
+        var reloadWatch = Stopwatch.StartNew();
 
         if (DesignMode)
         {
@@ -702,6 +858,7 @@ public partial class MainWindowViewModel : MyReactiveObject
                 NoticeManager.Instance.Enqueue(ResUI.CheckServerSettings);
                 return;
             }
+            Logging.SaveLog($"Reload: start, server {profileItem.Remarks}");
             var allResult = await CoreConfigContextBuilder.BuildAll(_config, profileItem);
             if (NoticeManager.Instance.NotifyValidatorResult(allResult.CombinedValidatorResult) && !allResult.Success)
             {
@@ -737,18 +894,25 @@ public partial class MainWindowViewModel : MyReactiveObject
                 //{
                 //    await ClashProxiesViewModel.ProxiesReload();
                 //}, RxSchedulers.MainThreadScheduler);
-                await Signal.FromAsync(async () =>
+                // Never let the Clash API hold the reload: while it hangs, every later reload
+                // (switching servers, rule changes) is only queued and silently waits.
+                var proxiesReload = Signal.FromAsync(async () =>
                     {
                         await ClashProxiesViewModel.ProxiesReload();
                         return RxVoid.Default;
                     }).SubscribeOn(RxSchedulers.MainThreadScheduler)
                     .ToTask();
+                if (await Task.WhenAny(proxiesReload, Task.Delay(TimeSpan.FromSeconds(5))) != proxiesReload)
+                {
+                    Logging.SaveLog("Reload: Clash proxies list did not load within 5 s, skipped");
+                }
             }
 
             ReloadResult(showClashUI);
         }
         finally
         {
+            Logging.SaveLog($"Reload: done in {reloadWatch.ElapsedMilliseconds} ms{(_hasNextReloadJob ? ", running the queued one" : "")}");
             SetReloadEnabled(true);
             _reloadSemaphore.Release();
             //If there is a next reload job, execute it.

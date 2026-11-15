@@ -213,9 +213,48 @@ public class DownloadService : IDisposable
         {
             return response.Headers.Location.ToString();
         }
+        // Handlers that follow redirects themselves end on the target page; its URL is the answer.
+        var finalUri = response.RequestMessage?.RequestUri?.ToString();
+        if (response.IsSuccessStatusCode && finalUri.IsNotEmpty() && !string.Equals(finalUri, new Uri(url).ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return finalUri;
+        }
         Error?.Invoke(this, new ErrorEventArgs(new Exception("StatusCode error: " + response.StatusCode)));
         Logging.SaveLog("StatusCode error: " + url);
         return null;
+    }
+
+    /// <summary>
+    ///     Final URL after following redirects (works with handlers that follow redirects themselves,
+    ///     unlike <see cref="UrlRedirectAsync" />). Returns null on failure.
+    /// </summary>
+    public async Task<string?> ResolveFinalUrlAsync(string url, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var client = new HttpClient(GetHandler(), false);
+            using var timeoutCts = new CancellationTokenSource();
+            timeoutCts.CancelAfter(Global.ProxyFetch);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
+
+            using var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
+            if (response.StatusCode is HttpStatusCode.Redirect or HttpStatusCode.MovedPermanently
+                && response.Headers.Location is not null)
+            {
+                return response.Headers.Location.ToString();
+            }
+            return response.IsSuccessStatusCode ? response.RequestMessage?.RequestUri?.ToString() : null;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+            Error?.Invoke(this, new ErrorEventArgs(ex));
+            return null;
+        }
     }
 
     /// <summary>

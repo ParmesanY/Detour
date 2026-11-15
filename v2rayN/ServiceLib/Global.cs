@@ -2,7 +2,16 @@ namespace ServiceLib;
 
 public class Global
 {
-    public const string AppName = "v2rayN";
+    public const string AppName = "Detour";
+
+    /// <summary>
+    /// Name sent in the subscription User-Agent ("v2rayN/<version>"). Providers pick the config format
+    /// by it (e.g. full Xray JSON for v2rayN), so it stays the upstream name.
+    /// </summary>
+    public const string CompatClientName = "v2rayN";
+
+    /// <summary>Autorun entry name used before the rename; removed when autorun is updated.</summary>
+    public const string LegacyAutoRunName = "v2rayNAutoRun";
     public const string GithubUrl = "https://github.com";
     public const string GithubApiUrl = "https://api.github.com/repos";
     public const string GeoUrl = "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/{0}.dat";
@@ -78,7 +87,7 @@ public class Global
 
     public const string UserEMail = "t@t.tt";
     public const string AutoRunRegPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    public const string AutoRunName = "v2rayNAutoRun";
+    public const string AutoRunName = "DetourAutoRun";
     public const string SystemProxyExceptionsWindows = "localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*";
     public const string SystemProxyExceptionsLinux = "localhost,127.0.0.0/8,::1";
     public const string RoutingRuleComma = "<COMMA>";
@@ -108,6 +117,12 @@ public class Global
     public const string SingboxDirectDNSTagPrefix = "direct-dns-";
     public const string SingboxRemoteDNSTagPrefix = "remote-dns-";
     public const string SingboxDirectDNSTag = "direct-dns-1";
+
+    /// <summary>Resolver for the cores' own lookups (VPN server names) under TUN; see SingboxDnsService.</summary>
+    public const string SingboxCoreDNSTag = "core-dns";
+
+    /// <summary>Foreign DoH by IP (no bootstrap), dialled directly: Russian resolvers drop VPN domains.</summary>
+    public const string CoreDirectDoHServer = "8.8.8.8";
     public const string SingboxRemoteDNSTag = "remote-dns-1";
     public const string SingboxDirectDNSTagTemplate = "direct-dns-{0}";
     public const string SingboxRemoteDNSTagTemplate = "remote-dns-{0}";
@@ -479,8 +494,12 @@ public class Global
         ""
     ];
 
+    // This fork targets Russia: Yandex DNS first (upstream defaults to Chinese resolvers).
     public static readonly List<string> DomainDirectDNSAddress =
     [
+        "77.88.8.8",
+        "https://common.dot.dns.yandex.net/dns-query",
+        "localhost",
         "119.29.29.29",
         "223.5.5.5",
         "119.29.29.29,223.5.5.5,https://doh.pub/dns-query",
@@ -508,6 +527,7 @@ public class Global
 
     public static readonly List<string> DomainPureIPDNSAddress =
     [
+        "77.88.8.8",
         "119.29.29.29",
         "223.5.5.5",
         "localhost"

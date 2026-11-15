@@ -56,10 +56,8 @@ public sealed class CoreInfoManager
 
         if (RuntimeInformation.ProcessArchitecture != Architecture.X86)
         {
-            if (IsCheckUpdateSupported(ECoreType.v2rayN))
-            {
-                lst.Add(ECoreType.v2rayN);
-            }
+            // The client itself is not updated from upstream v2rayN releases: that would replace this
+            // fork with the original app. Cores and geo files are still updated as usual.
 
             if (!(Utils.IsWindows() && Environment.OSVersion.Version.Major < 10))
             {

@@ -288,7 +288,9 @@ public partial class CoreConfigV2rayService
         }
         if (context.ProtectDomainList.Count > 0)
         {
-            AddDnsServers(directDNSAddress, context.ProtectDomainList, true);
+            // VPN server names: a foreign DoH by IP, sent direct (tagged as direct DNS). The usual
+            // direct resolver is Russian (Yandex) and returns nothing for VPN providers' domains.
+            AddDnsServers([$"https://{Global.CoreDirectDoHServer}/dns-query"], context.ProtectDomainList, true);
         }
 
         if (simpleDNSItem.FakeIP == true)

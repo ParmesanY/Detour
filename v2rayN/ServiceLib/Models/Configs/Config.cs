@@ -34,6 +34,19 @@ public class Config
     public List<CoreTypeItem> CoreTypeItem { get; set; }
     public SimpleDNSItem SimpleDNSItem { get; set; }
     public HappyEyeballs4RayItem HappyEyeballs4RayItem { get; set; }
+    public ZapretItem ZapretItem { get; set; }
+    public TgWsProxyItem TgWsProxyItem { get; set; }
+    public List<ConnectionRule> ConnectionRules { get; set; }
+    public List<ConnectionRuleProfile> ConnectionRuleProfiles { get; set; }
+
+    /// <summary>Block internet if the VPN core dies while connected.</summary>
+    public bool KillSwitchEnabled { get; set; }
+
+    /// <summary>Password-protect the local proxy port in TUN mode (null = on).</summary>
+    public bool? ProtectLocalProxy { get; set; }
+
+    /// <summary>When set, every rule (except Block) uses this mode: a quick "all via VPN / all via zapret" switch.</summary>
+    public EConnectionMode? ConnectionRulesOverride { get; set; }
 
     #endregion other entities
 }

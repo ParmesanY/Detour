@@ -20,6 +20,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -45,7 +46,9 @@
                 Grid.Column="0"
                 VerticalAlignment="Center"
                 Style="{StaticResource ToolbarTextBlock}"
-                Text="{x:Static resx:ResUI.TbSettingsColor}" />
+                Text="{x:Static resx:ResUI.TbSettingsColor}"
+                Visibility="Collapsed" />
+            <!--  The accent comes from the graphite palette; the old MaterialDesign colour picker would do nothing.  -->
             <ComboBox
                 x:Name="cmbSwatches"
                 Grid.Row="2"
@@ -53,7 +56,8 @@
                 Width="120"
                 Margin="{StaticResource Margin8}"
                 DisplayMemberPath="Name"
-                Style="{StaticResource DefComboBox}" />
+                Style="{StaticResource DefComboBox}"
+                Visibility="Collapsed" />
 
             <TextBlock
                 Grid.Row="3"
@@ -84,6 +88,27 @@
                 DisplayMemberPath="Display"
                 SelectedValuePath="Value"
                 Style="{StaticResource DefComboBox}" />
+
+            <TextBlock
+                Grid.Row="5"
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Style="{StaticResource ToolbarTextBlock}"
+                Text="{x:Static resx:AppText.FontFamily}" />
+            <ComboBox
+                x:Name="cmbFontFamily"
+                Grid.Row="5"
+                Grid.Column="1"
+                Width="200"
+                Margin="{StaticResource Margin8}"
+                IsTextSearchEnabled="True"
+                MaxDropDownHeight="360">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock FontFamily="{Binding}" Text="{Binding}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
         </Grid>
     </StackPanel>
 </reactiveui:ReactiveUserControl>

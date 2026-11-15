@@ -165,13 +165,36 @@ public partial class CoreConfigSingboxService
             server = Global.SingboxHostsDNSTag,
         });
 
+        // VPN server names must never go to the remote resolver: it is reached through the proxy, i.e.
+        // through the very core that is looking for its server. That works only while the answers sit
+        // in cache.db and breaks every server at once when they expire. Under TUN the core usually asks
+        // through the system resolver, so the query arrives from svchost, not from the core: match the
+        // server domains themselves (custom JSON profiles included, see CustomConfigDomains).
+        // Nor may they use the regular direct resolver: the default one is Russian (Yandex), and
+        // Russian resolvers return nothing for VPN providers' domains. So: foreign DoH by IP, direct.
         if (context.ProtectDomainList.Count > 0)
         {
+            _coreConfig.dns.servers = EnsureCoreDnsServer(_coreConfig.dns.servers);
             _coreConfig.dns.rules.Add(new()
             {
-                server = Global.SingboxDirectDNSTag,
+                server = Global.SingboxCoreDNSTag,
                 domain = context.ProtectDomainList.ToList(),
             });
+        }
+
+        // Lookups made by the cores themselves (their own DNS settings) under TUN: same reasoning.
+        if (_coreConfig.inbounds?.Any(i => i.type == "tun") == true)
+        {
+            var coreExes = BuildRoutingDirectExe();
+            if (coreExes.Count > 0)
+            {
+                _coreConfig.dns.servers = EnsureCoreDnsServer(_coreConfig.dns.servers);
+                _coreConfig.dns.rules.Add(new()
+                {
+                    server = Global.SingboxCoreDNSTag,
+                    process_path = coreExes,
+                });
+            }
         }
 
         _coreConfig.dns.rules.AddRange([
@@ -610,6 +633,7 @@ public partial class CoreConfigSingboxService
         var protectDomainRule = BuildProtectDomainRule();
         if (protectDomainRule != null)
         {
+            dns4Sbox.servers = EnsureCoreDnsServer(dns4Sbox.servers);
             dns4Sbox.rules.Insert(0, protectDomainRule);
         }
 
@@ -624,9 +648,25 @@ public partial class CoreConfigSingboxService
         }
         return new()
         {
-            server = Global.SingboxLocalDNSTag,
+            server = Global.SingboxCoreDNSTag,
             domain = context.ProtectDomainList.ToList(),
         };
+    }
+
+    /// <summary>Adds the core-dns server (foreign DoH by IP, dialled directly) once.</summary>
+    private static List<Server4Sbox> EnsureCoreDnsServer(List<Server4Sbox>? servers)
+    {
+        servers ??= [];
+        if (!servers.Any(s => s.tag == Global.SingboxCoreDNSTag))
+        {
+            servers.Add(new Server4Sbox
+            {
+                tag = Global.SingboxCoreDNSTag,
+                type = "https",
+                server = Global.CoreDirectDoHServer,
+            });
+        }
+        return servers;
     }
 
     private static List<Server4Sbox> ParseDnsAddresses(string addresses)

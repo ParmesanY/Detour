@@ -49,6 +49,13 @@ public partial class CoreConfigSingboxService
                         inbound.listen = listen;
                     }
                 }
+
+                // In TUN mode apps don't need the local port; don't leave it open to any program.
+                if (LocalProxyGuard.ShouldProtect(_config, context.IsTunEnabled) && inbound.listen == Global.Loopback)
+                {
+                    var (user, pass) = LocalProxyGuard.SessionCredentials;
+                    inbound.users = [new() { username = user, password = pass }];
+                }
             }
 
             if (context.IsTunEnabled)

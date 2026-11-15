@@ -1,80 +1,93 @@
-# v2rayN
+<p align="center"><img src="docs/branding/logo.png" width="96" alt="Detour"></p>
 
-### A GUI client for Windows, Linux and macOS. Support [Xray](https://github.com/XTLS/Xray-core) and [sing-box](https://github.com/SagerNet/sing-box) and [others](https://github.com/2dust/v2rayN/wiki/List-of-supported-cores)
+<h1 align="center">Detour</h1>
 
-[![CodeFactor](https://www.codefactor.io/repository/github/2dust/v2rayn/badge)](https://www.codefactor.io/repository/github/2dust/v2rayn)
-[![Release](https://img.shields.io/github/v/release/2dust/v2rayN?logo=github&label=Release)](https://github.com/2dust/v2rayN/releases)
-[![Downloads](https://img.shields.io/github/downloads/2dust/v2rayN/latest/total?logo=github&label=Downloads)](https://github.com/2dust/v2rayN/releases)
-[![Telegram](https://img.shields.io/badge/Telegram-Chat-26A5E4?logo=telegram)](https://t.me/v2rayn)
- 
-[![Windows](https://img.shields.io/badge/Windows-supported-0078D6?logo=windows)](https://github.com/2dust/v2rayN) 
-[![Linux](https://img.shields.io/badge/Linux-supported-FCC624?logo=linux&logoColor=000)](https://github.com/2dust/v2rayN) 
-[![macOS](https://img.shields.io/badge/macOS-supported-000000?logo=apple)](https://github.com/2dust/v2rayN) 
-[![GPG Signed](https://img.shields.io/badge/GPG-signed-4B32C3?logo=gnuprivacyguard)](https://github.com/2dust/v2rayN)
-
+<p align="center">VPN-клиент для Windows со встроенным zapret и правилами «что через VPN, что через zapret, что напрямую».<br>
+A Windows VPN client with built-in zapret and per-app / per-site routing rules.</p>
 
 ---
 
-## Download / 下载
+## Что это
 
-Download the latest release here:
+Detour — форк [v2rayN](https://github.com/2dust/v2rayN) для пользователей в России. Он решает одну задачу:
+чтобы каждый сервис шёл самым быстрым путём, который у вас сейчас работает, и вам не приходилось
+вручную включать и выключать VPN.
 
-在这里下载最新版本：
+- **Правила подключений.** Для приложения, сайта, IP или готового набора выбирается режим:
+  `VPN`, `zapret`, `zapret → VPN`, `напрямую` или `блок`. Короткая запись: `Discord.exe +zapret+vpn`,
+  `@youtube +zapret+vpn`, `@russia +direct`.
+- **Встроенный zapret** (сборка [Flowseal](https://github.com/Flowseal/zapret-discord-youtube)): скачивается
+  одной кнопкой, стратегия подбирается автоматически.
+- **zapret → VPN со сторожем.** Сервис стартует через VPN; клиент сам проверяет прямой путь через zapret
+  и переводит его туда, когда тот работает, а при поломке возвращает на VPN.
+- **Готовые наборы** для Discord, YouTube, Telegram, ChatGPT, Claude, Instagram, X, Spotify, Roblox, Steam,
+  Minecraft и других, с рекомендованным режимом.
+- **Режим обучения:** клиент запоминает, куда ходит приложение, и добавляет эти адреса в правило.
+- **TG WS Proxy** ([Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)): Telegram Desktop
+  без VPN, кнопка «Подключить Telegram».
+- **Подписки** в формате v2rayN, Happ-подобные подписки с полными конфигами Xray, ключи `vless://`,
+  `hysteria2://` и другие. Ядра Xray и sing-box, режимы TUN (весь компьютер) и системного прокси.
+- **Kill switch**, защита локального порта прокси, проверка «видят ли сайты мой IP», журнал соединений.
 
-[https://github.com/2dust/v2rayN/releases](https://github.com/2dust/v2rayN/releases)
+## Установка
 
+1. Скачайте архив из [Releases](../../releases) и распакуйте в любую папку (не запускайте из архива).
+2. Запустите `Detour.exe`. Установка не нужна. Для режима TUN и zapret программа попросит права администратора.
+3. Скопируйте ссылку на подписку вашего VPN (или ключ) и нажмите `Ctrl+V` в окне программы.
+4. Выберите сервер двойным щелчком и нажмите **Подключить**.
 
-> [!TIP]
-> v2rayN is the desktop version. For the mobile version, please visit the v2rayNG \
-> v2rayN 是电脑版，手机版请访问 v2rayNG
->
-> https://github.com/2dust/v2rayNG
+Требования: Windows 10 или 11, x64.
 
----
+> [!NOTE]
+> Защитник Windows может ругаться на файлы в `bin\zapret`. Это WinDivert — драйвер перехвата пакетов,
+> на котором работает zapret, а не вирус. Исходники zapret и WinDivert открыты.
 
-## Documentation / 使用文档
+> [!WARNING]
+> Не запускайте Detour одновременно с другим VPN-клиентом (Throne, Happ, Hiddify, v2rayN…):
+> два туннеля мешают друг другу, и перестаёт работать всё. Detour предупредит, если заметит такой клиент.
 
-Read the Wiki for usage guides and configuration details.
+## Если что-то не работает
 
-请阅读 Wiki 获取使用说明和配置教程。
+- Внутри программы есть страница **Справка** с ответами на частые вопросы.
+- Журнал программы и вывод ядер сохраняются в `guiLogs` рядом с `Detour.exe`.
+- `tools\diag-live.ps1` снимает диагностику подключения (скорость и сайты разными путями, DNS, порты)
+  в текстовый отчёт. Адреса серверов в отчёте скрыты, его можно приложить к issue.
 
-[https://github.com/2dust/v2rayN/wiki](https://github.com/2dust/v2rayN/wiki)
+## Сборка из исходников
 
----
+Нужен [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
-## Supported Platforms / 支持平台
-
-| Platform / 平台 | x64 | x86 | arm64 | riscv64 | loong64 | ppc64le |
-| --- | --- | --- | --- | --- | --- | --- |
-| Windows | ✅ | ✅ | ✅ | - | - | - |
-| Linux | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| macOS | ✅ | - | ✅ | - | - | - |
-
-Minimum OS requirements: [Release files introduction](https://github.com/2dust/v2rayN/wiki/Release-files-introduction) / 最低系统要求：[发布文件介绍](https://github.com/2dust/v2rayN/wiki/Release-files-introduction)
-
----
-
-## GPG Verification / GPG 签名校验
-
-Release files are signed with GPG to verify authenticity and integrity, helping prevent mirror, ISP, or CDN hijacking.
-
-发布文件已使用 GPG 签名，可用于校验文件真实性与完整性，预防镜像站、运营商或 CDN 劫持。
-
-### Fingerprint / 公钥指纹
-
-```text
-7694 5E9F 3E9A 168F 8070 F195 805D 661C
-134D FAF6 8903 C199 463C 31E5 AE90 3AE0
+```powershell
+dotnet test --project v2rayN\ServiceLib.Tests\ServiceLib.Tests.csproj
+dotnet publish v2rayN\v2rayN\v2rayN.csproj -c Release -r win-x64 --self-contained true -o publish\Detour
 ```
 
+Ядра (Xray, sing-box), гео-базы и zapret программа скачивает сама при первом запуске.
+Проект и пространства имён по-прежнему называются `v2rayN`, чтобы было проще забирать изменения из оригинала.
+
+## Лицензии и благодарности
+
+Detour распространяется под **GPL-3.0** (см. [LICENSE](LICENSE)), как и v2rayN, на котором он основан.
+
+| Компонент | Автор | Лицензия |
+|---|---|---|
+| [v2rayN](https://github.com/2dust/v2rayN) — основа клиента | 2dust и участники | GPL-3.0 |
+| [Xray-core](https://github.com/XTLS/Xray-core) | XTLS | MPL-2.0 |
+| [sing-box](https://github.com/SagerNet/sing-box) | SagerNet | GPL-3.0 |
+| [zapret](https://github.com/bol-van/zapret), [сборка Flowseal](https://github.com/Flowseal/zapret-discord-youtube) | bol-van, Flowseal | MIT |
+| [WinDivert](https://github.com/basil00/WinDivert) | basil00 | LGPL-3.0 / GPL-2.0 |
+| [TG WS Proxy](https://github.com/Flowseal/tg-ws-proxy) | Flowseal | MIT |
+| [WPF-UI](https://github.com/lepoco/wpfui) | lepo.co | MIT |
+| [Twemoji](https://github.com/twitter/twemoji) — флаги стран | Twitter | CC-BY 4.0 |
+
+zapret, TG WS Proxy и ядра не входят в исходники: программа скачивает их с официальных страниц релизов.
+
 ---
 
-## Community / 社区
+## English
 
-Telegram Group / Telegram 群组：
-
-[https://t.me/v2rayN](https://t.me/v2rayN)
-
-Telegram Channel / Telegram 频道：
-
-[https://t.me/github_2dust](https://t.me/github_2dust)
+Detour is a Windows fork of [v2rayN](https://github.com/2dust/v2rayN) aimed at users in Russia. Per app, site,
+IP or ready-made preset you choose how traffic goes: VPN, zapret (DPI bypass without a server), zapret with
+automatic fallback to VPN, direct, or block. zapret (Flowseal build) and TG WS Proxy are downloaded and run
+by the client; Xray and sing-box are the cores. Download from Releases, unzip, run `Detour.exe`, paste your
+subscription with `Ctrl+V`. Licensed under GPL-3.0; see the table above for third-party components.

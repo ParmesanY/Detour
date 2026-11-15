@@ -14,6 +14,13 @@ public class CoreManager
 
     private ProcessService? _processService;
     private ProcessService? _processPreService;
+
+    /// <summary>
+    /// A core was started and has exited without <see cref="CoreStop" /> being called
+    /// (crash or kill). Used by the kill switch.
+    /// </summary>
+    public bool HasCoreDied =>
+        _processService is { HasExited: true } || _processPreService is { HasExited: true };
     private bool _linuxSudo = false;
     private Func<bool, string, Task>? _updateFunc;
     private const string _tag = "CoreHandler";
@@ -21,7 +28,12 @@ public class CoreManager
     public async Task Init(Config config, Func<bool, string, Task> updateFunc)
     {
         _config = config;
-        _updateFunc = updateFunc;
+        // Core output only lived in the Log page and was gone once the app closed; keep a copy on disk.
+        _updateFunc = async (notify, msg) =>
+        {
+            CoreLog.Append(msg);
+            await updateFunc(notify, msg);
+        };
 
         //Copy the bin folder to the storage location (for init)
         if (Environment.GetEnvironmentVariable(Global.LocalAppData) == "1")
@@ -91,11 +103,36 @@ public class CoreManager
             await WindowsUtils.RemoveTunDevice();
         }
 
+        // Another client (an old build started by its autorun, Throne, plain v2rayN…) on the same
+        // local port: our core can't bind it, the TUN would then feed the other app's proxy, and
+        // every reload repeats that. Say who holds the port instead.
+        var port = preContext?.Node?.Port > 0 ? preContext.Node.Port : _config.Inbound?.FirstOrDefault()?.LocalPort ?? 0;
+        if (Utils.IsWindows() && port > 0)
+        {
+            string? holder = null;
+            for (var i = 0; i < 10 && (holder = PortOwner.ForeignListener(port)) != null; i++)
+            {
+                await Task.Delay(200);
+            }
+            if (holder != null)
+            {
+                await UpdateFunc(true, string.Format(AppText.CorePortBusy, port, holder));
+                return;
+            }
+        }
+
         await CoreStart(mainContext);
         await WaitForProxyPort(preContext);
         await CoreStartPreService(preContext);
 
         AppManager.Instance.RunningCoreType = preContext?.RunCoreType ?? mainContext.RunCoreType;
+
+        // Routing now matches the connection rules; bring zapret lists and winws in line.
+        var zapretMsg = await ConnectionRulesManager.Instance.SyncZapretAsync(AppManager.Instance.Config);
+        if (zapretMsg.IsNotEmpty())
+        {
+            await UpdateFunc(false, $"zapret: {zapretMsg}");
+        }
 
         if (_processService != null)
         {

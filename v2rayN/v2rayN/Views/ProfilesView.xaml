@@ -5,376 +5,487 @@
     xmlns:base="clr-namespace:v2rayN.Base"
     xmlns:conv="clr-namespace:v2rayN.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:reactiveui="http://reactiveui.net"
     xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:vms="clr-namespace:ServiceLib.ViewModels;assembly=ServiceLib"
     d:DesignHeight="450"
     d:DesignWidth="800"
     x:TypeArguments="vms:ProfilesViewModel"
-    Style="{StaticResource ViewGlobal}"
     mc:Ignorable="d">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisConverter" />
         <conv:DelayColorConverter x:Key="DelayColorConverter" />
+        <conv:ServerNameConverter x:Key="ServerName" />
+        <conv:ServerFlagConverter x:Key="ServerFlag" />
+        <conv:NotEmptyToBoolConverter x:Key="NotEmpty" />
+
+        <!--  Group filter: pill buttons  -->
+        <Style x:Key="GroupPill" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border
+                            x:Name="bd"
+                            Padding="12,5"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                            <ContentPresenter TextElement.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource DetourAccentSoftBrush}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource DetourAccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource DetourAccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ToolIcon" BasedOn="{StaticResource {x:Type ui:Button}}" TargetType="ui:Button">
+            <Setter Property="Width" Value="34" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="Appearance" Value="Transparent" />
+        </Style>
     </UserControl.Resources>
-    <Grid>
-        <DockPanel>
-            <WrapPanel Margin="{StaticResource Margin4}" DockPanel.Dock="Top">
+
+    <DockPanel>
+        <!--  Toolbar: groups, search, tests  -->
+        <DockPanel Margin="12,4,12,8" DockPanel.Dock="Top">
+            <StackPanel
+                VerticalAlignment="Top"
+                DockPanel.Dock="Right"
+                Orientation="Horizontal">
+                <ui:TextBox
+                    x:Name="txtServerFilter"
+                    Width="230"
+                    Margin="0,0,6,0"
+                    AutomationProperties.Name="{x:Static resx:ResUI.MsgServerTitle}"
+                    ClearButtonEnabled="True"
+                    Icon="{ui:SymbolIcon Search24}"
+                    PlaceholderText="{x:Static resx:AppText.FilterServers}" />
+                <ui:Button
+                    x:Name="btnFastRealPing"
+                    Icon="{ui:SymbolIcon Flash24}"
+                    Style="{StaticResource ToolIcon}"
+                    ToolTip="{x:Static resx:AppText.TestSelectedOrAll}" />
+                <ui:Button
+                    x:Name="menuMixedTestServer"
+                    Icon="{ui:SymbolIcon TopSpeed24}"
+                    Style="{StaticResource ToolIcon}"
+                    ToolTip="{x:Static resx:AppText.MixedTestSelectedOrAll}" />
+                <ui:Button
+                    x:Name="btnPickCore"
+                    Icon="{ui:SymbolIcon Wand24}"
+                    Style="{StaticResource ToolIcon}"
+                    ToolTip="{x:Static resx:AppText.PickCoreSelectedOrAll}" />
+                <ui:Button
+                    x:Name="btnAutofitColumnWidth"
+                    AutomationProperties.Name="{x:Static resx:ResUI.menuProfileAutofitColumnWidth}"
+                    Icon="{ui:SymbolIcon AutoFitWidth24}"
+                    Style="{StaticResource ToolIcon}"
+                    ToolTip="{x:Static resx:ResUI.menuProfileAutofitColumnWidth}" />
+            </StackPanel>
+
+            <WrapPanel>
                 <ListBox
                     x:Name="lstGroup"
                     MaxHeight="200"
+                    Background="Transparent"
+                    BorderThickness="0"
                     AutomationProperties.Name="{x:Static resx:ResUI.menuSubscription}"
-                    FontSize="{DynamicResource StdFontSize}"
-                    ItemContainerStyle="{StaticResource MyChipListBoxItem}"
-                    Style="{StaticResource MaterialDesignChoiceChipPrimaryOutlineListBox}">
+                    ItemContainerStyle="{StaticResource GroupPill}"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Remarks}" />
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-
-                <Button
+                <ui:Button
                     x:Name="btnEditSub"
-                    Width="30"
-                    Height="30"
-                    Margin="{StaticResource MarginLeftRight4}"
+                    VerticalAlignment="Top"
                     AutomationProperties.Name="{x:Static resx:ResUI.menuSubEdit}"
-                    Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
-                    ToolTip="{x:Static resx:ResUI.menuSubEdit}">
-                    <materialDesign:PackIcon VerticalAlignment="Center" Kind="Edit" />
-                </Button>
-                <Button
+                    Icon="{ui:SymbolIcon Edit24}"
+                    Style="{StaticResource ToolIcon}"
+                    ToolTip="{x:Static resx:ResUI.menuSubEdit}" />
+                <ui:Button
                     x:Name="btnAddSub"
-                    Width="30"
-                    Height="30"
-                    Margin="{StaticResource MarginLeftRight4}"
+                    VerticalAlignment="Top"
                     AutomationProperties.Name="{x:Static resx:ResUI.menuSubAdd}"
-                    Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
-                    ToolTip="{x:Static resx:ResUI.menuSubAdd}">
-                    <materialDesign:PackIcon VerticalAlignment="Center" Kind="Plus" />
-                </Button>
-
-                <TextBox
-                    x:Name="txtServerFilter"
-                    Width="200"
-                    Margin="{StaticResource MarginLeftRight4}"
-                    VerticalContentAlignment="Center"
-                    materialDesign:HintAssist.Hint="{x:Static resx:ResUI.MsgServerTitle}"
-                    materialDesign:TextFieldAssist.HasClearButton="True"
-                    AutomationProperties.Name="{x:Static resx:ResUI.MsgServerTitle}"
-                    Style="{StaticResource DefTextBox}"
-                    ToolTip="{x:Static resx:ResUI.MsgServerTitle}" />
-
-                <Button
-                    x:Name="btnAutofitColumnWidth"
-                    Width="30"
-                    Height="30"
-                    Margin="{StaticResource MarginLeftRight4}"
-                    AutomationProperties.Name="{x:Static resx:ResUI.menuProfileAutofitColumnWidth}"
-                    Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
-                    ToolTip="{x:Static resx:ResUI.menuProfileAutofitColumnWidth}">
-                    <materialDesign:PackIcon VerticalAlignment="Center" Kind="ArrowSplitVertical" />
-                </Button>
-
-                <Button
-                    x:Name="btnFastRealPing"
-                    Width="30"
-                    Height="30"
-                    Margin="{StaticResource MarginLeftRight4}"
-                    Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
-                    ToolTip="{x:Static resx:ResUI.menuFastRealPing}">
-                    <materialDesign:PackIcon VerticalAlignment="Center" Kind="LightningBolt" />
-                </Button>
-                <Button
-                    x:Name="menuMixedTestServer"
-                    Width="30"
-                    Height="30"
-                    Margin="{StaticResource MarginLeftRight4}"
-                    Style="{StaticResource MaterialDesignFloatingActionMiniLightButton}"
-                    ToolTip="{x:Static resx:ResUI.menuMixedTestServer}">
-                    <materialDesign:PackIcon VerticalAlignment="Center" Kind="Speedometer" />
-                </Button>
+                    Icon="{ui:SymbolIcon Add24}"
+                    Style="{StaticResource ToolIcon}"
+                    ToolTip="{x:Static resx:ResUI.menuSubAdd}" />
             </WrapPanel>
-            <DataGrid
-                x:Name="lstProfiles"
-                materialDesign:DataGridAssist.CellPadding="2,2"
-                AutoGenerateColumns="False"
-                BorderThickness="1"
-                CanUserAddRows="False"
-                CanUserResizeRows="False"
-                CanUserSortColumns="False"
-                EnableRowVirtualization="True"
-                Focusable="True"
-                GridLinesVisibility="All"
-                HeadersVisibility="All"
-                IsReadOnly="True"
-                RowHeaderWidth="40"
-                Style="{StaticResource DefDataGrid}">
-                <DataGrid.InputBindings>
-                    <KeyBinding Command="ApplicationCommands.NotACommand" Gesture="Ctrl+C" />
-                    <KeyBinding Command="ApplicationCommands.NotACommand" Gesture="Ctrl+V" />
-                    <KeyBinding Command="ApplicationCommands.NotACommand" Gesture="Delete" />
-                    <KeyBinding Command="ApplicationCommands.NotACommand" Gesture="Enter" />
-                </DataGrid.InputBindings>
-                <DataGrid.ContextMenu>
-                    <ContextMenu Style="{StaticResource DefContextMenu}">
-                        <MenuItem
-                            x:Name="menuSetDefaultServer"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuSetDefaultServer}"
-                            InputGestureText="Enter" />
-                        <MenuItem
-                            x:Name="menuEditServer"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuEditServer}"
-                            InputGestureText="Ctrl+D" />
-                        <MenuItem
-                            x:Name="menuCopyServer"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuCopyServer}" />
-                        <MenuItem
-                            x:Name="menuRemoveServer"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuRemoveServer}"
-                            InputGestureText="Back" />
-                        <MenuItem
-                            x:Name="menuRemoveDuplicateServer"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuRemoveDuplicateServer}" />
-                        <MenuItem
-                            x:Name="menuRemoveInvalidServerResult"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuRemoveInvalidServerResult}" />
-                        <Separator />
-                        <MenuItem
-                            x:Name="menuTcpingServer"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuTcpingServer}"
-                            InputGestureText="Ctrl+O" />
-                        <MenuItem
-                            x:Name="menuRealPingServer"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuRealPingServer}"
-                            InputGestureText="Ctrl+R" />
-                        <MenuItem
-                            x:Name="menuUdpTestServer"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuUdpTestServer}" />
-                        <MenuItem
-                            x:Name="menuSpeedServer"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuSpeedServer}"
-                            InputGestureText="Ctrl+T" />
-                        <MenuItem
-                            x:Name="menuSortServerResult"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuSortServerResult}" />
-                        <Separator />
-                        <MenuItem
-                            x:Name="menuMoveToGroup"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuMoveToGroup}">
-                            <MenuItem Height="Auto">
-                                <MenuItem.Header>
-                                    <DockPanel>
-                                        <ComboBox
-                                            x:Name="cmbMoveToGroup"
-                                            Width="200"
-                                            materialDesign:HintAssist.Hint="{x:Static resx:ResUI.menuSubscription}"
-                                            DisplayMemberPath="Remarks"
-                                            FontSize="{DynamicResource StdFontSize}"
-                                            Style="{StaticResource MaterialDesignFilledComboBox}" />
-                                    </DockPanel>
-                                </MenuItem.Header>
-                            </MenuItem>
-                        </MenuItem>
-                        <MenuItem Header="{x:Static resx:ResUI.menuMoveTo}">
-                            <MenuItem
-                                x:Name="menuMoveTop"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuMoveTop}"
-                                InputGestureText="T" />
-                            <MenuItem
-                                x:Name="menuMoveUp"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuMoveUp}"
-                                InputGestureText="U" />
-                            <MenuItem
-                                x:Name="menuMoveDown"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuMoveDown}"
-                                InputGestureText="D" />
-                            <MenuItem
-                                x:Name="menuMoveBottom"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuMoveBottom}"
-                                InputGestureText="B" />
-                        </MenuItem>
-                        <MenuItem
-                            x:Name="menuSelectAll"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuSelectAll}"
-                            InputGestureText="Ctrl+A" />
-                        <Separator />
-                        <MenuItem
-                            x:Name="menuShareServer"
-                            Height="{StaticResource MenuItemHeight}"
-                            Header="{x:Static resx:ResUI.menuShareServer}"
-                            InputGestureText="Ctrl+F" />
-                        <MenuItem Header="{x:Static resx:ResUI.menuExportConfig}">
-                            <MenuItem
-                                x:Name="menuExport2ClientConfig"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuExport2ClientConfig}" />
-                            <MenuItem
-                                x:Name="menuExport2ClientConfigClipboard"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuExport2ClientConfigClipboard}" />
-                            <Separator />
-                            <MenuItem
-                                x:Name="menuExport2ShareUrl"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuExport2ShareUrl}"
-                                InputGestureText="Ctrl+C" />
-                            <MenuItem
-                                x:Name="menuExport2ShareUrlBase64"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuExport2ShareUrlBase64}" />
-                            <MenuItem
-                                x:Name="menuExport2InnerUri"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuExport2InnerUri}" />
-                        </MenuItem>
-                        <Separator />
-                        <MenuItem Header="{x:Static resx:ResUI.menuGenGroupServer}">
-                            <MenuItem
-                                x:Name="menuGenGroupAllServer"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuAllServers}" />
-                            <MenuItem
-                                x:Name="menuGenGroupRegionServer"
-                                Height="{StaticResource MenuItemHeight}"
-                                Header="{x:Static resx:ResUI.menuGenRegionGroup}" />
-                        </MenuItem>
-                    </ContextMenu>
-                </DataGrid.ContextMenu>
-                <DataGrid.Resources>
-                    <Style BasedOn="{StaticResource MaterialDesignDataGridRow}" TargetType="DataGridRow">
-                        <EventSetter Event="MouseDoubleClick" Handler="LstProfiles_MouseDoubleClick" />
-                    </Style>
-                    <Style BasedOn="{StaticResource MaterialDesignDataGridColumnHeader}" TargetType="DataGridColumnHeader">
-                        <EventSetter Event="Click" Handler="LstProfiles_ColumnHeader_Click" />
-                    </Style>
-
-                    <Style BasedOn="{StaticResource MaterialDesignDataGridCell}" TargetType="DataGridCell">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource MaterialDesign.Brush.Primary.Light}" />
-                                <Setter Property="Foreground" Value="Black" />
-                                <Setter Property="BorderBrush" Value="{DynamicResource MaterialDesign.Brush.Primary.Light}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </DataGrid.Resources>
-                <DataGrid.Columns>
-                    <base:MyDGTextColumn
-                        Width="80"
-                        Binding="{Binding ConfigType}"
-                        ExName="ConfigType"
-                        Header="{x:Static resx:ResUI.LvServiceType}" />
-                    <base:MyDGTextColumn
-                        Width="150"
-                        Binding="{Binding Remarks}"
-                        ExName="Remarks"
-                        Header="{x:Static resx:ResUI.LvRemarks}" />
-                    <base:MyDGTextColumn
-                        Width="120"
-                        Binding="{Binding Address}"
-                        ExName="Address"
-                        Header="{x:Static resx:ResUI.LvAddress}" />
-                    <base:MyDGTextColumn
-                        Width="60"
-                        Binding="{Binding Port}"
-                        ExName="Port"
-                        Header="{x:Static resx:ResUI.LvPort}" />
-                    <base:MyDGTextColumn
-                        Width="100"
-                        Binding="{Binding Network}"
-                        ExName="Network"
-                        Header="{x:Static resx:ResUI.LvTransportProtocol}" />
-                    <base:MyDGTextColumn
-                        Width="100"
-                        Binding="{Binding StreamSecurity}"
-                        ExName="StreamSecurity"
-                        Header="{x:Static resx:ResUI.LvTLS}" />
-                    <base:MyDGTextColumn
-                        Width="100"
-                        Binding="{Binding SubRemarks}"
-                        ExName="SubRemarks"
-                        Header="{x:Static resx:ResUI.LvSubscription}" />
-                    <base:MyDGTextColumn
-                        Width="100"
-                        Binding="{Binding DelayVal}"
-                        ExName="DelayVal"
-                        Header="{x:Static resx:ResUI.LvTestDelay}"
-                        SortMemberPath="Delay">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="{x:Type TextBlock}">
-                                <Setter Property="HorizontalAlignment" Value="Right" />
-                                <Setter Property="Foreground" Value="{Binding Delay, Converter={StaticResource DelayColorConverter}}" />
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </base:MyDGTextColumn>
-                    <base:MyDGTextColumn
-                        Width="100"
-                        Binding="{Binding SpeedVal}"
-                        ExName="SpeedVal"
-                        Header="{x:Static resx:ResUI.LvTestSpeed}">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="{x:Type TextBlock}">
-                                <Setter Property="HorizontalAlignment" Value="Right" />
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </base:MyDGTextColumn>
-
-                    <base:MyDGTextColumn
-                        x:Name="colTodayUp"
-                        Width="100"
-                        Binding="{Binding TodayUp}"
-                        ExName="TodayUp"
-                        Header="{x:Static resx:ResUI.LvTodayUploadDataAmount}" />
-
-                    <base:MyDGTextColumn
-                        x:Name="colIpInfo"
-                        Width="100"
-                        Binding="{Binding IpInfo}"
-                        ExName="IpInfo"
-                        Header="{x:Static resx:ResUI.LvTestIpInfo}" />
-
-                    <base:MyDGTextColumn
-                        x:Name="colTodayDown"
-                        Width="100"
-                        Binding="{Binding TodayDown}"
-                        ExName="TodayDown"
-                        Header="{x:Static resx:ResUI.LvTodayDownloadDataAmount}" />
-                    <base:MyDGTextColumn
-                        x:Name="colTotalUp"
-                        Width="100"
-                        Binding="{Binding TotalUp}"
-                        ExName="TotalUp"
-                        Header="{x:Static resx:ResUI.LvTotalUploadDataAmount}" />
-                    <base:MyDGTextColumn
-                        x:Name="colTotalDown"
-                        Width="100"
-                        Binding="{Binding TotalDown}"
-                        ExName="TotalDown"
-                        Header="{x:Static resx:ResUI.LvTotalDownloadDataAmount}" />
-                </DataGrid.Columns>
-            </DataGrid>
         </DockPanel>
-    </Grid>
+
+        <DataGrid
+            x:Name="lstProfiles"
+            AutoGenerateColumns="False"
+            Background="Transparent"
+            BorderThickness="0"
+            CanUserAddRows="False"
+            CanUserResizeRows="False"
+            CanUserSortColumns="False"
+            EnableRowVirtualization="True"
+            Focusable="True"
+            GridLinesVisibility="Horizontal"
+            HeadersVisibility="Column"
+            HorizontalGridLinesBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+            IsReadOnly="True"
+            RowHeight="38"
+            SelectionMode="Extended"
+            SelectionUnit="FullRow">
+            <DataGrid.InputBindings>
+                <KeyBinding Command="ApplicationCommands.NotACommand" Gesture="Ctrl+C" />
+                <KeyBinding Command="ApplicationCommands.NotACommand" Gesture="Ctrl+V" />
+                <KeyBinding Command="ApplicationCommands.NotACommand" Gesture="Delete" />
+                <KeyBinding Command="ApplicationCommands.NotACommand" Gesture="Enter" />
+            </DataGrid.InputBindings>
+
+            <!--  Throne-like order: connect and properties first, then tests, organising, removal  -->
+            <DataGrid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem
+                        x:Name="menuSetDefaultServer"
+                        FontWeight="SemiBold"
+                        Header="{x:Static resx:AppText.CtxConnect}"
+                        InputGestureText="Enter">
+                        <MenuItem.Icon>
+                            <ui:SymbolIcon Symbol="Play24" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem
+                        x:Name="menuEditServer"
+                        Header="{x:Static resx:AppText.CtxProperties}"
+                        InputGestureText="Ctrl+D">
+                        <MenuItem.Icon>
+                            <ui:SymbolIcon Symbol="Info24" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem
+                        x:Name="menuRealPingServer"
+                        Header="{x:Static resx:AppText.CtxUrlTest}"
+                        InputGestureText="Ctrl+R">
+                        <MenuItem.Icon>
+                            <ui:SymbolIcon Symbol="Flash24" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem x:Name="menuPickCore" Header="{x:Static resx:AppText.CtxPickCore}">
+                        <MenuItem.Icon>
+                            <ui:SymbolIcon Symbol="ArrowSwap24" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem
+                        x:Name="menuSpeedServer"
+                        Header="{x:Static resx:AppText.CtxSpeedTest}"
+                        InputGestureText="Ctrl+T">
+                        <MenuItem.Icon>
+                            <ui:SymbolIcon Symbol="TopSpeed24" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem
+                        x:Name="menuTcpingServer"
+                        Header="{x:Static resx:AppText.CtxTcping}"
+                        InputGestureText="Ctrl+O" />
+                    <MenuItem x:Name="menuUdpTestServer" Header="{x:Static resx:AppText.CtxUdpTest}" />
+                    <MenuItem x:Name="menuSortServerResult" Header="{x:Static resx:ResUI.menuSortServerResult}" />
+                    <Separator />
+                    <MenuItem x:Name="menuCopyServer" Header="{x:Static resx:AppText.CtxClone}">
+                        <MenuItem.Icon>
+                            <ui:SymbolIcon Symbol="Copy24" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem x:Name="menuMoveToGroup" Header="{x:Static resx:ResUI.menuMoveToGroup}">
+                        <MenuItem.Icon>
+                            <ui:SymbolIcon Symbol="FolderArrowRight24" />
+                        </MenuItem.Icon>
+                        <MenuItem Height="Auto">
+                            <MenuItem.Header>
+                                <ComboBox
+                                    x:Name="cmbMoveToGroup"
+                                    Width="220"
+                                    DisplayMemberPath="Remarks" />
+                            </MenuItem.Header>
+                        </MenuItem>
+                    </MenuItem>
+                    <MenuItem Header="{x:Static resx:AppText.CtxOrder}">
+                        <MenuItem
+                            x:Name="menuMoveTop"
+                            Header="{x:Static resx:ResUI.menuMoveTop}"
+                            InputGestureText="T" />
+                        <MenuItem
+                            x:Name="menuMoveUp"
+                            Header="{x:Static resx:ResUI.menuMoveUp}"
+                            InputGestureText="U" />
+                        <MenuItem
+                            x:Name="menuMoveDown"
+                            Header="{x:Static resx:ResUI.menuMoveDown}"
+                            InputGestureText="D" />
+                        <MenuItem
+                            x:Name="menuMoveBottom"
+                            Header="{x:Static resx:ResUI.menuMoveBottom}"
+                            InputGestureText="B" />
+                    </MenuItem>
+                    <MenuItem
+                        x:Name="menuSelectAll"
+                        Header="{x:Static resx:ResUI.menuSelectAll}"
+                        InputGestureText="Ctrl+A" />
+                    <Separator />
+                    <MenuItem
+                        x:Name="menuShareServer"
+                        Header="{x:Static resx:AppText.CtxShare}"
+                        InputGestureText="Ctrl+F">
+                        <MenuItem.Icon>
+                            <ui:SymbolIcon Symbol="QrCode24" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem Header="{x:Static resx:ResUI.menuExportConfig}">
+                        <MenuItem x:Name="menuExport2ShareUrl" Header="{x:Static resx:ResUI.menuExport2ShareUrl}" InputGestureText="Ctrl+C" />
+                        <MenuItem x:Name="menuExport2ShareUrlBase64" Header="{x:Static resx:ResUI.menuExport2ShareUrlBase64}" />
+                        <MenuItem x:Name="menuExport2InnerUri" Header="{x:Static resx:ResUI.menuExport2InnerUri}" />
+                        <Separator />
+                        <MenuItem x:Name="menuExport2ClientConfig" Header="{x:Static resx:ResUI.menuExport2ClientConfig}" />
+                        <MenuItem x:Name="menuExport2ClientConfigClipboard" Header="{x:Static resx:ResUI.menuExport2ClientConfigClipboard}" />
+                    </MenuItem>
+                    <MenuItem Header="{x:Static resx:ResUI.menuGenGroupServer}">
+                        <MenuItem x:Name="menuGenGroupAllServer" Header="{x:Static resx:ResUI.menuAllServers}" />
+                        <MenuItem x:Name="menuGenGroupRegionServer" Header="{x:Static resx:ResUI.menuGenRegionGroup}" />
+                    </MenuItem>
+                    <Separator />
+                    <MenuItem
+                        x:Name="menuRemoveServer"
+                        Header="{x:Static resx:AppText.CtxDelete}"
+                        InputGestureText="Del">
+                        <MenuItem.Icon>
+                            <ui:SymbolIcon Symbol="Delete24" />
+                        </MenuItem.Icon>
+                    </MenuItem>
+                    <MenuItem x:Name="menuRemoveDuplicateServer" Header="{x:Static resx:ResUI.menuRemoveDuplicateServer}" />
+                    <MenuItem x:Name="menuRemoveInvalidServerResult" Header="{x:Static resx:ResUI.menuRemoveInvalidServerResult}" />
+                </ContextMenu>
+            </DataGrid.ContextMenu>
+
+            <DataGrid.Resources>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Background" Value="Transparent" />
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
+                        </DataTrigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+                <Style TargetType="DataGridColumnHeader">
+                    <EventSetter Event="Click" Handler="LstProfiles_ColumnHeader_Click" />
+                    <Setter Property="Padding" Value="10,8" />
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <Setter Property="FontSize" Value="12" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                    <Setter Property="BorderThickness" Value="0,0,0,1" />
+                </Style>
+                <Style TargetType="DataGridCell">
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="DataGridCell">
+                                <ContentPresenter Margin="10,0" VerticalAlignment="Center" />
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </DataGrid.Resources>
+
+            <DataGrid.Columns>
+                <!--  Server: active marker, country badge (from the flag emoji), name  -->
+                <base:MyDGTemplateColumn
+                    Width="300"
+                    ExName="Remarks"
+                    Header="{x:Static resx:AppText.ColServer}"
+                    SortMemberPath="Remarks">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Grid>
+                            <Border
+                                Width="3"
+                                Height="18"
+                                Margin="-9,0,0,0"
+                                HorizontalAlignment="Left"
+                                Background="{DynamicResource AccentFillColorDefaultBrush}"
+                                CornerRadius="1.5"
+                                Visibility="{Binding IsActive, Converter={StaticResource BoolToVisConverter}}" />
+                            <StackPanel Orientation="Horizontal">
+                                <Image
+                                    Width="20"
+                                    Height="20"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    RenderOptions.BitmapScalingMode="HighQuality"
+                                    Source="{Binding Remarks, Converter={StaticResource ServerFlag}}">
+                                    <Image.Style>
+                                        <Style TargetType="Image">
+                                            <Style.Triggers>
+                                                <Trigger Property="Source" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Image.Style>
+                                </Image>
+                                <Border
+                                    MinWidth="28"
+                                    Margin="0,0,10,0"
+                                    Padding="5,1"
+                                    VerticalAlignment="Center"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Visibility="{Binding Remarks, Converter={StaticResource ServerFlag}, ConverterParameter=badge}">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding Remarks, Converter={StaticResource ServerName}}" />
+                                </Border>
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    FontFamily="Segoe UI Variable Text, Segoe UI, Segoe UI Emoji, Segoe UI Symbol"
+                                    Text="{Binding Remarks, Converter={StaticResource ServerName}, ConverterParameter=name}"
+                                    TextTrimming="CharacterEllipsis"
+                                    ToolTip="{Binding Remarks}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </base:MyDGTemplateColumn>
+                <base:MyDGTextColumn
+                    Width="100"
+                    Binding="{Binding DelayVal}"
+                    ExName="DelayVal"
+                    Header="{x:Static resx:ResUI.LvTestDelay}"
+                    SortMemberPath="Delay">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="{x:Type TextBlock}">
+                            <Setter Property="HorizontalAlignment" Value="Right" />
+                            <Setter Property="FontWeight" Value="SemiBold" />
+                            <Setter Property="Foreground" Value="{Binding Delay, Converter={StaticResource DelayColorConverter}}" />
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </base:MyDGTextColumn>
+                <base:MyDGTextColumn
+                    Width="100"
+                    Binding="{Binding SpeedVal}"
+                    ExName="SpeedVal"
+                    Header="{x:Static resx:ResUI.LvTestSpeed}">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="{x:Type TextBlock}">
+                            <Setter Property="HorizontalAlignment" Value="Right" />
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </base:MyDGTextColumn>
+                <base:MyDGTextColumn
+                    Width="90"
+                    Binding="{Binding ConfigType}"
+                    ExName="ConfigType"
+                    Header="{x:Static resx:AppText.ColType}" />
+                <base:MyDGTextColumn
+                    Width="90"
+                    Binding="{Binding Network}"
+                    ExName="Network"
+                    Header="{x:Static resx:ResUI.LvTransportProtocol}" />
+                <base:MyDGTextColumn
+                    Width="90"
+                    Binding="{Binding StreamSecurity}"
+                    ExName="StreamSecurity"
+                    Header="{x:Static resx:ResUI.LvTLS}" />
+                <base:MyDGTextColumn
+                    Width="130"
+                    Binding="{Binding SubRemarks}"
+                    ExName="SubRemarks"
+                    Header="{x:Static resx:ResUI.LvSubscription}" />
+                <base:MyDGTextColumn
+                    Width="140"
+                    Binding="{Binding Address}"
+                    ExName="Address"
+                    Header="{x:Static resx:ResUI.LvAddress}" />
+                <base:MyDGTextColumn
+                    Width="60"
+                    Binding="{Binding Port}"
+                    ExName="Port"
+                    Header="{x:Static resx:ResUI.LvPort}" />
+                <base:MyDGTextColumn
+                    x:Name="colIpInfo"
+                    Width="110"
+                    Binding="{Binding IpInfo}"
+                    ExName="IpInfo"
+                    Header="{x:Static resx:ResUI.LvTestIpInfo}" />
+                <base:MyDGTextColumn
+                    x:Name="colTodayUp"
+                    Width="100"
+                    Binding="{Binding TodayUp}"
+                    ExName="TodayUp"
+                    Header="{x:Static resx:ResUI.LvTodayUploadDataAmount}" />
+                <base:MyDGTextColumn
+                    x:Name="colTodayDown"
+                    Width="100"
+                    Binding="{Binding TodayDown}"
+                    ExName="TodayDown"
+                    Header="{x:Static resx:ResUI.LvTodayDownloadDataAmount}" />
+                <base:MyDGTextColumn
+                    x:Name="colTotalUp"
+                    Width="100"
+                    Binding="{Binding TotalUp}"
+                    ExName="TotalUp"
+                    Header="{x:Static resx:ResUI.LvTotalUploadDataAmount}" />
+                <base:MyDGTextColumn
+                    x:Name="colTotalDown"
+                    Width="100"
+                    Binding="{Binding TotalDown}"
+                    ExName="TotalDown"
+                    Header="{x:Static resx:ResUI.LvTotalDownloadDataAmount}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
 </reactiveui:ReactiveUserControl>

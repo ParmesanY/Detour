@@ -51,6 +51,14 @@ public partial class CoreConfigV2rayService
                         inbound.listen = listen;
                     }
                 }
+
+                // In TUN mode apps don't need the local port; don't leave it open to any program.
+                if (LocalProxyGuard.ShouldProtect(_config, context.IsTunEnabled) && inbound.listen != listen)
+                {
+                    var (user, pass) = LocalProxyGuard.SessionCredentials;
+                    inbound.settings.auth = "password";
+                    inbound.settings.accounts = [new() { user = user, pass = pass }];
+                }
             }
 
             if (context.IsTunEnabled)

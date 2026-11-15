@@ -46,7 +46,7 @@ public class CoreConfigContextBuilder
             SimpleDnsItem = config.SimpleDNSItem,
             ProtectDomainList = [],
             RawDnsItem = await AppManager.Instance.GetDNSItem(coreType),
-            RoutingItem = await ConfigHandler.GetDefaultRouting(config),
+            RoutingItem = ConnectionRulesManager.Instance.ApplyToRouting(config, await ConfigHandler.GetDefaultRouting(config)),
             IsWindows = Utils.IsWindows(),
             IsMacOS = Utils.IsMacOS(),
             IsLinux = Utils.IsLinux(),
@@ -390,6 +390,26 @@ public class CoreConfigContextBuilder
         if (Utils.IsDomain(address))
         {
             context.ProtectDomainList.Add(address);
+        }
+
+        // Custom profiles: Address is the config file name; the server names are inside the JSON.
+        if (node.ConfigType == EConfigType.Custom && address.IsNotEmpty())
+        {
+            try
+            {
+                var path = File.Exists(address) ? address : Utils.GetConfigPath(address);
+                if (File.Exists(path))
+                {
+                    foreach (var domain in CustomConfigDomains.Extract(await File.ReadAllTextAsync(path)))
+                    {
+                        context.ProtectDomainList.Add(domain);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logging.SaveLog("CoreConfigContextBuilder", ex);
+            }
         }
 
         // ech query server name protect

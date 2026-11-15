@@ -15,10 +15,10 @@
     Style="{StaticResource ViewGlobal}"
     mc:Ignorable="d">
     <Grid>
-        <materialDesign:ColorZone
-            Height="auto"
-            Margin="{StaticResource Margin4}"
-            Mode="Standard">
+        <Border
+            Margin="0,4,0,0"
+            Padding="4,2"
+            Style="{StaticResource DetourPanel}">
             <DockPanel>
                 <StackPanel
                     Margin="{StaticResource MarginLeftRight8}"
@@ -101,13 +101,13 @@
                     <TextBlock x:Name="txtRunningInfoDisplay" Style="{StaticResource StatusbarItem}" />
                 </StackPanel>
             </DockPanel>
-        </materialDesign:ColorZone>
+        </Border>
 
         <tb:TaskbarIcon
             x:Name="tbNotify"
-            IconSource="/Resources/v2rayN.ico"
+            IconSource="/Resources/app.ico"
             NoLeftClickDelay="True"
-            ToolTipText="v2rayN">
+            ToolTipText="Detour">
             <tb:TaskbarIcon.ContextMenu>
                 <ContextMenu Style="{StaticResource DefContextMenu}">
                     <MenuItem

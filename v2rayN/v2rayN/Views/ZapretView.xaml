@@ -1,0 +1,158 @@
+<reactiveui:ReactiveUserControl
+    x:Class="v2rayN.Views.ZapretView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="clr-namespace:v2rayN.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:reactiveui="http://reactiveui.net"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:vms="clr-namespace:ServiceLib.ViewModels;assembly=ServiceLib"
+    d:DesignHeight="700"
+    d:DesignWidth="900"
+    x:TypeArguments="vms:ZapretViewModel"
+    mc:Ignorable="d">
+    <UserControl.Resources>
+        <conv:NotEmptyToBoolConverter x:Key="NotEmpty" />
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <conv:InvertBoolConverter x:Key="Inverse" />
+    </UserControl.Resources>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="900" Margin="32,24,32,24">
+            <ui:TextBlock FontTypography="Title" Text="{x:Static resx:AppText.ZapretTitle}" />
+            <ui:TextBlock
+                Margin="0,6,0,20"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                Text="{x:Static resx:AppText.ZapretSubtitle}"
+                TextWrapping="Wrap" />
+
+            <ui:InfoBar
+                Margin="0,0,0,12"
+                IsClosable="False"
+                IsOpen="{Binding IsAdmin, Converter={StaticResource Inverse}}"
+                Message="{x:Static resx:AppText.ZapretNeedsAdmin}"
+                Severity="Warning" />
+
+            <!--  Status  -->
+            <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon ShieldCheckmark24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding StateText}" />
+                        <TextBlock
+                            Margin="0,2,0,0"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            Text="{Binding VersionText}" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <StackPanel Orientation="Horizontal">
+                    <ui:Button
+                        Command="{Binding InstallCmd}"
+                        Icon="{ui:SymbolIcon ArrowDownload24}">
+                        <ui:Button.Style>
+                            <Style BasedOn="{StaticResource {x:Type ui:Button}}" TargetType="ui:Button">
+                                <Setter Property="Content" Value="{x:Static resx:AppText.ZapretUpdate}" />
+                                <Setter Property="Appearance" Value="Secondary" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsInstalled}" Value="False">
+                                        <Setter Property="Content" Value="{x:Static resx:AppText.ZapretInstall}" />
+                                        <Setter Property="Appearance" Value="Primary" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                    <ui:Button
+                        Margin="8,0,0,0"
+                        Appearance="Primary"
+                        Command="{Binding StartCmd}"
+                        Content="{x:Static resx:AppText.ZapretStart}"
+                        Icon="{ui:SymbolIcon Play24}"
+                        Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}, ConverterParameter=invert}" />
+                    <ui:Button
+                        Margin="8,0,0,0"
+                        Command="{Binding StopCmd}"
+                        Content="{x:Static resx:AppText.ZapretStop}"
+                        Icon="{ui:SymbolIcon Stop24}"
+                        Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+            </ui:CardControl>
+
+            <ui:CardControl
+                Margin="0,0,0,4"
+                Header="{x:Static resx:AppText.ZapretEnabled}"
+                Icon="{ui:SymbolIcon Power24}">
+                <ui:ToggleSwitch IsChecked="{Binding Enabled}" />
+            </ui:CardControl>
+
+            <!--  Strategy  -->
+            <ui:CardControl Margin="0,16,0,4" Icon="{ui:SymbolIcon Options24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Text="{x:Static resx:AppText.ZapretStrategy}" />
+                        <TextBlock
+                            Margin="0,2,24,0"
+                            FontSize="12"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            Text="{x:Static resx:AppText.ZapretStrategyHint}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <StackPanel Orientation="Horizontal">
+                    <ComboBox
+                        MinWidth="220"
+                        ItemsSource="{Binding Strategies}"
+                        SelectedItem="{Binding SelectedStrategy}" />
+                    <ui:Button
+                        Margin="8,0,0,0"
+                        Command="{Binding AutoSelectCmd}"
+                        Content="{x:Static resx:AppText.ZapretAutoSelect}"
+                        Icon="{ui:SymbolIcon Wand24}" />
+                </StackPanel>
+            </ui:CardControl>
+
+            <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Games24}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Text="{x:Static resx:AppText.ZapretGameFilter}" />
+                        <TextBlock
+                            Margin="0,2,24,0"
+                            FontSize="12"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            Text="{x:Static resx:AppText.ZapretGameFilterHint}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ComboBox
+                    MinWidth="160"
+                    DisplayMemberPath="Value"
+                    ItemsSource="{Binding GameFilterModes}"
+                    SelectedValue="{Binding GameFilterMode}"
+                    SelectedValuePath="Key" />
+            </ui:CardControl>
+
+            <!--  Progress  -->
+            <StackPanel Margin="0,16,0,0" Orientation="Horizontal">
+                <ui:ProgressRing
+                    Width="18"
+                    Height="18"
+                    Margin="0,0,10,0"
+                    IsIndeterminate="True"
+                    Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    Text="{Binding ProgressText}"
+                    TextWrapping="Wrap" />
+            </StackPanel>
+
+            <TextBlock
+                Margin="0,24,0,0"
+                FontSize="12"
+                Foreground="{DynamicResource TextFillColorTertiaryBrush}">
+                <Run Text="{x:Static resx:AppText.ZapretSource}" /><Run Text=": github.com/Flowseal/zapret-discord-youtube (MIT)" />
+            </TextBlock>
+        </StackPanel>
+    </ScrollViewer>
+</reactiveui:ReactiveUserControl>

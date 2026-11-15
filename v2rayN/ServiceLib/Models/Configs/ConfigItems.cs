@@ -80,6 +80,15 @@ public class MsgUIItem
 
 public class UIItem
 {
+    /// <summary>Connect button mode: true = whole computer via TUN, false = system proxy. Null = not chosen yet.</summary>
+    public bool? PreferTunConnect { get; set; }
+
+    /// <summary>Restore the last connection (TUN / system proxy) on start; null = yes.</summary>
+    public bool? ConnectOnStartup { get; set; }
+
+    /// <summary>Detour UI defaults (dark theme, live speed) applied once to this config.</summary>
+    public bool DetourDefaultsApplied { get; set; }
+
     public bool EnableAutoAdjustMainLvColWidth { get; set; }
     public int MainGirdHeight1 { get; set; }
     public int MainGirdHeight2 { get; set; }

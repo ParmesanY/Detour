@@ -41,6 +41,7 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
     #region UI
 
     [Reactive] public partial bool AutoRun { get; set; }
+    private bool _autoRunLoaded;
     [Reactive] public partial bool EnableStatistics { get; set; }
     [Reactive] public partial bool KeepOlderDedupl { get; set; }
     [Reactive] public partial bool DisplayRealTimeSpeed { get; set; }
@@ -176,6 +177,7 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
         #region UI
 
         AutoRun = _config.GuiItem.AutoRun;
+        _autoRunLoaded = AutoRun;
         EnableStatistics = _config.GuiItem.EnableStatistics;
         DisplayRealTimeSpeed = _config.GuiItem.DisplayRealTimeSpeed;
         KeepOlderDedupl = _config.GuiItem.KeepOlderDedupl;
@@ -355,7 +357,12 @@ public partial class OptionSettingViewModel : MyReactiveObject, ICloseable
         _config.Fragment4RayItem.Delays = fragmentDelays;
         _config.Fragment4RayItem.MaxSplit = FragmentMaxSplit;
 
-        _config.GuiItem.AutoRun = AutoRun;
+        // Only when changed here: the switch on the main panel may have changed it after this
+        // window loaded its copy, and saving would silently undo that.
+        if (AutoRun != _autoRunLoaded)
+        {
+            _config.GuiItem.AutoRun = AutoRun;
+        }
         _config.GuiItem.EnableStatistics = EnableStatistics;
         _config.GuiItem.DisplayRealTimeSpeed = DisplayRealTimeSpeed;
         _config.GuiItem.KeepOlderDedupl = KeepOlderDedupl;

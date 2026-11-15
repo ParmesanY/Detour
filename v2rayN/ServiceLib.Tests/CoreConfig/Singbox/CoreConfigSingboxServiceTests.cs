@@ -68,6 +68,61 @@ public class CoreConfigSingboxServiceTests
     }
 
     [Test]
+    public async Task GenerateClientConfigContent_Tun_CoreProcessesResolveViaDirectDns()
+    {
+        // The cores' own lookups (VPN server names) must not go to the remote resolver, which is
+        // reached through the proxy, i.e. through the core itself.
+        var config = CoreConfigTestFactory.CreateConfig(ECoreType.sing_box);
+        config.TunModeItem.EnableTun = true;
+        CoreConfigTestFactory.BindAppManagerConfig(config);
+        var node = CoreConfigTestFactory.CreateSocksNode(ECoreType.sing_box);
+        var context = CoreConfigTestFactory.CreateContext(config, node, ECoreType.sing_box) with
+        {
+            IsTunEnabled = true,
+            ProtectCoreTypeList = [ECoreType.Xray],
+        };
+        // Core paths are listed only for files that exist.
+        var xray = CoreInfoManager.Instance.GetCoreInfo(ECoreType.Xray)!;
+        var fakeExe = Utils.GetBinPath(Utils.GetExeName(xray.CoreExes!.First()), ECoreType.Xray.ToString());
+        var created = !File.Exists(fakeExe);
+        Directory.CreateDirectory(Path.GetDirectoryName(fakeExe)!);
+        if (created)
+        {
+            await File.WriteAllTextAsync(fakeExe, "");
+        }
+
+        RetResult result;
+        try
+        {
+            result = new CoreConfigSingboxService(context).GenerateClientConfigContent();
+        }
+        finally
+        {
+            if (created)
+            {
+                File.Delete(fakeExe);
+            }
+        }
+
+        await result.Success.Should().BeTrue().Because($"ret msg: {result.Msg}");
+        var cfg = JsonUtils.Deserialize<SingboxConfig>(result.Data!.ToString())!;
+        var hijack = cfg.route.rules.FirstOrDefault(r => r.action == "hijack-dns" && r.process_path?.Count > 0);
+        await hijack.Should().NotBeNull();
+
+        var dnsRules = cfg.dns!.rules!;
+        var coreRule = dnsRules.FindIndex(r => r.process_path?.SequenceEqual(hijack!.process_path!) == true);
+        await coreRule.Should().BeGreaterThanOrEqualTo(0);
+        // A foreign DoH by IP, dialled directly: Russian resolvers (the default direct DNS) drop VPN domains.
+        await dnsRules[coreRule].server.Should().BeEqualTo(Global.SingboxCoreDNSTag);
+        var coreDns = cfg.dns.servers!.First(s => s.tag == Global.SingboxCoreDNSTag);
+        await coreDns.type.Should().BeEqualTo("https");
+        await coreDns.server.Should().BeEqualTo(Global.CoreDirectDoHServer);
+        await coreDns.detour.Should().BeNull();
+        var firstRemote = dnsRules.FindIndex(r => r.server == Global.SingboxRemoteDNSTag);
+        await (firstRemote < 0 || coreRule < firstRemote).Should().BeTrue();
+    }
+
+    [Test]
     public async Task GenerateClientConfigContent_TunDnsModeDisabled_ShouldIncludeDnsMode()
     {
         var config = CoreConfigTestFactory.CreateConfig(ECoreType.sing_box);

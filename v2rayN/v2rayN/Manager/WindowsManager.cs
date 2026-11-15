@@ -13,7 +13,7 @@ public sealed class WindowsManager
     {
         try
         {
-            var index = (int)config.SystemProxyItem.SysProxyType;
+            var index = StateIndex(config);
 
             //Load from routing setting
             var createdIcon = await GetNotifyIcon4Routing(config);
@@ -44,9 +44,17 @@ public sealed class WindowsManager
         }
     }
 
+    /// <summary>Icon index: the system proxy type, but "on" whenever TUN carries the traffic.</summary>
+    private static int StateIndex(Config config)
+    {
+        return config.TunModeItem?.EnableTun == true
+            ? (int)ESysProxyType.ForcedChange
+            : (int)config.SystemProxyItem.SysProxyType;
+    }
+
     public System.Windows.Media.ImageSource GetAppIcon(Config config)
     {
-        var index = (int)config.SystemProxyItem.SysProxyType + 1;
+        var index = StateIndex(config) + 1;
         return BitmapFrame.Create(new Uri($"pack://application:,,,/Resources/NotifyIcon{index}.ico", UriKind.RelativeOrAbsolute));
     }
 

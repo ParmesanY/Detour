@@ -927,7 +927,7 @@ public class Utils
         {
             return blFull
                 ? $"{Global.AppName} - V{GetVersionInfo()} - {RuntimeInformation.ProcessArchitecture}"
-                : $"{Global.AppName}/{GetVersionInfo()}";
+                : $"{Global.CompatClientName}/{GetVersionInfo()}";
         }
         catch (Exception ex)
         {

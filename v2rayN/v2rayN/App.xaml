@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:conv="clr-namespace:v2rayN.Converters"
     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <ResourceDictionary xmlns:system="clr-namespace:System;assembly=mscorlib">
@@ -13,6 +14,12 @@
                     PrimaryColor="Blue"
                     SecondaryColor="Lime" />
                 <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign2.Defaults.xaml" />
+                <!--  Fluent (WPF-UI) goes last so its implicit styles win; MaterialDesign keys stay for not yet migrated dialogs.  -->
+                <ui:ThemesDictionary Theme="Light" />
+                <ui:ControlsDictionary />
+                <!--  Detour look: shared styles, then the graphite palette (swapped on theme change, must stay last).  -->
+                <ResourceDictionary Source="/Themes/Detour.Shared.xaml" />
+                <ResourceDictionary Source="/Themes/Graphite.Dark.xaml" />
             </ResourceDictionary.MergedDictionaries>
             <system:Double x:Key="MenuItemHeight">32</system:Double>
             <system:Double x:Key="StdFontSize">12</system:Double>

@@ -14,4 +14,7 @@ public static class AppEvents
     public static readonly EventChannel<bool> ShutdownRequested = new();
 
     public static readonly EventChannel<ESysProxyType> SysProxyChangeRequested = new();
+
+    /// <summary>Regenerate core configs and restart cores (e.g. after a zapret→VPN switch).</summary>
+    public static readonly EventChannel<RxVoid> CoreReloadRequested = new();
 }

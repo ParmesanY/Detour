@@ -24,6 +24,7 @@ public partial class ProfilesView
         lstProfiles.PreviewKeyDown += LstProfiles_PreviewKeyDown;
         lstProfiles.SelectionChanged += LstProfiles_SelectionChanged;
         lstProfiles.LoadingRow += LstProfiles_LoadingRow;
+        lstProfiles.MouseDoubleClick += LstProfiles_MouseDoubleClick;
         menuSelectAll.Click += menuSelectAll_Click;
 
         if (_config.UiItem.EnableDragDropSort)
@@ -69,6 +70,8 @@ public partial class ProfilesView
             this.BindCommand(ViewModel, vm => vm.MixedTestServerCmd, v => v.menuMixedTestServer).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.TcpingServerCmd, v => v.menuTcpingServer).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.RealPingServerCmd, v => v.menuRealPingServer).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.PickCoreCmd, v => v.menuPickCore).DisposeWith(disposables);
+            this.BindCommand(ViewModel, vm => vm.PickCoreCmd, v => v.btnPickCore).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.UdpTestServerCmd, v => v.menuUdpTestServer).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.SpeedServerCmd, v => v.menuSpeedServer).DisposeWith(disposables);
             this.BindCommand(ViewModel, vm => vm.SortServerResultCmd, v => v.menuSortServerResult).DisposeWith(disposables);
@@ -189,15 +192,23 @@ public partial class ProfilesView
         e.Row.Header = $" {e.Row.GetIndex() + 1}";
     }
 
+    /// <summary>Double click connects to the server; its properties are in the right-click menu.</summary>
+    /// <summary>
+    /// Subscribed on the DataGrid itself: an implicit DataGridRow style with an EventSetter is
+    /// overridden by the explicit RowStyle the theme sets, so the handler never reached the rows.
+    /// The server is taken from the row under the click, not from SelectedProfile, which can lag.
+    /// </summary>
     private void LstProfiles_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (_config.UiItem.DoubleClick2Activate)
+        if (e.ChangedButton != MouseButton.Left || e.OriginalSource is not DependencyObject source)
         {
-            ViewModel?.SetDefaultServer();
+            return;
         }
-        else
+        var row = FindAncestor<DataGridRow>(source);
+        if (row?.Item is ProfileItemModel item && item.IndexId.IsNotEmpty())
         {
-            ViewModel?.EditServerAsync();
+            Logging.SaveLog($"ProfilesView: double click on {item.Remarks}");
+            _ = ViewModel?.SetDefaultServer(item.IndexId);
         }
     }
 
@@ -208,8 +219,10 @@ public partial class ProfilesView
             return;
         }
 
-        var colName = ((MyDGTextColumn)colHeader.Column).ExName;
-        ViewModel?.SortServer(colName);
+        if (colHeader.Column is IExNameColumn col)
+        {
+            ViewModel?.SortServer(col.ExName);
+        }
     }
 
     private void menuSelectAll_Click(object sender, RoutedEventArgs e)
@@ -329,13 +342,14 @@ public partial class ProfilesView
     {
         try
         {
+            // Saved widths and hidden columns are restored; the column order is the one in the XAML
+            // (the server name first), so layouts saved by the upstream table don't reshuffle it.
             var lvColumnItem = _config.UiItem.MainColumnItem.OrderBy(t => t.Index).ToList();
-            var displayIndex = 0;
             foreach (var item in lvColumnItem)
             {
-                foreach (var item2 in lstProfiles.Columns.Cast<MyDGTextColumn>())
+                foreach (var item2 in lstProfiles.Columns)
                 {
-                    if (item2.ExName == item.Name)
+                    if (item2 is IExNameColumn named && named.ExName == item.Name)
                     {
                         if (item.Width < 0)
                         {
@@ -343,8 +357,8 @@ public partial class ProfilesView
                         }
                         else
                         {
-                            item2.Width = item.Width;
-                            item2.DisplayIndex = displayIndex++;
+                            // The name column now also holds the country badge; keep it readable.
+                            item2.Width = item.Name == "Remarks" ? Math.Max(item.Width, 260) : item.Width;
                         }
                         if (item.Name.StartsWith("to", StringComparison.CurrentCultureIgnoreCase))
                         {
@@ -369,11 +383,15 @@ public partial class ProfilesView
         try
         {
             List<ColumnItem> lvColumnItem = [];
-            foreach (var item2 in lstProfiles.Columns.Cast<MyDGTextColumn>())
+            foreach (var item2 in lstProfiles.Columns)
             {
+                if (item2 is not IExNameColumn named)
+                {
+                    continue;
+                }
                 lvColumnItem.Add(new()
                 {
-                    Name = item2.ExName,
+                    Name = named.ExName,
                     Width = (int)(item2.Visibility == Visibility.Visible ? item2.ActualWidth : -1),
                     Index = item2.DisplayIndex
                 });
@@ -408,7 +426,10 @@ public partial class ProfilesView
             {
                 return (T)current;
             }
-            current = VisualTreeHelper.GetParent(current);
+            // Text runs inside a cell are not visuals: VisualTreeHelper would throw for them.
+            current = current is Visual or System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(current)
+                : LogicalTreeHelper.GetParent(current);
         }
         while (current != null);
         return null;

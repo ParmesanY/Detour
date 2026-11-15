@@ -48,6 +48,8 @@ public static class AutoStartupHandler
         {
             AutoStartTaskService(autoRunName, "", "");
         }
+        // Entries of earlier builds (other folders, old name) would start a second client at logon.
+        RemoveLegacyAutoRuns();
 
         await Task.CompletedTask;
     }
@@ -122,7 +124,12 @@ public static class AutoStartupHandler
             return;
         }
 
-        RunSchtasks($"/Delete /TN \"{taskName}\" /F");
+        // Separate arguments: one "/Delete /TN name /F" string reaches schtasks as a single
+        // invalid argument, so old tasks were never deleted.
+        if (TaskExists(taskName))
+        {
+            RunSchtasks("/Delete", "/TN", taskName, "/F");
+        }
 
         if (string.IsNullOrEmpty(fileName))
         {
@@ -149,6 +156,102 @@ public static class AutoStartupHandler
             "/XML", taskXmlFileName,
             "/F"
         );
+    }
+
+    private static bool TaskExists(string taskName)
+    {
+        return RunSchtasksOutput(out _, "/Query", "/TN", taskName);
+    }
+
+    /// <summary>
+    /// Removes autorun entries left by earlier builds of this client (named v2rayNAutoRun_* before the
+    /// rename, with a hash of whatever folder that build lived in). Only entries whose exe sits next to
+    /// a bin\zapret folder are ours; a separately installed upstream v2rayN is left alone.
+    /// </summary>
+    [SupportedOSPlatform("windows")]
+    public static void RemoveLegacyAutoRuns()
+    {
+        try
+        {
+            var prefix = Global.LegacyAutoRunName + "_";
+            using var run = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(Global.AutoRunRegPath, true);
+            foreach (var name in run?.GetValueNames() ?? [])
+            {
+                if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                    && IsOurOldBuild(run!.GetValue(name)?.ToString()))
+                {
+                    run.DeleteValue(name, false);
+                    Logging.SaveLog($"{_tag}: removed old autorun value {name}");
+                }
+            }
+
+            if (!Utils.IsAdministrator() || !RunSchtasksOutput(out var list, "/Query", "/FO", "CSV", "/NH"))
+            {
+                return;
+            }
+            var names = list.Split('\n')
+                .Select(l => l.Split(',').FirstOrDefault()?.Trim().Trim('"').TrimStart('\\') ?? "")
+                .Where(n => n.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+            foreach (var name in names)
+            {
+                if (RunSchtasksOutput(out var xml, "/Query", "/TN", name, "/XML")
+                    && IsOurOldBuild(TaskCommand(xml)))
+                {
+                    RunSchtasks("/Delete", "/TN", name, "/F");
+                    Logging.SaveLog($"{_tag}: removed old autorun task {name}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+        }
+    }
+
+    /// <summary>Exe path from a task XML's &lt;Command&gt;.</summary>
+    public static string? TaskCommand(string xml)
+    {
+        var m = Regex.Match(xml, "<Command>(.*?)</Command>", RegexOptions.Singleline);
+        return m.Success ? System.Net.WebUtility.HtmlDecode(m.Groups[1].Value).Trim().Trim('"') : null;
+    }
+
+    /// <summary>The exe is a build of this client: it has bin\zapret next to it (upstream v2rayN never does).</summary>
+    public static bool IsOurOldBuild(string? exePath)
+    {
+        exePath = exePath?.Trim().Trim('"');
+        if (exePath.IsNullOrEmpty() || exePath!.Equals(Utils.GetExePath(), StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+        var dir = Path.GetDirectoryName(exePath);
+        return dir != null && Directory.Exists(Path.Combine(dir, "bin", "zapret"));
+    }
+
+    private static bool RunSchtasksOutput(out string output, params string[] arguments)
+    {
+        output = string.Empty;
+        var psi = new ProcessStartInfo
+        {
+            FileName = "schtasks.exe",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (var argument in arguments)
+        {
+            psi.ArgumentList.Add(argument);
+        }
+        using var process = Process.Start(psi);
+        if (process == null)
+        {
+            return false;
+        }
+        output = process.StandardOutput.ReadToEnd();
+        process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        return process.ExitCode == 0;
     }
 
     private static bool RunSchtasks(params string[] arguments)
@@ -190,9 +293,9 @@ public static class AutoStartupHandler
         return process.ExitCode == 0;
     }
 
-    private static string GetAutoRunNameWindows()
+    private static string GetAutoRunNameWindows(string prefix = Global.AutoRunName)
     {
-        return $"{Global.AutoRunName}_{Utils.GetMd5(Utils.StartupPath())}";
+        return $"{prefix}_{Utils.GetMd5(Utils.StartupPath())}";
     }
 
     #endregion Windows

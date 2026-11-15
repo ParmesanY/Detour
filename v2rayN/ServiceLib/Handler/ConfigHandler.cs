@@ -100,6 +100,13 @@ public static class ConfigHandler
         config.MsgUIItem ??= new();
 
         config.UiItem ??= new();
+        if (!config.UiItem.DetourDefaultsApplied)
+        {
+            // The connection panel shows live speed; the design is made dark-first.
+            config.UiItem.DetourDefaultsApplied = true;
+            config.GuiItem.DisplayRealTimeSpeed = true;
+            config.UiItem.CurrentTheme = nameof(ETheme.Dark);
+        }
         config.UiItem.MainColumnItem ??= [];
         config.UiItem.WindowSizeItem ??= [];
         if (config.UiItem.FrozenColumnCount == null)
@@ -128,6 +135,7 @@ public static class ConfigHandler
         config.ConstItem ??= new ConstItem();
 
         config.SimpleDNSItem ??= InitBuiltinSimpleDNS();
+        MigrateChineseDirectDns(config.SimpleDNSItem);
         config.SimpleDNSItem.BlockAAAAQuery ??= false;
         config.SimpleDNSItem.FakeIPRange ??= Global.FakeIPRanges.FirstOrDefault();
         config.SimpleDNSItem.FakeIPv6 ??= false;
@@ -185,6 +193,23 @@ public static class ConfigHandler
             Packets = "tlshello",
         };
         config.Fragment4RayItem.MaxSplit ??= "0";
+
+        config.ZapretItem ??= new();
+        config.TgWsProxyItem ??= new();
+        if (config.TgWsProxyItem.Port is <= 0 or > 65535)
+        {
+            config.TgWsProxyItem.Port = TgWsProxyManager.DefaultPort;
+        }
+        config.ConnectionRules ??= ConnectionPresets.DefaultRules();
+        // "zapret then VPN" starts on VPN each run; the watchdog moves it to zapret once verified.
+        ZapretWatchdog.ResetToVpn(config.ConnectionRules);
+
+        ApplyConnectOnStartup(config);
+        config.ConnectionRuleProfiles ??= [];
+        if (config.ZapretItem.Strategy.IsNullOrEmpty())
+        {
+            config.ZapretItem.Strategy = ZapretStrategyParser.DefaultStrategy;
+        }
 
         config.HappyEyeballs4RayItem ??= new()
         {
@@ -1678,7 +1703,64 @@ public static class ConfigHandler
                 Port = node.PreSocksPort.Value,
             };
         }
+        else if (node.ConfigType == EConfigType.Custom
+            && config.TunModeItem.EnableTun
+            && DetectCustomSocksPort(node) is { } detectedPort)
+        {
+            // Subscriptions with full Xray configs (Happ-style) already open a local SOCKS port.
+            // Put a sing-box TUN in front of it so "whole computer" mode and the connection rules
+            // work without the user having to set the pre-socks port by hand.
+            itemSocks = new ProfileItem()
+            {
+                CoreType = ECoreType.sing_box,
+                ConfigType = EConfigType.SOCKS,
+                Address = Global.Loopback,
+                Port = detectedPort,
+            };
+        }
         return itemSocks;
+    }
+
+    /// <summary>Local SOCKS (or mixed) inbound port of a custom Xray/sing-box config file, if it has one.</summary>
+    public static int? DetectCustomSocksPort(ProfileItem node)
+    {
+        try
+        {
+            var path = File.Exists(node.Address) ? node.Address : Utils.GetConfigPath(node.Address);
+            return File.Exists(path) ? DetectSocksPortInConfig(File.ReadAllText(path)) : null;
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+            return null;
+        }
+    }
+
+    public static int? DetectSocksPortInConfig(string json)
+    {
+        if (JsonUtils.ParseJson(json)?["inbounds"] is not JsonArray inbounds)
+        {
+            return null;
+        }
+        foreach (var inbound in inbounds.OfType<JsonNode>())
+        {
+            // Xray uses "protocol", sing-box "type"; port is "port" or "listen_port".
+            var kind = (inbound["protocol"] ?? inbound["type"])?.ToString();
+            if (kind is not ("socks" or "mixed"))
+            {
+                continue;
+            }
+            var listen = inbound["listen"]?.ToString();
+            if (listen.IsNotEmpty() && listen is not ("127.0.0.1" or "localhost" or "0.0.0.0" or "::1" or "::"))
+            {
+                continue;
+            }
+            if (int.TryParse((inbound["port"] ?? inbound["listen_port"])?.ToString(), out var port) && port is > 0 and <= 65535)
+            {
+                return port;
+            }
+        }
+        return null;
     }
 
     /// <summary>
@@ -2735,6 +2817,8 @@ public static class ConfigHandler
 
         if (!blImportAdvancedRules && items.Count() > 0) // items.Count(u => u.Remarks.StartsWith(ver)) > 0)
         {
+            await RenameLegacyBuiltinRoutings(config, items);
+
             //migrate
             //TODO Temporary code to be removed later
             if (config.RoutingBasicItem.RoutingIndexId.IsNotEmpty())
@@ -2751,38 +2835,64 @@ public static class ConfigHandler
         }
 
         var maxSort = items.Count;
-        //Bypass the mainland
-        var item2 = new RoutingItem()
-        {
-            Remarks = $"{ver}绕过大陆(Whitelist)",
-            Url = string.Empty,
-            Sort = maxSort + 1,
-        };
-        await AddBatchRoutingRules(item2, EmbedUtils.GetEmbedText(Global.CustomRoutingFileName + "white"));
-
-        //Blacklist
-        var item3 = new RoutingItem()
-        {
-            Remarks = $"{ver}黑名单(Blacklist)",
-            Url = string.Empty,
-            Sort = maxSort + 2,
-        };
-        await AddBatchRoutingRules(item3, EmbedUtils.GetEmbedText(Global.CustomRoutingFileName + "black"));
-
-        //Global
+        // Upstream also creates China-specific whitelist/blacklist routings; this fork leaves them out:
+        // local specifics are handled by connection rules and their profiles.
         var item1 = new RoutingItem()
         {
-            Remarks = $"{ver}全局(Global)",
+            Remarks = BuiltinRoutingName("global"),
             Url = string.Empty,
-            Sort = maxSort + 3,
+            Sort = maxSort + 1,
         };
         await AddBatchRoutingRules(item1, EmbedUtils.GetEmbedText(Global.CustomRoutingFileName + "global"));
 
         if (!blImportAdvancedRules)
         {
-            await SetDefaultRouting(config, item2);
+            // Connection rules handle the local specifics on top, so "everything via VPN" is the base.
+            await SetDefaultRouting(config, item1);
         }
         return 0;
+    }
+
+    /// <summary>Names of the built-in routings; upstream ones are China-specific and named in Chinese.</summary>
+    private static string BuiltinRoutingName(string kind)
+    {
+        var ru = AppManager.Instance.Config?.UiItem?.CurrentLanguage?.StartsWith("ru", StringComparison.OrdinalIgnoreCase) != false;
+        return kind switch
+        {
+            _ => ru ? "Всё через VPN" : "Everything via VPN",
+        };
+    }
+
+    /// <summary>
+    /// Renames upstream's Chinese "Global" routing and removes its China-specific whitelist/blacklist
+    /// routings (also under the names an earlier build of this fork gave them).
+    /// </summary>
+    private static async Task RenameLegacyBuiltinRoutings(Config config, IEnumerable<RoutingItem> items)
+    {
+        string[] chinaOnly =
+        [
+            "V4-绕过大陆(Whitelist)", "V4-黑名单(Blacklist)",
+            "Шаблон v2rayN: всё кроме Китая", "Шаблон v2rayN: заблокированное в Китае",
+            "v2rayN template: all except China", "v2rayN template: blocked in China",
+        ];
+        var list = items.ToList();
+        var global = list.FirstOrDefault(i => i.Remarks is "V4-全局(Global)" or "Всё через VPN" or "Everything via VPN");
+        if (global is { Remarks: "V4-全局(Global)" })
+        {
+            global.Remarks = BuiltinRoutingName("global");
+            await SQLiteHelper.Instance.ReplaceAsync(global);
+        }
+
+        var removedActive = false;
+        foreach (var item in list.Where(i => chinaOnly.Contains(i.Remarks)))
+        {
+            removedActive |= item.IsActive;
+            await RemoveRoutingItem(item);
+        }
+        if (removedActive && global != null)
+        {
+            await SetDefaultRouting(config, global);
+        }
     }
 
     /// <summary>
@@ -2921,6 +3031,59 @@ public static class ConfigHandler
     #endregion DNS
 
     #region Simple DNS
+
+    /// <summary>
+    /// Upstream defaults resolve "direct" domains through Chinese DNS (DNSPod/AliDNS), which from
+    /// Russia is slow or wrong for Russian sites. Replace those untouched defaults with Yandex DNS.
+    /// </summary>
+    /// <summary>
+    /// "Connect on startup": on — always start connected in the preferred mode (TUN or system
+    /// proxy), not just restore however the last session ended; off — start disconnected.
+    /// Nothing to connect to without a selected server.
+    /// </summary>
+    public static void ApplyConnectOnStartup(Config config)
+    {
+        config.TunModeItem ??= new();
+        config.SystemProxyItem ??= new();
+        var connect = config.UiItem?.ConnectOnStartup != false && config.IndexId.IsNotEmpty();
+        if (!connect)
+        {
+            config.TunModeItem.EnableTun = false;
+            config.SystemProxyItem.SysProxyType = ESysProxyType.ForcedClear;
+        }
+        else if (config.UiItem?.PreferTunConnect ?? true)
+        {
+            config.TunModeItem.EnableTun = true;
+            config.SystemProxyItem.SysProxyType = ESysProxyType.ForcedClear;
+        }
+        else
+        {
+            config.TunModeItem.EnableTun = false;
+            config.SystemProxyItem.SysProxyType = ESysProxyType.ForcedChange;
+        }
+    }
+
+    public static void MigrateChineseDirectDns(SimpleDNSItem? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+        string[] chineseDefaults =
+        [
+            "119.29.29.29", "223.5.5.5", "119.29.29.29,223.5.5.5,https://doh.pub/dns-query",
+            "https://doh.pub/dns-query", "https://dns.alidns.com/dns-query",
+            "https://doh.pub/dns-query,https://dns.alidns.com/dns-query",
+        ];
+        if (item.DirectDNS.IsNullOrEmpty() || chineseDefaults.Contains(item.DirectDNS))
+        {
+            item.DirectDNS = Global.DomainDirectDNSAddress.First();
+        }
+        if (item.BootstrapDNS.IsNullOrEmpty() || chineseDefaults.Contains(item.BootstrapDNS))
+        {
+            item.BootstrapDNS = Global.DomainPureIPDNSAddress.First();
+        }
+    }
 
     public static SimpleDNSItem InitBuiltinSimpleDNS()
     {
