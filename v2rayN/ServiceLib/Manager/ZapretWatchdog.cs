@@ -182,7 +182,11 @@ public class ZapretWatchdog
     /// response ended, or enough bytes came through to rule out a DPI freeze. Any HTTP status
     /// counts, it only matters that data flows.
     /// </summary>
-    public static async Task<bool> ProbeAsync(string url, CancellationToken cancellationToken)
+    public static Task<bool> ProbeAsync(string url, CancellationToken cancellationToken)
+        => ProbeAsync(url, ZapretManager.UsesTpws, cancellationToken);
+
+    /// <param name="viaTpws">macOS/Linux: through the tpws SOCKS proxy (the zapret path) or plain direct.</param>
+    public static async Task<bool> ProbeAsync(string url, bool viaTpws, CancellationToken cancellationToken)
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(_probeTimeout);
@@ -191,7 +195,7 @@ public class ZapretWatchdog
             var localAddress = PhysicalIPv4Address();
             // macOS/Linux: zapret is the tpws SOCKS proxy, so the check goes through it (tpws itself
             // connects directly: under TUN the cores route its process past the tunnel).
-            var tpwsPort = ZapretManager.UsesTpws ? AppManager.Instance.Config.ZapretItem.SocksPort : 0;
+            var tpwsPort = viaTpws && ZapretManager.UsesTpws ? AppManager.Instance.Config.ZapretItem.SocksPort : 0;
             using var handler = tpwsPort > 0
                 ? new SocketsHttpHandler
                 {

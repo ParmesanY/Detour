@@ -405,6 +405,9 @@ public partial class MainWindowViewModel : MyReactiveObject
         await ConfigHandler.InitBuiltinDNS(_config);
         await ConfigHandler.InitBuiltinFullConfigTemplate(_config);
         await ProfileExManager.Instance.Init();
+        // Downloaded preset lists go into the very first core config; a weekly refresh follows in the background.
+        PresetListManager.Instance.LoadCached();
+        PresetListManager.Instance.UpdateInBackgroundIfStale();
         await CoreManager.Instance.Init(_config, UpdateHandler);
         await CertPemManager.Instance.Init(_config);
         TaskManager.Instance.RegUpdateTask(_config, UpdateTaskHandler);

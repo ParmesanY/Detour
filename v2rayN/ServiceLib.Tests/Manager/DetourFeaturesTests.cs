@@ -172,6 +172,51 @@ public class DetourFeaturesTests
     }
 
     [Test]
+    public async Task PresetLists_ParseAndMergeWithoutLosingBuiltins()
+    {
+        var parsed = PresetListManager.ParseList("# comment\n.ua\nDiscord.com\r\n1.2.3.4\n*.bad\n\nnew-host.example\ndiscord.com\n");
+        await Assert.That(parsed).IsEquivalentTo(new[] { "ua", "discord.com", "new-host.example" });
+
+        try
+        {
+            ConnectionPresets.SetExtraDomains(new Dictionary<string, IReadOnlyList<string>> { ["discord"] = ["new-host.example"] });
+            var discord = ConnectionPresets.Find("@discord")!;
+            await Assert.That(discord.Domains).Contains("new-host.example");
+            await Assert.That(discord.Domains).Contains("discord.gg");
+            await Assert.That(discord.Domains.Count(d => d == "discord.com")).IsEqualTo(1);
+            await Assert.That(ConnectionPresets.Find("@blocked")).IsNotNull();
+        }
+        finally
+        {
+            ConnectionPresets.SetExtraDomains(null);
+        }
+        await Assert.That(ConnectionPresets.Find("@discord")!.Domains).DoesNotContain("new-host.example");
+    }
+
+    [Test]
+    public async Task BlockCheck_SuggestsModesAndEditsRulesText()
+    {
+        var youtube = ConnectionPresets.Find("@youtube")!;
+        var twitch = ConnectionPresets.Find("@twitch")!;
+        var openai = ConnectionPresets.Find("@openai")!;
+
+        await Assert.That(BlockCheckManager.Evaluate(twitch, null, true, null).Suggested).IsEqualTo(EConnectionMode.Direct);
+        await Assert.That(BlockCheckManager.Evaluate(youtube, EConnectionMode.Vpn, false, true).Suggested).IsEqualTo(EConnectionMode.ZapretThenVpn);
+        await Assert.That(BlockCheckManager.Evaluate(youtube, EConnectionMode.ZapretThenVpn, true, null).ChangeSuggested).IsFalse();
+        await Assert.That(BlockCheckManager.Evaluate(youtube, EConnectionMode.Warp, false, false).Suggested).IsEqualTo(EConnectionMode.Warp);
+        var gpt = BlockCheckManager.Evaluate(openai, null, true, null);
+        await Assert.That(gpt.Suggested).IsEqualTo(EConnectionMode.Vpn);
+        await Assert.That(gpt.ChangeSuggested).IsFalse();
+
+        var text = BlockCheckManager.ApplyToText("@youtube +vpn\n@russia +direct\n",
+            [BlockCheckManager.Evaluate(youtube, EConnectionMode.Vpn, false, true), BlockCheckManager.Evaluate(twitch, null, true, null)]);
+        var lines = text.Split(Environment.NewLine);
+        await Assert.That(lines[0]).IsEqualTo(ConnectionRuleParser.Format(new() { Target = "@youtube", Mode = EConnectionMode.ZapretThenVpn }));
+        await Assert.That(lines[1]).IsEqualTo("@russia +direct");
+        await Assert.That(lines[^1]).StartsWith("@twitch ");
+    }
+
+    [Test]
     public async Task Warp_ParsesTrace()
     {
         var trace = WarpProxyManager.ParseTrace("fl=1\nip=104.28.1.1\ncolo=WAW\nloc=PL\nwarp=on\n");

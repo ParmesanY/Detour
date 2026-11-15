@@ -20,7 +20,7 @@ public record ConnectionPreset(
 /// </summary>
 public static class ConnectionPresets
 {
-    public static IReadOnlyList<ConnectionPreset> All { get; } =
+    private static readonly IReadOnlyList<ConnectionPreset> _builtin =
     [
         new("discord", "Discord", EConnectionMode.ZapretThenVpn,
             "Блокируется по DPI. zapret обычно справляется и с чатом, и с голосом, пинг ниже. VPN — запасной вариант.",
@@ -174,7 +174,36 @@ public static class ConnectionPresets
             [],
             [],
             ["qbittorrent.exe", "uTorrent.exe", "BitTorrent.exe", "transmission-qt.exe", "tixati.exe"]),
+
+        // Filled from the public list on the first update (PresetListManager); these few keep it useful offline.
+        new("blocked", "Все заблокированные в РФ (список)", EConnectionMode.Vpn,
+            "Около тысячи сайтов, заблокированных Роскомнадзором, из открытого списка itdoginfo/allow-domains. " +
+            "Detour обновляет список сам раз в неделю. Правила выше в списке важнее этого.",
+            ["rutracker.org", "nnmclub.to", "linkedin.com", "instagram.com", "facebook.com", "x.com", "twitter.com",
+             "meduza.io", "4pda.to", "rezka.ag", "kinozal.tv", "signal.org", "viber.com", "soundcloud.com"],
+            [],
+            []),
     ];
+
+    private static volatile IReadOnlyList<ConnectionPreset> _all = _builtin;
+    private static volatile ConnectionPreset? _warp;
+
+    /// <summary>Built-in presets with the domains from the downloaded lists added (see <see cref="SetExtraDomains"/>).</summary>
+    public static IReadOnlyList<ConnectionPreset> All => _all;
+
+    /// <summary>
+    /// Adds domains from updated public lists to the built-in presets (preset id → domains). The built-in
+    /// domains always stay, so a broken download can only add, never remove.
+    /// </summary>
+    public static void SetExtraDomains(IReadOnlyDictionary<string, IReadOnlyList<string>>? extra)
+    {
+        var merged = _builtin.Select(p => extra != null && extra.TryGetValue(p.Id, out var more) && more.Count > 0
+                ? p with { Domains = [.. p.Domains.Concat(more).Distinct(StringComparer.OrdinalIgnoreCase)] }
+                : p)
+            .ToList();
+        _all = merged;
+        _warp = null;
+    }
 
     /// <summary>
     /// "@warp": services blocked by the ISP (Roskomnadzor) that don't refuse Russian users themselves.
@@ -183,12 +212,14 @@ public static class ConnectionPresets
     /// </summary>
     private static readonly string[] _warpPresetIds = ["instagram", "twitter", "linkedin", "rutracker", "signal", "viber"];
 
-    public static ConnectionPreset Warp { get; } = new("warp", "Через WARP: заблокированные в РФ", EConnectionMode.Warp,
+    public static ConnectionPreset Warp => _warp ??= BuildWarp(_all);
+
+    private static ConnectionPreset BuildWarp(IReadOnlyList<ConnectionPreset> all) => new("warp", "Через WARP: заблокированные в РФ", EConnectionMode.Warp,
         "Сайты, которые блокирует провайдер, но сами пускают россиян: Instagram, X, LinkedIn, Rutracker, Signal, Viber. " +
         "WARP скрывает трафик от провайдера и не нагружает ваш VPN-сервер. Нужна включённая страница WARP, без неё — через VPN.",
-        [.. _warpPresetIds.SelectMany(id => All.First(p => p.Id == id).Domains)],
+        [.. _warpPresetIds.SelectMany(id => all.First(p => p.Id == id).Domains).Distinct(StringComparer.OrdinalIgnoreCase)],
         [],
-        [.. _warpPresetIds.SelectMany(id => All.First(p => p.Id == id).Processes)]);
+        [.. _warpPresetIds.SelectMany(id => all.First(p => p.Id == id).Processes)]);
 
     /// <summary>All presets, including the composite ones.</summary>
     public static IEnumerable<ConnectionPreset> AllWithComposite => All.Append(Warp);

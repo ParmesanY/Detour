@@ -1,4 +1,4 @@
-﻿namespace ServiceLib.ViewModels;
+namespace ServiceLib.ViewModels;
 
 /// <summary>One preset card on the rules page.</summary>
 public record PresetCardModel(string Target, string Name, string Mode, string Why, string Line);
@@ -85,6 +85,7 @@ public partial class ConnectionRulesViewModel : MyReactiveObject
             AppEvents.CoreReloadRequested.Publish();
         });
 
+        InitCheck();
         RefreshProfiles();
         Load();
     }

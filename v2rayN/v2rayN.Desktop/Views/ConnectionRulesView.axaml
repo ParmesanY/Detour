@@ -76,6 +76,66 @@
             Padding="0,0,12,0"
             HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
+                <TextBlock Classes="head" Text="{x:Static resx:AppText.CheckTitle}" />
+                <TextBlock Classes="hint" Text="{x:Static resx:AppText.CheckHint}" />
+                <StackPanel Classes="row">
+                    <Button
+                        Classes="Primary"
+                        Command="{Binding CheckBlocksCmd}"
+                        Content="{x:Static resx:AppText.CheckRun}"
+                        Theme="{DynamicResource SolidButton}" />
+                    <Button
+                        Command="{Binding ApplyCheckCmd}"
+                        Content="{x:Static resx:AppText.CheckApply}"
+                        IsVisible="{Binding HasCheckResults}" />
+                </StackPanel>
+                <TextBlock
+                    Margin="0,8,0,0"
+                    FontFamily="Cascadia Mono, Menlo, DejaVu Sans Mono, monospace"
+                    FontSize="12"
+                    Foreground="{DynamicResource SemiColorText2}"
+                    IsVisible="{Binding IsChecking}"
+                    Text="{Binding CheckStatus}" />
+                <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding CheckRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vms:BlockCheckRow">
+                            <Border
+                                Margin="0,0,0,6"
+                                Padding="10,6"
+                                Classes="card"
+                                ToolTip.Tip="{Binding Verdict}">
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                    <TextBlock
+                                        FontFamily="Cascadia Mono, Menlo, DejaVu Sans Mono, monospace"
+                                        FontSize="11"
+                                        Foreground="{DynamicResource SemiColorText2}"
+                                        Text="{Binding Paths}" />
+                                    <TextBlock
+                                        FontSize="12"
+                                        Foreground="{DynamicResource SemiColorPrimary}"
+                                        IsVisible="{Binding Changed}"
+                                        Text="{Binding Suggestion}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        FontSize="12"
+                                        Foreground="{DynamicResource SemiColorText2}"
+                                        IsVisible="{Binding !Changed}"
+                                        Text="{Binding Suggestion}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Margin="0,14,0,0" Classes="head" Text="{x:Static resx:AppText.ListsTitle}" />
+                <TextBlock Classes="hint" Text="{Binding ListsText}" />
+                <Button
+                    Margin="0,0,0,18"
+                    Command="{Binding UpdateListsCmd}"
+                    Content="{x:Static resx:AppText.ListsUpdate}" />
+
                 <TextBlock Classes="head" Text="{x:Static resx:AppText.RulesProfile}" />
                 <TextBlock Classes="hint" Text="{x:Static resx:AppText.RulesProfileHint}" />
                 <Grid Margin="0,0,0,6" ColumnDefinitions="*,Auto,Auto">

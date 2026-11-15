@@ -158,6 +158,40 @@ public static class AppText
     public static string RulesLearnStart => T("Слушать 60 секунд", "Listen for 60 seconds");
     public static string RulesLearnNoProcess => T("В правилах нет приложений (*.exe).", "There are no app (*.exe) rules.");
     public static string RulesLearnDone => T("{0}: найдено доменов {1}, IP {2}.", "{0}: found {1} domains, {2} IPs.");
+    // Block check and list updates (rules page)
+    public static string CheckTitle => T("Проверка блокировок", "Block check");
+    public static string CheckHint => T(
+        "Проверяет популярные сервисы напрямую, мимо VPN: работает ли без VPN, с zapret или только через VPN, и предлагает правила. Около минуты.",
+        "Checks popular services directly, bypassing the VPN: whether they work without VPN, with zapret or only via VPN, and suggests rules. About a minute.");
+    public static string CheckRun => T("Проверить", "Check");
+    public static string CheckRunning => T("Проверяю… {0}%", "Checking… {0}%");
+    public static string CheckApply => T("Перенести в правила", "Put into rules");
+    public static string CheckApplied => T("Предложения перенесены в редактор. Проверьте и нажмите «Сохранить».",
+        "Suggestions are in the editor. Review them and press Save.");
+    public static string CheckNoChanges => T("Ваши правила уже подходят, менять нечего.", "Your rules already fit, nothing to change.");
+    public static string CheckDirect => T("напрямую", "direct");
+    public static string CheckZapret => T("zapret", "zapret");
+    public static string CheckYes => T("работает", "works");
+    public static string CheckNo => T("заблокирован", "blocked");
+    public static string CheckSuggest => T("Совет: {0}", "Suggested: {0}");
+    public static string CheckCurrent => T("сейчас: {0}", "now: {0}");
+    public static string CheckNoRule => T("правила нет", "no rule");
+    public static string CheckWorksDirect => T("Работает без VPN.", "Works without VPN.");
+    public static string CheckWorksZapret => T("Напрямую заблокирован, с zapret работает.", "Blocked directly, works with zapret.");
+    public static string CheckBlocked => T("Заблокирован и напрямую, и с zapret: нужен VPN.", "Blocked both directly and with zapret: needs VPN.");
+    public static string CheckBlockedNoZapret => T("Напрямую заблокирован. zapret не запущен: включите его и проверьте ещё раз, иначе только VPN.",
+        "Blocked directly. zapret isn't running: turn it on and check again, otherwise VPN only.");
+    public static string CheckRefusesRussia => T("Сервис сам не пускает пользователей из России: только VPN.", "The service refuses Russian users itself: VPN only.");
+    public static string CheckNotChecked => T("Не проверялся.", "Not checked.");
+    public static string ListsTitle => T("Списки доменов", "Domain lists");
+    public static string ListsInfo => T("Обновлены {0}, доменов из списков: {1}. Источник: itdoginfo/allow-domains, обновляются раз в неделю.",
+        "Updated {0}, domains from lists: {1}. Source: itdoginfo/allow-domains, updated weekly.");
+    public static string ListsNever => T("Списки ещё не скачивались: используются встроенные. Источник: itdoginfo/allow-domains.",
+        "Lists haven't been downloaded yet: built-in ones are used. Source: itdoginfo/allow-domains.");
+    public static string ListsUpdate => T("Обновить сейчас", "Update now");
+    public static string ListsUpdated => T("Списки обновлены и применены.", "Lists updated and applied.");
+    public static string ListsFailed => T("Списки не обновились: {0}", "Lists not updated: {0}");
+
     public static string RulesFallbackActive => T("сейчас через VPN: zapret не сработал", "now via VPN: zapret didn't work");
 
     public static string RulesProfile => T("Профиль", "Profile");

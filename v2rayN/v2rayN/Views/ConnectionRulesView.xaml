@@ -142,6 +142,76 @@
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Auto">
             <StackPanel>
+                <!--  Block check: what works without VPN, suggested rules  -->
+                <ui:TextBlock FontTypography="BodyStrong" Text="{x:Static resx:AppText.CheckTitle}" />
+                <TextBlock Style="{StaticResource SideCaption}" Text="{x:Static resx:AppText.CheckHint}" />
+                <StackPanel Orientation="Horizontal">
+                    <ui:Button
+                        Appearance="Primary"
+                        Command="{Binding CheckBlocksCmd}"
+                        Content="{x:Static resx:AppText.CheckRun}"
+                        Icon="{ui:SymbolIcon ShieldTask24}" />
+                    <ui:Button
+                        Margin="8,0,0,0"
+                        Command="{Binding ApplyCheckCmd}"
+                        Content="{x:Static resx:AppText.CheckApply}"
+                        Visibility="{Binding HasCheckResults, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+                <TextBlock
+                    Margin="0,8,0,0"
+                    FontFamily="Cascadia Mono, Consolas"
+                    FontSize="12"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    Text="{Binding CheckStatus}"
+                    Visibility="{Binding IsChecking, Converter={StaticResource BoolToVis}}" />
+                <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding CheckRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border
+                                Margin="0,0,0,6"
+                                Padding="10,6"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                ToolTip="{Binding Verdict}">
+                                <StackPanel>
+                                    <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                                    <TextBlock
+                                        FontFamily="Cascadia Mono, Consolas"
+                                        FontSize="11"
+                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                        Text="{Binding Paths}" />
+                                    <TextBlock FontSize="12" Text="{Binding Suggestion}" TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Changed}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!--  Domain lists  -->
+                <ui:TextBlock
+                    Margin="0,14,0,0"
+                    FontTypography="BodyStrong"
+                    Text="{x:Static resx:AppText.ListsTitle}" />
+                <TextBlock Style="{StaticResource SideCaption}" Text="{Binding ListsText}" />
+                <ui:Button
+                    Margin="0,0,0,20"
+                    Command="{Binding UpdateListsCmd}"
+                    Content="{x:Static resx:AppText.ListsUpdate}"
+                    Icon="{ui:SymbolIcon ArrowSync24}" />
+
                 <!--  Profiles  -->
                 <ui:TextBlock FontTypography="BodyStrong" Text="{x:Static resx:AppText.RulesProfile}" />
                 <TextBlock Style="{StaticResource SideCaption}" Text="{x:Static resx:AppText.RulesProfileHint}" />
