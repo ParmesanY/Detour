@@ -10,6 +10,11 @@ on:
 permissions:
   contents: write
 
+# A newer push to the same branch cancels the run still in progress; tag builds are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
 jobs:
   windows:
     runs-on: windows-latest
@@ -20,7 +25,15 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      # Tags point at commits already tested on main.
       - name: Test
+        if: github.ref_type != 'tag'
         run: dotnet test --project v2rayN\ServiceLib.Tests\ServiceLib.Tests.csproj
 
       # Full package: app + Xray + sing-box + geo files + rule sets + zapret,
