@@ -223,8 +223,18 @@
                     <MenuItem
                         x:Name="menuWarp"
                         Height="{StaticResource MenuItemHeight}"
-                        Header="{x:Static resx:AppText.WarpTrayItem}"
-                        IsCheckable="True" />
+                        AutomationProperties.Name="{x:Static resx:AppText.WarpTrayItem}">
+                        <MenuItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    x:Name="menuWarpCheck"
+                                    Margin="{StaticResource MarginRight8}"
+                                    VerticalAlignment="Center"
+                                    Kind="Check" />
+                                <TextBlock Text="{x:Static resx:AppText.WarpTrayItem}" />
+                            </StackPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
                     <MenuItem
                         x:Name="menuCopyProxyCmdToClipboard"
                         Height="{StaticResource MenuItemHeight}"
