@@ -41,10 +41,35 @@ public partial class DiagnosticsWindow
     private void SetBusy(bool busy)
     {
         progress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
-        btnRerun.IsEnabled = btnCopy.IsEnabled = btnSave.IsEnabled = !busy;
+        btnNetCheck.IsEnabled = btnRerun.IsEnabled = btnCopy.IsEnabled = btnSave.IsEnabled = !busy;
     }
 
     private async void BtnRerun_Click(object sender, RoutedEventArgs e) => await RunAsync();
+
+    private async void BtnNetCheck_Click(object sender, RoutedEventArgs e)
+    {
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        SetBusy(true);
+        txtReport.Text = ServiceLib.Resx.AppText.NetCheckRunning;
+        try
+        {
+            var token = _cts.Token;
+            var progress = new Progress<string>(s => txtReport.Text = ServiceLib.Resx.AppText.NetCheckRunning + Environment.NewLine + s);
+            txtReport.Text = await Task.Run(() => NetCheckReport.BuildAsync(AppManager.Instance.Config, progress, token), token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            txtReport.Text = ex.ToString();
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
 
     private void BtnCopy_Click(object sender, RoutedEventArgs e)
     {

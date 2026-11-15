@@ -46,6 +46,7 @@ public sealed class PresetListManager
     /// <summary>Applies the cached lists (no network). Call once at start-up.</summary>
     public void LoadCached()
     {
+        VpnStrategyManager.LoadCachedList();
         try
         {
             if (!File.Exists(CachePath))
@@ -100,6 +101,7 @@ public sealed class PresetListManager
                     cache.Domains[id] = domains;
                 }
             }
+            await VpnStrategyManager.UpdateListAsync(client, cancellationToken);
             if (failed == Sources.Count)
             {
                 return "не удалось скачать ни один список";

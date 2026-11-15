@@ -13,6 +13,7 @@ public partial class DiagnosticsWindow : Window
         Opened += async (_, _) => await RunAsync();
         Closed += (_, _) => _cts?.Cancel();
         btnRerun.Click += async (_, _) => await RunAsync();
+        btnNetCheck.Click += async (_, _) => await NetCheckAsync();
         btnCopy.Click += async (_, _) =>
         {
             await AvaUtils.SetClipboardData(this, txtReport.Text ?? string.Empty);
@@ -55,9 +56,34 @@ public partial class DiagnosticsWindow : Window
         }
     }
 
+    private async Task NetCheckAsync()
+    {
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        SetBusy(true);
+        txtReport.Text = AppText.NetCheckRunning;
+        try
+        {
+            var token = _cts.Token;
+            var progress = new Progress<string>(s => txtReport.Text = AppText.NetCheckRunning + Environment.NewLine + s);
+            txtReport.Text = await Task.Run(() => NetCheckReport.BuildAsync(AppManager.Instance.Config, progress, token), token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            txtReport.Text = ex.ToString();
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
     private void SetBusy(bool busy)
     {
         progress.IsVisible = busy;
-        btnRerun.IsEnabled = btnCopy.IsEnabled = btnSave.IsEnabled = !busy;
+        btnNetCheck.IsEnabled = btnRerun.IsEnabled = btnCopy.IsEnabled = btnSave.IsEnabled = !busy;
     }
 }

@@ -383,6 +383,28 @@ public partial class ZapretManager
             args.Insert(0, $"--wf-iface={ifIndex}");
         }
 
+        // A winws VPN strategy: its own profile for the traffic to the selected VPN server goes first,
+        // and the server port is added to the capture filter.
+        var (vpnSection, vpnPort) = await VpnStrategyManager.WinwsSectionAsync(AppManager.Instance.Config, ListsDir);
+        if (vpnSection.Count > 0)
+        {
+            var wfTcp = args.FindIndex(a => a.StartsWith("--wf-tcp=", StringComparison.Ordinal));
+            if (wfTcp >= 0)
+            {
+                var ports = args[wfTcp]["--wf-tcp=".Length..].Split(',');
+                if (!ports.Contains(vpnPort.ToString()))
+                {
+                    args[wfTcp] += "," + vpnPort;
+                }
+            }
+            else
+            {
+                args.Insert(0, $"--wf-tcp={vpnPort}");
+            }
+            var firstProfile = args.FindIndex(a => a.StartsWith("--filter-", StringComparison.Ordinal));
+            args.InsertRange(firstProfile >= 0 ? firstProfile : args.Count, vpnSection);
+        }
+
         await StopCoreAsync();
         try
         {

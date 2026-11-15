@@ -1,0 +1,50 @@
+[
+  {
+    "Name": "general",
+    "Description": "ClientHello кусками по 100–200 байт, паузы 10–20 мс. Начните с неё.",
+    "Packets": "tlshello", "Lengths": "100-200", "Delays": "10-20", "MaxSplit": "0"
+  },
+  {
+    "Name": "fine",
+    "Description": "Мелкие куски 10–30 байт, паузы 5–10 мс: имя сайта (SNI) разрезано на части.",
+    "Packets": "tlshello", "Lengths": "10-30", "Delays": "5-10", "MaxSplit": "0"
+  },
+  {
+    "Name": "tiny",
+    "Description": "Совсем мелко, 3–8 байт: против DPI, который собирает куски обратно. Медленнее рукопожатие.",
+    "Packets": "tlshello", "Lengths": "3-8", "Delays": "1-3", "MaxSplit": "0"
+  },
+  {
+    "Name": "slow",
+    "Description": "Куски 30–60 байт с долгими паузами 50–100 мс: DPI не дожидается конца рукопожатия.",
+    "Packets": "tlshello", "Lengths": "30-60", "Delays": "50-100", "MaxSplit": "0"
+  },
+  {
+    "Name": "first packets",
+    "Description": "Режет первые три записи соединения, а не только рукопожатие: для протоколов без TLS.",
+    "Packets": "1-3", "Lengths": "40-80", "Delays": "10-20", "MaxSplit": "0"
+  },
+  {
+    "Name": "split 2",
+    "Description": "Только два куска: самый быстрый вариант, если провайдер мягкий.",
+    "Packets": "tlshello", "Lengths": "100-200", "Delays": "5-10", "MaxSplit": "2"
+  },
+  {
+    "Name": "zapret fake",
+    "Description": "zapret: перед рукопожатием уходит поддельный пакет, который сервер отбросит, а DPI примет за настоящий. Нужен включённый zapret.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Winws": "--dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=badseq"
+  },
+  {
+    "Name": "zapret multisplit",
+    "Description": "zapret: рукопожатие режется на части на уровне TCP, с перекрытием. Нужен включённый zapret.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Winws": "--dpi-desync=multisplit --dpi-desync-split-pos=1,sniext+1 --dpi-desync-split-seqovl=1"
+  },
+  {
+    "Name": "zapret fakedsplit",
+    "Description": "zapret: поддельные пакеты вперемешку с кусками рукопожатия, самый сильный вариант. Нужен включённый zapret.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Winws": "--dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00"
+  }
+]

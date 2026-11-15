@@ -24,6 +24,7 @@
                 Height="20"
                 IsIndeterminate="True"
                 Theme="{DynamicResource ProgressRing}" />
+            <Button x:Name="btnNetCheck" Content="{x:Static resx:AppText.NetCheckRun}" />
             <Button x:Name="btnRerun" Content="{x:Static resx:AppText.DiagRerun}" />
             <Button x:Name="btnSave" Content="{x:Static resx:AppText.DiagSave}" />
             <Button

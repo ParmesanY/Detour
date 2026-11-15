@@ -294,6 +294,41 @@ public class DetourFeaturesTests
     }
 
     [Test]
+    public async Task VpnStrategy_PublishedListAndWinwsSafety()
+    {
+        var root = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(root, "strategies", "vpn-strategies.json")))
+        {
+            root = Path.GetDirectoryName(root)!;
+        }
+        var published = VpnStrategyManager.ParseList(File.ReadAllText(Path.Combine(root, "strategies", "vpn-strategies.json")));
+        var builtin = VpnStrategyManager.ParseList(VpnStrategyManager.BuiltinJson());
+        // The published file is the built-in list: keep them in sync.
+        await Assert.That(published.Count).IsEqualTo(builtin.Count);
+        await Assert.That(published.Select(s => s.Name)).IsEquivalentTo(builtin.Select(s => s.Name));
+        await Assert.That(published.Count(s => s.UsesWinws)).IsEqualTo(3);
+
+        var hostile = """
+            [{"Name":"x","Description":"d","Packets":"","Lengths":"","Delays":"","Winws":"--dpi-desync=fake --wf-tcp=1-65535 --hostlist=C:\\evil.txt --dpi-desync-fake-tls=..\\..\\x.bin"},
+             {"Name":"y","Description":"d","Packets":"tlshello","Lengths":"1; rm","Delays":"1-2"},
+             {"Name":"z","Description":"d","Packets":"tlshello","Lengths":"5-9","Delays":"1-2"}]
+            """;
+        var parsed = VpnStrategyManager.ParseList(hostile);
+        await Assert.That(parsed.Select(s => s.Name)).IsEquivalentTo(new[] { "x", "z" });
+        await Assert.That(parsed[0].Winws).IsEqualTo("--dpi-desync=fake");
+    }
+
+    [Test]
+    public async Task NetCheck_Bogons()
+    {
+        await Assert.That(NetCheckReport.IsBogon(IPAddress.Parse("10.10.34.35"))).IsTrue();
+        await Assert.That(NetCheckReport.IsBogon(IPAddress.Parse("198.18.0.5"))).IsTrue();
+        await Assert.That(NetCheckReport.IsBogon(IPAddress.Parse("104.16.1.1"))).IsFalse();
+        var frozen = NetCheckReport.Format(new(true, true, 16_000, 7000, "HTTP/1.1 200 OK", "stalled", true));
+        await Assert.That(frozen).Contains("16");
+    }
+
+    [Test]
     public async Task Warp_ParsesTrace()
     {
         var trace = WarpProxyManager.ParseTrace("fl=1\nip=104.28.1.1\ncolo=WAW\nloc=PL\nwarp=on\n");

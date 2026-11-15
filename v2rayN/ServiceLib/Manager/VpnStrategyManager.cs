@@ -5,7 +5,13 @@ namespace ServiceLib.Manager;
 /// handshake (ClientHello) or the first writes go out in small pieces with pauses between them.
 /// Applied through Xray's fragment mask, so it works with any TLS/Reality server and on every OS.
 /// </summary>
-public sealed record VpnStrategy(string Name, string Description, string Packets, string Lengths, string Delays, string MaxSplit = "0");
+/// <param name="Winws">Windows: winws desync arguments applied to the traffic to the VPN server
+/// (fake packets, splits — what Xray can't do); null for Xray fragment strategies.</param>
+public sealed record VpnStrategy(string Name, string Description, string Packets, string Lengths, string Delays,
+    string MaxSplit = "0", string? Winws = null)
+{
+    public bool UsesWinws => Winws.IsNotEmpty();
+}
 
 /// <summary>What happened with the server: reachability, and which strategies let traffic through.</summary>
 public sealed record VpnStrategyResult(VpnStrategy? Strategy, bool Handshake, bool BigTransfer, int DelayMs)
@@ -43,7 +49,7 @@ public static class VpnStrategyManager
     public const string BigTransferUrl = "https://speed.cloudflare.com/__down?bytes=65536";
     private const int _bigTransferBytes = 64 * 1024;
 
-    public static IReadOnlyList<VpnStrategy> Strategies { get; } =
+    private static readonly IReadOnlyList<VpnStrategy> _builtin =
     [
         new("general", "ClientHello кусками по 100–200 байт, паузы 10–20 мс. Начните с неё.", "tlshello", "100-200", "10-20"),
         new("fine", "Мелкие куски 10–30 байт, паузы 5–10 мс: имя сайта (SNI) разрезано на части.", "tlshello", "10-30", "5-10"),
@@ -51,17 +57,101 @@ public static class VpnStrategyManager
         new("slow", "Куски 30–60 байт с долгими паузами 50–100 мс: DPI не дожидается конца рукопожатия.", "tlshello", "30-60", "50-100"),
         new("first packets", "Режет первые три записи соединения, а не только рукопожатие: для протоколов без TLS.", "1-3", "40-80", "10-20"),
         new("split 2", "Только два куска: самый быстрый вариант, если провайдер мягкий.", "tlshello", "100-200", "5-10", "2"),
+        // Windows: winws on the traffic to the VPN server. Needs zapret turned on (administrator rights).
+        new("zapret fake", "zapret: перед рукопожатием уходит поддельный пакет, который сервер отбросит, а DPI примет за настоящий. Нужен включённый zapret.",
+            "", "", "", Winws: "--dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=badseq"),
+        new("zapret multisplit", "zapret: рукопожатие режется на части на уровне TCP, с перекрытием. Нужен включённый zapret.",
+            "", "", "", Winws: "--dpi-desync=multisplit --dpi-desync-split-pos=1,sniext+1 --dpi-desync-split-seqovl=1"),
+        new("zapret fakedsplit", "zapret: поддельные пакеты вперемешку с кусками рукопожатия, самый сильный вариант. Нужен включённый zapret.",
+            "", "", "", Winws: "--dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00"),
     ];
+
+    private static volatile IReadOnlyList<VpnStrategy> _downloaded = [];
+
+    /// <summary>Built-in strategies, updated and extended by the downloaded list; winws ones on Windows only.</summary>
+    public static IReadOnlyList<VpnStrategy> Strategies
+    {
+        get
+        {
+            var byName = _downloaded.ToDictionary(s => s.Name, StringComparer.OrdinalIgnoreCase);
+            return _builtin.Select(s => byName.GetValueOrDefault(s.Name) ?? s)
+                .Concat(_downloaded.Where(d => !_builtin.Any(s => s.Name.Equals(d.Name, StringComparison.OrdinalIgnoreCase))))
+                .Where(s => !s.UsesWinws || (Utils.IsWindows() && !ZapretManager.UsesTpws))
+                .ToList();
+        }
+    }
+
+    /// <summary>Published list, so strategies can change without a new release (like Flowseal's .bat updates).</summary>
+    public const string ListPath = "strategies/vpn-strategies.json";
+    private static string CachePath => Utils.GetConfigPath("vpnStrategies.json");
+    private static readonly Regex _range = new(@"^\d{1,5}(-\d{1,5})?$");
+
+    /// <summary>Validated strategies from the list JSON; anything odd is dropped.</summary>
+    public static List<VpnStrategy> ParseList(string? json)
+    {
+        var list = JsonUtils.Deserialize<List<VpnStrategy>>(json) ?? [];
+        return list.Where(s => s != null && s.Name.IsNotEmpty() && s.Name.Length <= 40 && s.Description.IsNotEmpty())
+            .Select(s => s.UsesWinws ? s with { Winws = string.Join(' ', SafeWinwsArgs(s.Winws)) } : s)
+            .Where(s => s.UsesWinws
+                ? s.Winws!.Length > 0
+                : (s.Packets == "tlshello" || _range.IsMatch(s.Packets)) && _range.IsMatch(s.Lengths) && _range.IsMatch(s.Delays)
+                  && _range.IsMatch(s.MaxSplit.IsNullOrEmpty() ? "0" : s.MaxSplit))
+            .ToList();
+    }
+
+    public static void LoadCachedList()
+    {
+        try
+        {
+            if (File.Exists(CachePath))
+            {
+                _downloaded = ParseList(File.ReadAllText(CachePath));
+            }
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog(_tag, ex);
+        }
+    }
+
+    /// <summary>Downloads the list from the project repository; keeps the old one on any failure.</summary>
+    public static async Task UpdateListAsync(HttpClient client, CancellationToken ct)
+    {
+        if (AppUpdateManager.Repo is not { Length: > 0 } repo)
+        {
+            return;
+        }
+        try
+        {
+            var json = await client.GetStringAsync($"https://raw.githubusercontent.com/{repo}/main/{ListPath}", ct);
+            var list = ParseList(json);
+            if (list.Count > 0)
+            {
+                _downloaded = list;
+                await File.WriteAllTextAsync(CachePath, json, ct);
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
+        {
+            Logging.SaveLog($"{_tag}: list: {ex.Message}");
+        }
+    }
+
+    /// <summary>The built-in list as JSON (what the published file starts from).</summary>
+    public static string BuiltinJson() => JsonUtils.Serialize(_builtin.ToList());
 
     public static VpnStrategy? Find(string? name)
         => Strategies.FirstOrDefault(s => s.Name.Equals(name ?? "", StringComparison.OrdinalIgnoreCase));
 
-    /// <summary>Writes the strategy into the core settings (null = fragmentation off).</summary>
+    /// <summary>
+    /// Writes the strategy into the settings (null = off). Xray strategies turn on the fragment mask;
+    /// winws ones turn it off and take effect when zapret (re)starts.
+    /// </summary>
     public static void Apply(Config config, VpnStrategy? strategy)
     {
         config.ZapretItem.VpnStrategy = strategy?.Name ?? string.Empty;
-        config.CoreBasicItem.EnableFragment = strategy != null;
-        if (strategy == null)
+        config.CoreBasicItem.EnableFragment = strategy is { UsesWinws: false };
+        if (strategy is null or { UsesWinws: true })
         {
             return;
         }
@@ -79,41 +169,46 @@ public static class VpnStrategyManager
     public static async Task<VpnDiagnosisReport> DiagnoseAsync(Config config, IProgress<string>? progress = null,
         CancellationToken ct = default)
     {
-        var profile = config.IndexId.IsNullOrEmpty() ? null : await AppManager.Instance.GetProfileItem(config.IndexId);
-        // Custom (full JSON) Xray configs are tested as a copy with their own inbounds replaced.
-        var customJson = profile?.ConfigType == EConfigType.Custom && profile.CoreType is null or ECoreType.Xray
-            ? ReadCustomConfig(profile.Address)
-            : null;
-        var customServer = CustomConfigFragment.FirstServer(customJson);
-        string host;
-        int port;
-        if (customJson != null && customServer is { } cs && CustomConfigFragment.IsXray(customJson))
-        {
-            (host, port) = cs;
-        }
-        else if (profile != null && !profile.ConfigType.IsComplexType() && profile.Address.IsNotEmpty() && profile.Port > 0)
-        {
-            (host, port, customJson) = (profile.Address, profile.Port, null);
-        }
-        else
+        var server = await CurrentServerAsync(config);
+        if (server == null)
         {
             return new(VpnDiagnosis.NotTestable, null, [], AppText.VpnDiagNotTestable);
         }
+        var (profile, host, port, customJson) = server.Value;
 
         progress?.Report(AppText.VpnDiagReach);
         var reachable = await TcpReachableAsync(host, port, ct);
 
+        // winws strategies need zapret running: they restart it with a section for this server.
+        var zapretRunning = ZapretManager.Instance.IsRunning;
         var results = new List<VpnStrategyResult>();
-        foreach (var strategy in new VpnStrategy?[] { null }.Concat(Strategies))
+        try
         {
-            ct.ThrowIfCancellationRequested();
-            progress?.Report(string.Format(AppText.VpnDiagTrying, strategy?.Name ?? AppText.VpnStrategyOff));
-            var result = customJson != null ? await TestCustomAsync(customJson, strategy, ct) : await TestAsync(config, profile!, strategy, ct);
-            results.Add(result);
-            // Without a strategy it already works: nothing to pick.
-            if (strategy == null && result.Works)
+            foreach (var strategy in new VpnStrategy?[] { null }.Concat(Strategies.Where(s => !s.UsesWinws || zapretRunning)))
             {
-                break;
+                ct.ThrowIfCancellationRequested();
+                progress?.Report(string.Format(AppText.VpnDiagTrying, strategy?.Name ?? AppText.VpnStrategyOff));
+                if (strategy is { UsesWinws: true } || _winwsOverride != null)
+                {
+                    _winwsOverride = strategy is { UsesWinws: true } ? strategy : null;
+                    await ZapretManager.Instance.StartAsync();
+                }
+                var xray = strategy is { UsesWinws: false } ? strategy : null;
+                var result = customJson != null ? await TestCustomAsync(customJson, xray, ct) : await TestAsync(config, profile, xray, ct);
+                results.Add(result with { Strategy = strategy });
+                // Without a strategy it already works: nothing to pick.
+                if (strategy == null && result.Works)
+                {
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            if (_winwsOverride != null)
+            {
+                _winwsOverride = null;
+                await ZapretManager.Instance.StartAsync();
             }
         }
         return Summarize(reachable, results);
@@ -193,6 +288,64 @@ public static class VpnStrategyManager
             }
         }
     }
+
+    /// <summary>Strategy being tested by the picker; winws uses it instead of the saved one.</summary>
+    private static volatile VpnStrategy? _winwsOverride;
+
+    /// <summary>The selected server: its profile, address and port, and the custom Xray JSON if it is one.</summary>
+    public static async Task<(ProfileItem Profile, string Host, int Port, string? CustomJson)?> CurrentServerAsync(Config config)
+    {
+        var profile = config.IndexId.IsNullOrEmpty() ? null : await AppManager.Instance.GetProfileItem(config.IndexId);
+        if (profile == null)
+        {
+            return null;
+        }
+        if (profile.ConfigType == EConfigType.Custom)
+        {
+            var json = profile.CoreType is null or ECoreType.Xray ? ReadCustomConfig(profile.Address) : null;
+            return json != null && CustomConfigFragment.IsXray(json) && CustomConfigFragment.FirstServer(json) is { } s
+                ? (profile, s.Host, s.Port, json)
+                : null;
+        }
+        return !profile.ConfigType.IsComplexType() && profile.Address.IsNotEmpty() && profile.Port > 0
+            ? (profile, profile.Address, profile.Port, null)
+            : null;
+    }
+
+    public const string VpnServerIpsetFile = "ipset-vpn-server.txt";
+
+    /// <summary>
+    /// winws arguments for the traffic to the selected VPN server (a profile placed before the strategy's own,
+    /// ending with --new), or nothing when no winws strategy is chosen. Also returns the server port, which
+    /// must be in winws' --wf-tcp filter.
+    /// </summary>
+    public static async Task<(List<string> Args, int Port)> WinwsSectionAsync(Config config, string listsDir)
+    {
+        var strategy = _winwsOverride ?? Find(config.ZapretItem.VpnStrategy);
+        if (strategy is not { UsesWinws: true } || await CurrentServerAsync(config) is not { } server)
+        {
+            return ([], 0);
+        }
+        var ips = IPAddress.TryParse(server.Host.Trim('[', ']'), out var ip)
+            ? [ip]
+            : await ZapretWatchdog.ResolveDirectAsync(server.Host, ZapretWatchdog.PhysicalIPv4Address(), CancellationToken.None);
+        if (ips.Length == 0)
+        {
+            return ([], 0);
+        }
+        var path = Path.Combine(listsDir, VpnServerIpsetFile);
+        await File.WriteAllLinesAsync(path, ips.Select(a => a.ToString()));
+        return ([$"--filter-tcp={server.Port}", $"--ipset={path}", .. SafeWinwsArgs(strategy.Winws), "--new"], server.Port);
+    }
+
+    /// <summary>
+    /// Only --dpi-desync* options with plain values pass: the args go to winws running as administrator,
+    /// and the strategy list can come from the network.
+    /// </summary>
+    public static List<string> SafeWinwsArgs(string? args)
+        => (args ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(a => Regex.IsMatch(a, @"^--dpi-desync[a-z0-9-]*(=[A-Za-z0-9,.:+_-]*)?$"))
+            .ToList();
 
     private static string? ReadCustomConfig(string? address)
     {

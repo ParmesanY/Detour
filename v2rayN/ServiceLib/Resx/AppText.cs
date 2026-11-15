@@ -158,6 +158,45 @@ public static class AppText
     public static string RulesLearnStart => T("Слушать 60 секунд", "Listen for 60 seconds");
     public static string RulesLearnNoProcess => T("В правилах нет приложений (*.exe).", "There are no app (*.exe) rules.");
     public static string RulesLearnDone => T("{0}: найдено доменов {1}, IP {2}.", "{0}: found {1} domains, {2} IPs.");
+    // Network check (diagnostics window)
+    public static string NetCheckRun => T("Проверить сеть", "Check network");
+    public static string NetCheckRunning => T("Проверяю сеть провайдера, 1–2 минуты…", "Checking the ISP network, 1–2 minutes…");
+    public static string NetCheckTitle => T("Проверка сети", "Network check");
+    public static string NetCheckViaNic => T("Проверка идёт напрямую через сетевую карту, мимо VPN: видно провайдера.", "Checks go directly via the network card, past the VPN: this shows the ISP.");
+    public static string NetCheckNoNic => T("Сетевая карта не найдена: проверка может пойти через VPN.", "Network card not found: checks may go through the VPN.");
+    public static string NetCheckZapretOn => T("zapret запущен: сайты из его списков проверяются вместе с ним.", "zapret is running: sites from its lists are checked with it.");
+    public static string NetCheckSites => T("--- 1. Сайты и хостинги (DNS провайдера; загрузка 64 КБ) ---", "--- 1. Sites and hosting (ISP DNS; 64 KB download) ---");
+    public static string NetCheckSni => T("--- 2. Фильтр по имени сайта (SNI) на одном сервере ---", "--- 2. Site name (SNI) filter on one server ---");
+    public static string NetCheckSniOwn => T("своё имя", "own name");
+    public static string NetCheckIps => T("--- 3. Блокировки по IP ---", "--- 3. IP blocks ---");
+    public static string NetCheckAdvice => T("--- Что это значит ---", "--- What it means ---");
+    public static string NetCheckDnsOk => T("DNS ок", "DNS OK");
+    public static string NetCheckDnsNone => T("DNS провайдера не отвечает", "ISP DNS doesn't answer");
+    public static string NetCheckDnsStub => T("DNS провайдера подменяет ({0})", "ISP DNS substitutes ({0})");
+    public static string NetCheckNoIp => T("адрес не найден", "address not found");
+    public static string NetCheckOk => T("ок", "OK");
+    public static string NetCheckNoAnswer => T("НЕТ ОТВЕТА", "NO ANSWER");
+    public static string NetCheckIpDead => T("IP НЕ ОТВЕЧАЕТ ({0})", "IP DOESN'T ANSWER ({0})");
+    public static string NetCheckTlsFail => T("TCP есть, TLS: {0}", "TCP OK, TLS: {0}");
+    public static string NetCheckFreeze => T("ЗАВИС после {0} КБ ({1} мс): блокировка «16 КБ»", "FROZE after {0} KB ({1} ms): the \"16 KB\" block");
+    public static string NetCheckCut => T("оборвалось на {0} КБ: {1}", "cut at {0} KB: {1}");
+    public static string NetCheckNoReply => T("TLS есть, но сервер ничего не ответил", "TLS OK, but the server sent nothing");
+    public static string NetCheckWorks => T("ок, {0} КБ за {1} мс [{2}]", "OK, {0} KB in {1} ms [{2}]");
+    public static string NetCheckTimeout => T("таймаут", "timeout");
+    public static string NetCheckStalled => T("данные перестали приходить", "data stopped coming");
+    public static string NetCheckTlsSilence => T("ТИШИНА (похоже на DPI)", "SILENCE (looks like DPI)");
+    public static string NetCheckTlsReset => T("СБРОС (похоже на DPI)", "RESET (looks like DPI)");
+    public static string NetCheckTlsAlert => T("сервер отказал (это не DPI)", "the server refused (not DPI)");
+    public static string NetCheckAdviceDns => T("Провайдер подменяет DNS-ответы. Detour уже обходит это через DoH, в браузере включите «Безопасный DNS».",
+        "The ISP substitutes DNS answers. Detour already avoids it with DoH; turn on \"Secure DNS\" in the browser.");
+    public static string NetCheckAdviceFreeze => T("Соединения с хостингами ({0}) замирают после ~16 КБ. Если VPN-сервер там же, включите «Дробление VPN-трафика» → «Подобрать для сервера».",
+        "Connections to hosting ({0}) freeze after ~16 KB. If your VPN server is there, use \"VPN traffic fragmentation\" → \"Pick for this server\".");
+    public static string NetCheckAdviceSni => T("Провайдер режет сайты по имени (DPI): {0}. Для них поможет zapret (правило +zapret или +zapret+vpn).",
+        "The ISP blocks sites by name (DPI): {0}. zapret helps with them (+zapret or +zapret+vpn rule).");
+    public static string NetCheckAdviceIp => T("Заблокированы по IP: {0}. zapret тут не поможет, нужен VPN или WARP.",
+        "Blocked by IP: {0}. zapret won't help, use VPN or WARP.");
+    public static string NetCheckAdviceNone => T("Явных блокировок не найдено.", "No obvious blocks found.");
+
     // VPN strategies (zapret page): fragmentation of the VPN connection itself + server diagnosis
     public static string VpnStrategyTitle => T("Дробление VPN-трафика", "VPN traffic fragmentation");
     public static string VpnStrategyHint => T(
