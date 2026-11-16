@@ -46,6 +46,11 @@ public partial class DiagnosticsWindow
 
     private async void BtnRerun_Click(object sender, RoutedEventArgs e) => await RunAsync();
 
+    private void BtnBlockMap_Click(object sender, RoutedEventArgs e)
+    {
+        new BlockMapWindow { Owner = this }.Show();
+    }
+
     private async void BtnNetCheck_Click(object sender, RoutedEventArgs e)
     {
         _cts?.Cancel();

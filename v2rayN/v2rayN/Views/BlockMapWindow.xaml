@@ -1,0 +1,110 @@
+<ui:FluentWindow
+    x:Class="v2rayN.Views.BlockMapWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="{x:Static resx:AppText.BlockMapTitle}"
+    Width="860"
+    Height="700"
+    ExtendsContentIntoTitleBar="True"
+    WindowBackdropType="None"
+    WindowStartupLocation="CenterOwner">
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Title="{x:Static resx:AppText.BlockMapTitle}" ShowMaximize="True" ShowMinimize="False" />
+
+        <TextBlock
+            Grid.Row="1"
+            Margin="16,4,16,12"
+            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+            Text="{x:Static resx:AppText.BlockMapIntro}"
+            TextWrapping="Wrap" />
+
+        <StackPanel Grid.Row="2" Margin="16,0,16,12">
+            <StackPanel Orientation="Horizontal" ToolTip="{x:Static resx:AppText.BlockMapEnableHint}">
+                <ui:ToggleSwitch x:Name="tglEnabled" Checked="TglEnabled_Changed" Unchecked="TglEnabled_Changed" />
+                <TextBlock
+                    Margin="8,0,0,0"
+                    VerticalAlignment="Center"
+                    Text="{x:Static resx:AppText.BlockMapEnable}" />
+            </StackPanel>
+            <TextBlock
+                Margin="0,4,0,0"
+                FontSize="12"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                Text="{x:Static resx:AppText.BlockMapEnableHint}"
+                TextWrapping="Wrap" />
+            <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                <TextBlock
+                    Margin="0,0,12,0"
+                    VerticalAlignment="Center"
+                    Text="{x:Static resx:AppText.BlockMapNetLabel}" />
+                <RadioButton
+                    x:Name="rbHome"
+                    Margin="0,0,16,0"
+                    Checked="Net_Checked"
+                    Content="{x:Static resx:AppText.BlockMapNetHome}"
+                    GroupName="net" />
+                <RadioButton
+                    x:Name="rbMobile"
+                    Checked="Net_Checked"
+                    Content="{x:Static resx:AppText.BlockMapNetMobile}"
+                    GroupName="net" />
+            </StackPanel>
+            <TextBlock
+                x:Name="txtStatus"
+                Margin="0,10,0,0"
+                FontFamily="{DynamicResource DetourMonoFont}"
+                FontSize="12"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        </StackPanel>
+
+        <TextBox
+            x:Name="txtReport"
+            Grid.Row="3"
+            Margin="16,0,16,0"
+            AcceptsReturn="True"
+            FontFamily="{DynamicResource DetourMonoFont}"
+            FontSize="12"
+            HorizontalScrollBarVisibility="Auto"
+            IsReadOnly="True"
+            TextWrapping="NoWrap"
+            VerticalScrollBarVisibility="Auto" />
+
+        <DockPanel Grid.Row="4" Margin="16,12,16,16">
+            <ui:Button
+                x:Name="btnOpenSite"
+                Appearance="Secondary"
+                Click="BtnOpenSite_Click"
+                Content="{x:Static resx:AppText.BlockMapOpenSite}"
+                DockPanel.Dock="Left"
+                Icon="{ui:SymbolIcon Map24}" />
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                <ui:ProgressRing
+                    x:Name="progress"
+                    Width="20"
+                    Height="20"
+                    Margin="0,0,12,0"
+                    IsIndeterminate="True"
+                    Visibility="Collapsed" />
+                <ui:Button
+                    x:Name="btnMeasure"
+                    Margin="0,0,8,0"
+                    Click="BtnMeasure_Click"
+                    Content="{x:Static resx:AppText.BlockMapRunOnly}" />
+                <ui:Button
+                    x:Name="btnSend"
+                    Appearance="Primary"
+                    Click="BtnSend_Click"
+                    Content="{x:Static resx:AppText.BlockMapRunSend}" />
+            </StackPanel>
+        </DockPanel>
+    </Grid>
+</ui:FluentWindow>

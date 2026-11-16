@@ -47,6 +47,11 @@
                 Margin="0,0,12,0"
                 IsIndeterminate="True" />
             <ui:Button
+                Margin="0,0,8,0"
+                Click="BtnBlockMap_Click"
+                Content="{x:Static resx:AppText.BlockMapButton}"
+                Icon="{ui:SymbolIcon Map24}" />
+            <ui:Button
                 x:Name="btnNetCheck"
                 Margin="0,0,8,0"
                 Click="BtnNetCheck_Click"

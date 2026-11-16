@@ -158,6 +158,53 @@ public static class AppText
     public static string RulesLearnStart => T("Слушать 60 секунд", "Listen for 60 seconds");
     public static string RulesLearnNoProcess => T("В правилах нет приложений (*.exe).", "There are no app (*.exe) rules.");
     public static string RulesLearnDone => T("{0}: найдено доменов {1}, IP {2}.", "{0}: found {1} domains, {2} IPs.");
+    // Detour Map (block map window)
+    public static string BlockMapButton => T("Карта блокировок", "Block map");
+    public static string BlockMapTitle => T("Карта блокировок", "Block map");
+    public static string BlockMapIntro => T(
+        "Detour Map — общая карта блокировок в России: что заблокировано, у какого провайдера, в каком регионе и каким способом. "
+        + "Замеры присылают сами пользователи.\n\n"
+        + "Что отправляется: результаты проверки ~40 сайтов (DNS, TCP, TLS, загрузка, QUIC), час замера, тип подключения и версия Detour. "
+        + "Не отправляются: IP-адрес, имя компьютера, ваши сайты, серверы и подписки. Сервер по адресу соединения узнаёт только "
+        + "провайдера и регион и сам адрес не хранит. Отчёт целиком виден ниже до и после отправки.",
+        "Detour Map is a shared map of blocks in Russia: what is blocked, by which ISP, in which region and how. "
+        + "Users send the measurements.\n\n"
+        + "Sent: the results of checking ~40 sites (DNS, TCP, TLS, download, QUIC), the hour, the connection type and the Detour version. "
+        + "Not sent: your IP address, computer name, your sites, servers or subscriptions. From the connection the server learns only "
+        + "the ISP and region, and does not store the address. The whole report is shown below before and after sending.");
+    public static string BlockMapEnable => T("Помогать карте: замер раз в 6 часов", "Help the map: measure every 6 hours");
+    public static string BlockMapEnableHint => T(
+        "В фоне, когда zapret выключен (с ним заблокированные сайты выглядят открытыми). Замер идёт мимо VPN, 1–2 минуты.",
+        "In the background while zapret is off (with it blocked sites look open). Goes past the VPN, 1–2 minutes.");
+    public static string BlockMapNetLabel => T("Подключение:", "Connection:");
+    public static string BlockMapNetHome => T("домашний интернет", "home internet");
+    public static string BlockMapNetMobile => T("мобильный / раздача с телефона", "mobile / phone hotspot");
+    public static string BlockMapRunSend => T("Замерить и отправить", "Measure and send");
+    public static string BlockMapRunOnly => T("Только замерить", "Measure only");
+    public static string BlockMapOpenSite => T("Открыть карту", "Open the map");
+    public static string BlockMapLastSent => T("Последняя отправка: {0}", "Last sent: {0}");
+    public static string BlockMapNeverSent => T("Ещё не отправлялось.", "Nothing sent yet.");
+    public static string BlockMapPauseZapretConfirm => T(
+        "zapret сейчас работает и сделает заблокированные сайты «открытыми» для замера.\n\n"
+        + "Остановить zapret на время замера (1–2 минуты) и запустить снова после? Сайты, которые идут через zapret, это время будут недоступны.",
+        "zapret is running and would make blocked sites look open.\n\n"
+        + "Stop zapret for the measurement (1–2 minutes) and start it again afterwards? Sites that go through zapret will be unavailable meanwhile.");
+    public static string BlockMapBusy => T("Замер уже идёт.", "A measurement is already running.");
+    public static string BlockMapZapretRunning => T("zapret запущен: замер отложен (с ним заблокированные сайты выглядят открытыми).", "zapret is running: measurement skipped (blocked sites would look open).");
+    public static string BlockMapOtherBypass => T("Запущен другой обход DPI (GoodbyeDPI, ByeDPI…): замер был бы неверным. Остановите его и повторите.", "Another DPI bypass is running (GoodbyeDPI, ByeDPI…): the results would be wrong. Stop it and try again.");
+    public static string BlockMapPausingZapret => T("Останавливаю zapret на время замера…", "Stopping zapret for the measurement…");
+    public static string BlockMapResumingZapret => T("Запускаю zapret обратно…", "Starting zapret again…");
+    public static string BlockMapProgress => T("Замер {0}/{1}: {2}", "Measuring {0}/{1}: {2}");
+    public static string BlockMapBypassDuringRun => T("Во время замера запустился обход DPI: результат не отправлен.", "A DPI bypass started during the measurement: the result was not sent.");
+    public static string BlockMapMeasured => T("Замер готов, ничего не отправлено.", "Measured, nothing sent.");
+    public static string BlockMapSending => T("Отправляю на карту…", "Sending to the map…");
+    public static string BlockMapSent => T("Отправлено на карту. Спасибо!", "Sent to the map. Thank you!");
+    public static string BlockMapRefused => T("Сервер карты не принял отчёт (HTTP {0}): {1}", "The map server refused the report (HTTP {0}): {1}");
+    public static string BlockMapSendFailed => T("Не удалось связаться с сервером карты: {0}", "Couldn't reach the map server: {0}");
+    public static string BlockMapColTarget => T("Сайт", "Site");
+    public static string BlockMapColVerdict => T("Вердикт", "Verdict");
+    public static string BlockMapJsonHeader => T("--- Отчёт, который отправляется (JSON) ---", "--- The report that is sent (JSON) ---");
+
     // Network check (diagnostics window)
     public static string NetCheckRun => T("Проверить сеть", "Check network");
     public static string NetCheckRunning => T("Проверяю сеть провайдера, 1–2 минуты…", "Checking the ISP network, 1–2 minutes…");

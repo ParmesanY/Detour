@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/detour-map/">
+    <Project Path="../external/detour-map/probe/Detour.NetProbe/Detour.NetProbe.csproj" />
+  </Folder>
   <Folder Name="/GitHub Action/">
     <File Path="../.github/workflows/build-all.yml" />
     <File Path="../.github/workflows/build-linux.yml" />

@@ -1,3 +1,6 @@
 [submodule "v2rayN/GlobalHotKeys"]
 	path = v2rayN/GlobalHotKeys
 	url = https://github.com/2dust/GlobalHotKeys
+[submodule "external/detour-map"]
+	path = external/detour-map
+	url = ../detour-map.git

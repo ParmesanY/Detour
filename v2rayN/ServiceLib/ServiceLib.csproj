@@ -95,6 +95,8 @@
 
     <ItemGroup>
         <ProjectReference Include="..\ServiceLib.UdpTest\ServiceLib.UdpTest.csproj" />
+    <!-- Detour Map probe (git submodule external/detour-map): the same measurements as the detour-probe CLI. -->
+    <ProjectReference Include="..\..\external\detour-map\probe\Detour.NetProbe\Detour.NetProbe.csproj" />
     </ItemGroup>
 
 </Project>
