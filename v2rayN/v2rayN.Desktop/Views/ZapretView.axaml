@@ -58,6 +58,16 @@
             </Border>
 
             <Border Classes="card" IsVisible="{Binding IsWinws}">
+                <DockPanel>
+                    <ToggleSwitch DockPanel.Dock="Right" IsChecked="{Binding AutoHeal}" OffContent="" OnContent="" />
+                    <StackPanel>
+                        <TextBlock Classes="head" Text="{x:Static resx:AppText.HealTitle}" />
+                        <TextBlock Classes="hint" Text="{x:Static resx:AppText.HealHint}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Classes="card" IsVisible="{Binding IsWinws}">
                 <StackPanel>
                     <TextBlock Classes="head" Text="{x:Static resx:AppText.ZapretGameFilter}" />
                     <TextBlock Classes="hint" Text="{x:Static resx:AppText.ZapretGameFilterHint}" />

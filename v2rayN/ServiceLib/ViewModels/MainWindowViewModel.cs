@@ -412,6 +412,7 @@ public partial class MainWindowViewModel : MyReactiveObject
         await CertPemManager.Instance.Init(_config);
         TaskManager.Instance.RegUpdateTask(_config, UpdateTaskHandler);
         ZapretWatchdog.Instance.Start(_config);
+        TrafficSplitManager.Instance.Start(_config);
         KillSwitchManager.Instance.Start(_config);
         FailoverManager.Instance.SwitchRequested += (indexId, remarks) =>
             RxSchedulers.MainThreadScheduler.Schedule(async () =>

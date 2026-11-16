@@ -98,8 +98,16 @@ public partial class ZapretViewModel : MyReactiveObject
             await ConfigHandler.SaveConfig(_config);
             await RestartIfRunning();
         });
+        AutoHeal = _config.ZapretItem.AutoHeal;
+        this.WhenAnyValue(x => x.AutoHeal).Skip(1).SubscribeAsync(async v =>
+        {
+            _config.ZapretItem.AutoHeal = v;
+            await ConfigHandler.SaveConfig(_config);
+        });
         InitVpnStrategy();
     }
+
+    [Reactive] public partial bool AutoHeal { get; set; }
 
     private void Refresh()
     {
@@ -203,14 +211,14 @@ public partial class ZapretViewModel : MyReactiveObject
         IsBusy = true;
         try
         {
-            var (best, _) = await ZapretManager.Instance.AutoSelectStrategyAsync(_config, true, m =>
+            var (best, all) = await ZapretManager.Instance.AutoSelectStrategyAsync(_config, true, m =>
             {
                 ProgressText = m;
                 return Task.CompletedTask;
             });
             ProgressText = best is { Passed: > 0 }
                 ? string.Format(AppText.ZapretAutoResult, best.Strategy, best.Passed, best.Total)
-                : AppText.ZapretAutoNothing;
+                : all.Count == 0 ? AppText.ZapretSelectBusy : AppText.ZapretAutoNothing;
             Refresh();
         }
         finally

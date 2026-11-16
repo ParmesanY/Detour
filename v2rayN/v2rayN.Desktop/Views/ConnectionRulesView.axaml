@@ -76,7 +76,36 @@
             Padding="0,0,12,0"
             HorizontalScrollBarVisibility="Disabled">
             <StackPanel>
-                <TextBlock Classes="head" Text="{x:Static resx:AppText.CheckTitle}" />
+                <TextBlock Classes="head" Text="{x:Static resx:AppText.SiteTitle}" />
+                <TextBlock Classes="hint" Text="{x:Static resx:AppText.SiteHint}" />
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox Text="{Binding SiteInput}" Watermark="rutracker.org">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Command="{Binding SiteCheckCmd}" Gesture="Enter" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <Button
+                        Grid.Column="1"
+                        Margin="6,0,0,0"
+                        Classes="Primary"
+                        Command="{Binding SiteCheckCmd}"
+                        Content="{x:Static resx:AppText.SiteRun}"
+                        Theme="{DynamicResource SolidButton}" />
+                </Grid>
+                <TextBlock
+                    Margin="0,8,0,0"
+                    FontFamily="Cascadia Mono, Menlo, DejaVu Sans Mono, monospace"
+                    FontSize="12"
+                    Foreground="{DynamicResource SemiColorText2}"
+                    Text="{Binding SiteResult}"
+                    TextWrapping="Wrap" />
+                <Button
+                    Margin="0,8,0,0"
+                    Command="{Binding SiteApplyCmd}"
+                    Content="{Binding SiteApplyText}"
+                    IsVisible="{Binding HasSiteSuggestion}" />
+
+                <TextBlock Margin="0,18,0,0" Classes="head" Text="{x:Static resx:AppText.CheckTitle}" />
                 <TextBlock Classes="hint" Text="{x:Static resx:AppText.CheckHint}" />
                 <StackPanel Classes="row">
                     <Button

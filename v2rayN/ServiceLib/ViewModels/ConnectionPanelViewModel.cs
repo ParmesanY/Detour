@@ -43,6 +43,30 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
     [Reactive] public partial string UpText { get; set; } = "—";
     [Reactive] public partial string DirectText { get; set; } = "—";
 
+    /// <summary>Traffic that went past the VPN today (TrafficSplitManager); empty until there is any.</summary>
+    [Reactive] public partial string SavingsText { get; set; } = string.Empty;
+    [Reactive] public partial string SavingsDetail { get; set; } = string.Empty;
+
+    private void RefreshSavings()
+    {
+        var s = TrafficSplitManager.Instance.Snapshot();
+        static string Size(long b) => Utils.HumanFy(b);
+        static int Percent(long part, long all) => all > 0 ? (int)Math.Round(part * 100.0 / all) : 0;
+
+        var today = s.TodayVpn + s.TodayDirect + s.TodayZapret;
+        var total = s.TotalVpn + s.TotalDirect + s.TotalZapret;
+        if (total <= 0)
+        {
+            SavingsText = SavingsDetail = string.Empty;
+            return;
+        }
+        var todayPast = s.TodayDirect + s.TodayZapret;
+        var totalPast = s.TotalDirect + s.TotalZapret;
+        SavingsText = string.Format(AppText.SavingsToday, Size(todayPast), Size(today), Percent(todayPast, today));
+        SavingsDetail = string.Format(AppText.SavingsDetail, Size(s.TodayZapret), Size(s.TodayDirect), Size(s.TodayVpn),
+            s.Since?.ToString("dd.MM.yyyy") ?? "—", Size(totalPast), Percent(totalPast, total));
+    }
+
     /// <summary>Last <see cref="HistoryLength" /> per-second samples (bytes/s), newest last, for the graph.</summary>
     [Reactive] public partial double[] DownHistory { get; set; } = new double[HistoryLength];
     [Reactive] public partial double[] UpHistory { get; set; } = new double[HistoryLength];
@@ -91,6 +115,10 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
             {
                 _shownIndexId = _config.IndexId;
                 Refresh();
+            }
+            if (ticks % 5 == 0)
+            {
+                RefreshSavings();
             }
             // Other VPN apps: checked every ~10 s (process scan is not free).
             if (ticks++ % 10 == 0)

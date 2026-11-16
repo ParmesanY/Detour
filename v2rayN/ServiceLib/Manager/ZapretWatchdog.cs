@@ -32,6 +32,7 @@ public class ZapretWatchdog
     private readonly Dictionary<string, int> _failures = [];
     private readonly Dictionary<string, int> _successes = [];
     private int _started;
+    private DateTime _startedAt;
 
     public ZapretWatchdog(Func<string, CancellationToken, Task<bool>> probe, Func<DateTime> now)
     {
@@ -57,6 +58,7 @@ public class ZapretWatchdog
         {
             return;
         }
+        _startedAt = _now();
         Task.Run(async () =>
         {
             // First check soon after start, then every CheckInterval.
@@ -78,6 +80,18 @@ public class ZapretWatchdog
                                 Logging.SaveLog($"{_tag}: {m}");
                             }
                             AppEvents.CoreReloadRequested.Publish();
+                        }
+
+                        // Rules stuck on the VPN: the strategy stopped working, look for a new one.
+                        if (config.ZapretItem.AutoHeal
+                            && ZapretHealer.ShouldHeal(config.ConnectionRules ?? [], _now(), _startedAt, ZapretHealer.LastHeal))
+                        {
+                            var healed = await ZapretHealer.HealAsync(config);
+                            if (healed != null)
+                            {
+                                NoticeManager.Instance.Enqueue(healed);
+                                Logging.SaveLog($"{_tag}: {healed}");
+                            }
                         }
                     }
                 }

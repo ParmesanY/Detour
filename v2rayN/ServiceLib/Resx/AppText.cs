@@ -330,6 +330,39 @@ public static class AppText
     public static string ZapretAutoResult => T("Лучшая стратегия: {0} ({1} из {2} сайтов открылись).", "Best strategy: {0} ({1} of {2} sites opened).");
     public static string ZapretAutoNothing => T("Ни одна стратегия не помогла. Возможно, сайты заблокированы по IP — тогда нужен VPN.",
         "No strategy helped. The sites may be blocked by IP, then only VPN helps.");
+    public static string ZapretSelectBusy => T("Стратегия уже подбирается (возможно, в фоне). Подождите пару минут.",
+        "A strategy is already being picked (maybe in the background). Wait a couple of minutes.");
+
+    // Self-healing zapret (ZapretHealer)
+    public static string HealTitle => T("Чинить zapret самостоятельно", "Fix zapret on its own");
+    public static string HealHint => T("Если сайты из правил «zapret→VPN» больше 10 минут идут через VPN, Detour в фоне подберёт новую стратегию, а если не поможет — поставит свежий Flowseal. Не чаще раза в 6 часов.",
+        "If \"zapret→VPN\" sites have been on the VPN for over 10 minutes, Detour picks a new strategy in the background and, if that doesn't help, installs a fresh Flowseal. At most once per 6 hours.");
+    public static string HealPicked => T("zapret перестал справляться — подобрана стратегия «{0}» ({1}/{2} сайтов). Сайты вернутся с VPN на zapret через минуту.",
+        "zapret stopped working: picked strategy \"{0}\" ({1}/{2} sites). Sites go back from VPN to zapret in a minute.");
+    public static string HealKept => T("zapret: текущая стратегия «{0}» снова лучшая ({1}/{2} сайтов).",
+        "zapret: the current strategy \"{0}\" is still the best ({1}/{2} sites).");
+    public static string HealNothing => T("zapret перестал справляться, и ни одна стратегия не помогла: сайты остаются на VPN.",
+        "zapret stopped working and no strategy helped: the sites stay on the VPN.");
+    public static string HealUpdated => T("zapret обновлён до {0}.", "zapret updated to {0}.");
+
+    // "A site doesn't open" (SiteCheckManager)
+    public static string SiteTitle => T("Не открывается сайт?", "A site doesn't open?");
+    public static string SiteHint => T("Вставьте адрес: Detour проверит его напрямую, через zapret и через VPN и предложит правило.",
+        "Paste the address: Detour checks it directly, through zapret and through the VPN and suggests a rule.");
+    public static string SiteRun => T("Проверить", "Check");
+    public static string SiteBadInput => T("Это не похоже на адрес сайта. Пример: rutracker.org", "That doesn't look like a site address. Example: rutracker.org");
+    public static string SiteChecking => T("Проверяю напрямую…", "Checking directly…");
+    public static string SiteCheckingZapret => T("Проверяю через zapret (он перезапустится)…", "Checking through zapret (it restarts)…");
+    public static string SiteCheckingVpn => T("Проверяю через VPN…", "Checking through the VPN…");
+    public static string SiteVpnOnly => T("Открывается только через VPN.", "Opens only through the VPN.");
+    public static string SiteDown => T("Не открывается даже через VPN: сайт лежит или не пускает этот VPN-сервер. Правило не поможет.",
+        "Doesn't open even through the VPN: the site is down or refuses this VPN server. A rule won't help.");
+    public static string SiteApply => T("Добавить правило: {0}", "Add rule: {0}");
+
+    // Traffic past the VPN (TrafficSplitManager)
+    public static string SavingsToday => T("мимо VPN сегодня: {0} из {1} ({2} %)", "past VPN today: {0} of {1} ({2}%)");
+    public static string SavingsDetail => T("Сегодня: zapret {0} · напрямую {1} · через VPN {2}\nС {3}: мимо VPN {4} ({5} %) — этот трафик не тратит VPN-подписку",
+        "Today: zapret {0} · direct {1} · via VPN {2}\nSince {3}: past VPN {4} ({5}%), traffic that doesn't use the VPN subscription");
     public static string ZapretSource => T("Источник", "Source");
 
     // Connection panel readouts and sidebar sections (mono, uppercase)

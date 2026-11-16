@@ -538,6 +538,30 @@ public partial class ZapretManager
     public async Task<(StrategyScore? Best, List<StrategyScore> All)> AutoSelectStrategyAsync(Config config, bool stopAtFirstFullPass = true,
         Func<string, Task>? progress = null, CancellationToken cancellationToken = default)
     {
+        // The user's picker and the background self-healing must not restart winws over each other.
+        if (Interlocked.Exchange(ref _selecting, 1) == 1)
+        {
+            await Report(progress, AppText.ZapretSelectBusy);
+            return (null, []);
+        }
+        try
+        {
+            return await AutoSelectCoreAsync(config, stopAtFirstFullPass, progress, cancellationToken);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _selecting, 0);
+        }
+    }
+
+    private int _selecting;
+
+    /// <summary>A strategy pick (by the user or by self-healing) is running.</summary>
+    public bool IsSelecting => Volatile.Read(ref _selecting) == 1;
+
+    private async Task<(StrategyScore? Best, List<StrategyScore> All)> AutoSelectCoreAsync(Config config, bool stopAtFirstFullPass,
+        Func<string, Task>? progress, CancellationToken cancellationToken)
+    {
         var item = config.ZapretItem;
         var original = item.Strategy;
         var urls = GetCheckUrls(config);

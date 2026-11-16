@@ -344,4 +344,86 @@ public class DetourFeaturesTests
         await Assert.That(keys!.Value.Private).IsEqualTo("aaa=");
         await Assert.That(keys.Value.Public).IsEqualTo("bbb=");
     }
+
+    [Test]
+    public async Task ZapretHealer_StuckRulesAndVersions()
+    {
+        var start = new DateTime(2026, 11, 16, 12, 0, 0);
+        List<ConnectionRule> rules = [new() { Target = "discord.com", Mode = EConnectionMode.ZapretThenVpn, FallbackActive = true }];
+        await Assert.That(ZapretHealer.ShouldHeal(rules, start.AddMinutes(5), start, null)).IsFalse();
+        await Assert.That(ZapretHealer.ShouldHeal(rules, start.AddMinutes(11), start, null)).IsTrue();
+        await Assert.That(ZapretHealer.ShouldHeal(rules, start.AddMinutes(11), start, start.AddHours(-1))).IsFalse();
+        rules[0].FallbackActive = false;
+        await Assert.That(ZapretHealer.ShouldHeal(rules, start.AddHours(1), start, null)).IsFalse();
+
+        await Assert.That(ZapretHealer.IsNewer("1.9.1", "1.8.5")).IsTrue();
+        await Assert.That(ZapretHealer.IsNewer("1.9.1", "1.9.1")).IsFalse();
+        await Assert.That(ZapretHealer.IsNewer("1.10.0", "1.9.9b")).IsTrue();
+        await Assert.That(ZapretHealer.IsNewer(null, "1.9.1")).IsFalse();
+    }
+
+    [Test]
+    public async Task SiteCheck_NormalizeAndEvaluate()
+    {
+        await Assert.That(SiteCheckManager.NormalizeHost("https://www.RuTracker.org/forum/index.php")).IsEqualTo("rutracker.org");
+        await Assert.That(SiteCheckManager.NormalizeHost("x.com")).IsEqualTo("x.com");
+        await Assert.That(SiteCheckManager.NormalizeHost("hello")).IsNull();
+        await Assert.That(SiteCheckManager.NormalizeHost("1.2.3.4")).IsNull();
+
+        List<ConnectionRule> rules = [new() { Target = "@youtube", Mode = EConnectionMode.Zapret }, new() { Target = "site.org", Mode = EConnectionMode.Direct }];
+        await Assert.That(SiteCheckManager.FindRule(rules, "www.youtube.com")?.Target).IsEqualTo("@youtube");
+        await Assert.That(SiteCheckManager.FindRule(rules, "a.site.org")?.Target).IsEqualTo("site.org");
+        await Assert.That(SiteCheckManager.FindRule(rules, "other.org")).IsNull();
+
+        const int none = SiteCheckManager.NoData;
+        var direct = SiteCheckManager.Evaluate("a.ru", null, 200, null, null);
+        await Assert.That(direct.Suggested).IsEqualTo(EConnectionMode.Direct);
+        await Assert.That(direct.ChangeSuggested).IsTrue();
+        var zapret = SiteCheckManager.Evaluate("a.ru", null, none, 200, null);
+        await Assert.That(zapret.Suggested).IsEqualTo(EConnectionMode.ZapretThenVpn);
+        var vpn = SiteCheckManager.Evaluate("a.ru", null, none, none, 200);
+        await Assert.That(vpn.Suggested).IsEqualTo(EConnectionMode.Vpn);
+        await Assert.That(vpn.ChangeSuggested).IsFalse();
+        var geo = SiteCheckManager.Evaluate("a.ru", EConnectionMode.Direct, 403, null, 200);
+        await Assert.That(geo.Suggested).IsEqualTo(EConnectionMode.Vpn);
+        await Assert.That(geo.ChangeSuggested).IsTrue();
+        var down = SiteCheckManager.Evaluate("a.ru", null, none, none, none);
+        await Assert.That(down.Suggested).IsNull();
+        await Assert.That(down.ChangeSuggested).IsFalse();
+
+        var text = BlockCheckManager.SetRuleLine("a.ru direct\r\nb.ru vpn", "b.ru", EConnectionMode.Direct);
+        await Assert.That(text.Split(Environment.NewLine).Length).IsEqualTo(2);
+        await Assert.That(text).DoesNotContain("b.ru vpn");
+    }
+
+    [Test]
+    public async Task TrafficSplit_SpreadsUnseenBytes()
+    {
+        static ConnectionItem C(string id, ulong bytes, string tag, string host) =>
+            new() { id = id, download = bytes, chains = [tag], metadata = new() { host = host } };
+        static bool Zapret(string h) => TrafficSplitManager.IsUnder(h, new HashSet<string> { "youtube.com" });
+
+        var tracker = new TrafficSplitTracker();
+        var first = tracker.Update(new() { downloadTotal = 1000, connections = [C("1", 500, "proxy", "a.com")] }, Zapret);
+        await Assert.That(first.Vpn + first.Direct + first.Zapret).IsEqualTo(0L);
+
+        // +300 VPN, +600 zapret seen; 100 unseen bytes spread 1:2.
+        var second = tracker.Update(new()
+        {
+            downloadTotal = 2000,
+            connections = [C("1", 800, "proxy", "a.com"), C("2", 600, "direct", "rr1.googlevideo.youtube.com")],
+        }, Zapret);
+        await Assert.That(second.Vpn).IsEqualTo(333L);
+        await Assert.That(second.Zapret).IsEqualTo(666L);
+        await Assert.That(second.Direct).IsEqualTo(0L);
+
+        var block = TrafficSplitTracker.Classify(C("3", 1, "block", "x"), Zapret);
+        await Assert.That(block).IsEqualTo(TrafficSplitTracker.Path.None);
+
+        var stats = new TrafficSplitStats();
+        stats.Add(10, 20, 30, new DateTime(2026, 11, 15, 23, 0, 0));
+        stats.Add(1, 2, 3, new DateTime(2026, 11, 16, 1, 0, 0));
+        await Assert.That(stats.TodayZapret).IsEqualTo(3L);
+        await Assert.That(stats.TotalZapret).IsEqualTo(33L);
+    }
 }

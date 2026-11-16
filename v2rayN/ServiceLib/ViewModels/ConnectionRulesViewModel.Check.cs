@@ -20,8 +20,89 @@ public partial class ConnectionRulesViewModel
 
     private List<BlockCheckResult> _checkResults = [];
 
+    // "A site doesn't open": one address.
+    public ReactiveCommand<RxVoid, RxVoid> SiteCheckCmd { get; private set; } = null!;
+    public ReactiveCommand<RxVoid, RxVoid> SiteApplyCmd { get; private set; } = null!;
+    [Reactive] public partial string SiteInput { get; set; } = string.Empty;
+    [Reactive] public partial string SiteResult { get; set; } = string.Empty;
+    [Reactive] public partial bool IsSiteChecking { get; set; }
+    [Reactive] public partial bool HasSiteSuggestion { get; set; }
+    [Reactive] public partial string SiteApplyText { get; set; } = string.Empty;
+    private SiteCheckResult? _siteResult;
+
+    private void InitSiteCheck()
+    {
+        SiteCheckCmd = ReactiveCommand.CreateFromTask(CheckSiteAsync,
+            this.WhenAnyValue(x => x.IsSiteChecking, x => x.SiteInput, (c, s) => !c && s.Trim().Length > 0));
+        SiteApplyCmd = ReactiveCommand.CreateFromTask(ApplySiteAsync,
+            this.WhenAnyValue(x => x.HasSiteSuggestion, x => x.IsSiteChecking, (h, c) => h && !c));
+    }
+
+    private async Task CheckSiteAsync()
+    {
+        HasSiteSuggestion = false;
+        _siteResult = null;
+        var host = SiteCheckManager.NormalizeHost(SiteInput);
+        if (host is null)
+        {
+            SiteResult = AppText.SiteBadInput;
+            return;
+        }
+        IsSiteChecking = true;
+        try
+        {
+            var progress = new Progress<string>(s => SiteResult = s);
+            var r = await Task.Run(() => SiteCheckManager.CheckAsync(_config, host, progress));
+            _siteResult = r;
+            static string State(bool ok) => ok ? AppText.CheckYes : AppText.CheckNo;
+            var paths = new List<string>();
+            if (r.Direct is { } d)
+            {
+                paths.Add($"{AppText.CheckDirect}: {State(d)}");
+            }
+            if (r.Zapret is { } z)
+            {
+                paths.Add($"{AppText.CheckZapret}: {State(z)}");
+            }
+            if (r.Vpn is { } v)
+            {
+                paths.Add($"VPN: {State(v)}");
+            }
+            var current = r.Current is { } c ? AppText.ModeName(c) : AppText.CheckNoRule;
+            var suggestion = r.Suggested is { } s
+                ? string.Format(AppText.CheckSuggest, AppText.ModeName(s)) + $" ({string.Format(AppText.CheckCurrent, current)})"
+                : string.Empty;
+            SiteResult = string.Join(Environment.NewLine,
+                new[] { r.Host, string.Join(" · ", paths), r.Verdict, suggestion }.Where(l => l.Length > 0));
+            HasSiteSuggestion = r.ChangeSuggested;
+            SiteApplyText = r.Suggested is { } m ? string.Format(AppText.SiteApply, AppText.ModeName(m)) : string.Empty;
+        }
+        finally
+        {
+            IsSiteChecking = false;
+        }
+    }
+
+    /// <summary>Puts the rule for the site on top (before a preset that may also cover it) and saves.</summary>
+    private async Task ApplySiteAsync()
+    {
+        if (_siteResult is not { Suggested: { } mode } r)
+        {
+            return;
+        }
+        var exists = RulesText.Replace("\r\n", "\n").Split('\n')
+            .Any(l => l.Trim().StartsWith(r.Host + " ", StringComparison.OrdinalIgnoreCase));
+        RulesText = exists
+            ? BlockCheckManager.SetRuleLine(RulesText, r.Host, mode)
+            : ConnectionRuleParser.Format(new ConnectionRule { Target = r.Host, Mode = mode })
+              + (RulesText.Trim().Length > 0 ? Environment.NewLine + RulesText : string.Empty);
+        await SaveAsync();
+        HasSiteSuggestion = false;
+    }
+
     private void InitCheck()
     {
+        InitSiteCheck();
         CheckBlocksCmd = ReactiveCommand.CreateFromTask(CheckBlocksAsync, this.WhenAnyValue(x => x.IsChecking).Select(c => !c));
         ApplyCheckCmd = ReactiveCommand.Create(ApplyCheck, this.WhenAnyValue(x => x.HasCheckResults, x => x.IsChecking, (h, c) => h && !c));
         UpdateListsCmd = ReactiveCommand.CreateFromTask(UpdateListsAsync, this.WhenAnyValue(x => x.IsUpdatingLists).Select(u => !u));

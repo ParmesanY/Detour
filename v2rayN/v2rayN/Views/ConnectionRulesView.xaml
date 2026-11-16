@@ -142,8 +142,45 @@
             HorizontalScrollBarVisibility="Disabled"
             VerticalScrollBarVisibility="Auto">
             <StackPanel>
+                <!--  One site: direct / zapret / VPN, the rule in one click  -->
+                <ui:TextBlock FontTypography="BodyStrong" Text="{x:Static resx:AppText.SiteTitle}" />
+                <TextBlock Style="{StaticResource SideCaption}" Text="{x:Static resx:AppText.SiteHint}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox PlaceholderText="rutracker.org" Text="{Binding SiteInput, UpdateSourceTrigger=PropertyChanged}">
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding SiteCheckCmd}" />
+                        </ui:TextBox.InputBindings>
+                    </ui:TextBox>
+                    <ui:Button
+                        Grid.Column="1"
+                        Margin="8,0,0,0"
+                        Appearance="Primary"
+                        Command="{Binding SiteCheckCmd}"
+                        Content="{x:Static resx:AppText.SiteRun}" />
+                </Grid>
+                <TextBlock
+                    Margin="0,8,0,0"
+                    FontFamily="Cascadia Mono, Consolas"
+                    FontSize="12"
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    Text="{Binding SiteResult}"
+                    TextWrapping="Wrap" />
+                <ui:Button
+                    Margin="0,8,0,0"
+                    Command="{Binding SiteApplyCmd}"
+                    Content="{Binding SiteApplyText}"
+                    Icon="{ui:SymbolIcon Add24}"
+                    Visibility="{Binding HasSiteSuggestion, Converter={StaticResource BoolToVis}}" />
+
                 <!--  Block check: what works without VPN, suggested rules  -->
-                <ui:TextBlock FontTypography="BodyStrong" Text="{x:Static resx:AppText.CheckTitle}" />
+                <ui:TextBlock
+                    Margin="0,18,0,0"
+                    FontTypography="BodyStrong"
+                    Text="{x:Static resx:AppText.CheckTitle}" />
                 <TextBlock Style="{StaticResource SideCaption}" Text="{x:Static resx:AppText.CheckHint}" />
                 <StackPanel Orientation="Horizontal">
                     <ui:Button

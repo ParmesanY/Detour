@@ -158,6 +158,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid>
                             <TextBlock Style="{StaticResource DetourLabel}" Text="{x:Static resx:AppText.PanelTraffic}" />
@@ -187,6 +188,16 @@
                                 Up="{Binding UpHistory}"
                                 UpBrush="{DynamicResource TextFillColorTertiaryBrush}" />
                         </Border>
+                        <!--  Past the VPN today (direct + zapret): the subscription's savings  -->
+                        <TextBlock
+                            Grid.Row="2"
+                            Margin="0,6,0,0"
+                            FontSize="10.5"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            Style="{StaticResource DetourMono}"
+                            Text="{Binding SavingsText}"
+                            TextTrimming="CharacterEllipsis"
+                            ToolTip="{Binding SavingsDetail}" />
                     </Grid>
 
                     <Button

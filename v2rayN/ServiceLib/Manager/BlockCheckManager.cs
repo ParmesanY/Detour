@@ -127,24 +127,31 @@ public static class BlockCheckManager
     /// </summary>
     public static string ApplyToText(string rulesText, IEnumerable<BlockCheckResult> results)
     {
-        var lines = rulesText.Replace("\r\n", "\n").Split('\n').ToList();
         foreach (var r in results.Where(r => r.ChangeSuggested))
         {
-            var line = ConnectionRuleParser.Format(new ConnectionRule { Target = r.Preset.Target, Mode = r.Suggested });
-            var index = lines.FindIndex(l => l.Trim().StartsWith(r.Preset.Target + " ", StringComparison.OrdinalIgnoreCase)
-                                             || l.Trim().Equals(r.Preset.Target, StringComparison.OrdinalIgnoreCase));
-            if (index >= 0)
+            rulesText = SetRuleLine(rulesText, r.Preset.Target, r.Suggested);
+        }
+        return rulesText;
+    }
+
+    /// <summary>Replaces the line of the rule for <paramref name="target"/> or appends one.</summary>
+    public static string SetRuleLine(string rulesText, string target, EConnectionMode mode)
+    {
+        var lines = rulesText.Replace("\r\n", "\n").Split('\n').ToList();
+        var line = ConnectionRuleParser.Format(new ConnectionRule { Target = target, Mode = mode });
+        var index = lines.FindIndex(l => l.Trim().StartsWith(target + " ", StringComparison.OrdinalIgnoreCase)
+                                         || l.Trim().Equals(target, StringComparison.OrdinalIgnoreCase));
+        if (index >= 0)
+        {
+            lines[index] = line;
+        }
+        else
+        {
+            while (lines.Count > 0 && lines[^1].Trim().Length == 0)
             {
-                lines[index] = line;
+                lines.RemoveAt(lines.Count - 1);
             }
-            else
-            {
-                while (lines.Count > 0 && lines[^1].Trim().Length == 0)
-                {
-                    lines.RemoveAt(lines.Count - 1);
-                }
-                lines.Add(line);
-            }
+            lines.Add(line);
         }
         return string.Join(Environment.NewLine, lines);
     }

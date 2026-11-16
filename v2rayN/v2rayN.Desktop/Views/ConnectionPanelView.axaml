@@ -49,6 +49,12 @@
                             <TextBlock FontFamily="Cascadia Mono, Menlo, DejaVu Sans Mono, monospace" Text="{Binding UpText}" />
                         </StackPanel>
                     </StackPanel>
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        Classes="hint"
+                        FontFamily="Cascadia Mono, Menlo, DejaVu Sans Mono, monospace"
+                        Text="{Binding SavingsText}"
+                        ToolTip.Tip="{Binding SavingsDetail}" />
                 </StackPanel>
 
                 <StackPanel

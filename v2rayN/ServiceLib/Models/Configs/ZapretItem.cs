@@ -20,6 +20,12 @@ public class ZapretItem
     /// <summary>Fragmentation strategy for the VPN connection itself (VpnStrategyManager), "" = off.</summary>
     public string VpnStrategy { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Self-healing: when zapret→VPN rules are stuck on the VPN, pick a new strategy in the background
+    /// and, if no strategy helps, install a newer Flowseal release (ZapretHealer).
+    /// </summary>
+    public bool AutoHeal { get; set; } = true;
+
     /// <summary>Installed release tag, empty if zapret is not installed.</summary>
     public string? InstalledVersion { get; set; }
 }

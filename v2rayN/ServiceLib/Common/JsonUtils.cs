@@ -218,6 +218,7 @@ public class JsonUtils
 [JsonSerializable(typeof(ClashProxies))]
 [JsonSerializable(typeof(ClashProviders))]
 [JsonSerializable(typeof(ClashConnections))]
+[JsonSerializable(typeof(TrafficSplitStats))]
 [JsonSerializable(typeof(ProtocolExtraItem))]
 [JsonSerializable(typeof(TransportExtraItem))]
 [JsonSerializable(typeof(TrafficItem))]
