@@ -19,12 +19,9 @@ jobs:
   build:
     strategy:
       fail-fast: false
+      # macOS runners are scarce and often time out in the queue: build them only for release tags.
       matrix:
-        include:
-          - { os: windows-latest, rid: win-x64, test: true }
-          - { os: ubuntu-latest, rid: linux-x64, test: false }
-          - { os: macos-latest, rid: osx-arm64, test: false }
-          - { os: macos-latest, rid: osx-x64, test: false }
+        include: ${{ fromJSON(github.ref_type == 'tag' && '[{"os":"windows-latest","rid":"win-x64","test":true},{"os":"ubuntu-latest","rid":"linux-x64","test":false},{"os":"macos-latest","rid":"osx-arm64","test":false},{"os":"macos-latest","rid":"osx-x64","test":false}]' || '[{"os":"windows-latest","rid":"win-x64","test":true},{"os":"ubuntu-latest","rid":"linux-x64","test":false}]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
