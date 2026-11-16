@@ -57,4 +57,13 @@
 		<ProjectReference Include="..\ServiceLib\ServiceLib.csproj" />
 	</ItemGroup>
 
+	<!-- The single-file publish leaves out msquic.dll, and without it the Detour Map probe reports QUIC as
+	     "unsupported". Take it from the runtime pack, next to Detour.exe like the other native libraries. -->
+	<Target Name="CopyMsQuic" AfterTargets="Publish" Condition="$(RuntimeIdentifier.StartsWith('win'))">
+		<ItemGroup>
+			<_MsQuic Include="@(ResolvedRuntimePack->'%(PackageDirectory)\runtimes\$(RuntimeIdentifier)\native\msquic.dll')" />
+		</ItemGroup>
+		<Copy SourceFiles="@(_MsQuic)" DestinationFolder="$(PublishDir)" Condition="Exists('%(_MsQuic.FullPath)')" SkipUnchangedFiles="true" />
+	</Target>
+
 </Project>
