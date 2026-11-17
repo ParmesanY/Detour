@@ -353,6 +353,17 @@ public class CoreManager
     private async Task<ProcessService?> RunProcess(CoreInfo? coreInfo, string configPath, bool displayLog, bool mayNeedSudo, bool isTunLaunch = false)
     {
         var fileName = CoreInfoManager.Instance.GetCoreExecFile(coreInfo, out var msg);
+        // AmneziaWG servers: the same sing-box config, run by the fork that understands "amnezia".
+        if (coreInfo?.CoreType == ECoreType.sing_box && AmneziaCore.ConfigNeedsIt(configPath))
+        {
+            var (amneziaExe, amneziaMsg) = await AmneziaCore.EnsureAsync(m => UpdateFunc(false, m));
+            if (amneziaExe == null)
+            {
+                await UpdateFunc(true, amneziaMsg);
+                return null;
+            }
+            fileName = amneziaExe;
+        }
         if (fileName.IsNullOrEmpty())
         {
             await UpdateFunc(false, msg);

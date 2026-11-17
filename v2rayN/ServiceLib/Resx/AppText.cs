@@ -12,6 +12,8 @@ public static class AppText
 
     private static string T(string ru, string en) => Ru ? ru : en;
 
+    public static bool IsRussian => Ru;
+
     // Navigation
     public static string NavServers => T("Серверы", "Servers");
     public static string NavRules => T("Правила", "Rules");
@@ -134,6 +136,7 @@ public static class AppText
         "ads.example.com +block    — заблокировать\n" +
         "spotify.com +warp         — через Cloudflare WARP (страница WARP)\n" +
         "@telegram +vpn            — готовый набор\n" +
+        "@youtube +vpn = Германия 1 — через свой сервер (= авто — лучший по пингу)\n" +
         "# строка                  — выключенное правило или комментарий",
         "Discord.exe +zapret+vpn   — app: zapret first, VPN if it doesn't work\n" +
         "youtube.com +zapret       — domain and subdomains through zapret\n" +
@@ -142,6 +145,7 @@ public static class AppText
         "ads.example.com +block    — block\n" +
         "spotify.com +warp         — through Cloudflare WARP (WARP page)\n" +
         "@telegram +vpn            — preset\n" +
+        "@youtube +vpn = Germany 1 — through its own server (= auto — best ping)\n" +
         "# line                    — switched-off rule or comment");
     public static string RulesPresets => T("Готовые наборы", "Presets");
     public static string RulesPresetsHint => T("Рекомендованный режим уже подставлен, его можно поменять в тексте.",
@@ -451,8 +455,14 @@ public static class AppText
         "{0}: это OpenVPN, его ядра не поддерживают. У Proton VPN и многих других сервисов можно скачать WireGuard-конфиг (.conf) — он подойдёт.",
         "{0}: OpenVPN is not supported by the cores. Proton VPN and many others offer a WireGuard config (.conf) instead.");
     public static string ImportAmneziaNote => T(
-        "В файле есть параметры AmneziaWG (Jc, S1, H1…): ядра их не понимают, сервер добавлен как обычный WireGuard и в России может не подключиться.",
-        "The file has AmneziaWG settings (Jc, S1, H1…): the cores ignore them, the server is added as plain WireGuard and may be blocked.");
+        "Это сервер AmneziaWG: при первом подключении Detour скачает для него отдельное ядро (sing-box-extended, ~36 МБ).",
+        "This is an AmneziaWG server: on the first connect Detour downloads a separate core for it (sing-box-extended, ~36 MB).");
+    public static string AmneziaDownloading => T("Скачиваю ядро для AmneziaWG (sing-box-extended)…", "Downloading the AmneziaWG core (sing-box-extended)…");
+    public static string AmneziaDownloadFailed => T("Не удалось скачать ядро для AmneziaWG: {0}", "Could not download the AmneziaWG core: {0}");
+    public static string AmneziaHashMismatch => T(
+        "Скачанное ядро AmneziaWG не совпало с ожидаемой контрольной суммой: файл не запущен. Попробуйте позже или обновите Detour.",
+        "The downloaded AmneziaWG core doesn't match the expected checksum: it was not started. Try later or update Detour.");
+    public static string AmneziaUnsupported => T("AmneziaWG пока работает только в Windows x64.", "AmneziaWG works only on Windows x64 for now.");
     public static string UpdateAvailableNotice => T("Доступна новая версия Detour {0}: Справка → Обновить", "Detour {0} is available: Help → Update");
     public static string UpdateHeader => T("ВЕРСИЯ", "VERSION");
     public static string UpdateCheck => T("Проверить обновления", "Check for updates");
@@ -589,6 +599,19 @@ public static class AppText
     public static string DiagSave => T("Сохранить…", "Save…");
     public static string DiagRerun => T("Повторить", "Run again");
     public static string DiagCopied => T("Отчёт скопирован", "Report copied");
+    public static string SubInfoTitle => T("Подписка: ", "Subscription: ");
+    public static string SubInfoTraffic => T("{0} из {1}", "{0} of {1}");
+    public static string SubInfoUsed => T("израсходовано {0}", "{0} used");
+    public static string SubInfoExpire => T("до {0}", "until {0}");
+    public static string SubSendHwid => T("Провайдер требует привязку устройства (HWID)", "Provider requires device binding (HWID)");
+    public static string SubSendHwidHint => T(
+        "Отправлять провайдеру заголовки X-HWID и X-Device-* (как Happ и INCY). Вместо ID железа — случайный номер этой установки Detour. Включайте, только если без этого подписка не обновляется или провайдер так просит.",
+        "Send X-HWID and X-Device-* headers to the provider (as Happ and INCY do). Instead of a hardware id it is a random id of this Detour install. Turn on only if the subscription won't update without it or the provider asks for it.");
+    public static string DiagExport => T("Архив для помощи", "Help archive");
+    public static string DiagExportHint => T(
+        "Один zip, который можно отправить тому, кто помогает: этот отчёт, логи за 3 дня и конфиги ядер. Ключи, пароли, ссылки подписок, адреса ваших VPN-серверов и имя пользователя Windows удаляются. Сайты, которые вы открывали, в логах остаются: по ним видно, что сломалось.",
+        "One zip to send to whoever helps you: this report, 3 days of logs and the core configs. Keys, passwords, subscription links, your VPN servers' addresses and the Windows user name are removed. Sites you opened stay in the logs: they show what broke.");
+    public static string DiagExported => T("Архив сохранён: {0}", "Archive saved: {0}");
 
     public static string ImportDropHint => T("Отпустите, чтобы добавить серверы из файлов", "Drop to add servers from files");
 

@@ -172,6 +172,9 @@ public class Endpoints4Sbox : BaseServer4Sbox
     public string? password { get; set; }
     public string? path { get; set; }
     public Dictionary<string, List<string>>? headers { get; set; }
+
+    /// <summary>AmneziaWG settings: understood only by the sing-box-extended fork.</summary>
+    public System.Text.Json.Nodes.JsonObject? amnezia { get; set; }
 }
 
 public class Peer4Sbox

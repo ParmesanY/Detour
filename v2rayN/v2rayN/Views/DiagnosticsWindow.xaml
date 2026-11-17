@@ -67,6 +67,12 @@
                 Click="BtnSave_Click"
                 Content="{x:Static resx:AppText.DiagSave}" />
             <ui:Button
+                x:Name="btnExport"
+                Margin="0,0,8,0"
+                Click="BtnExport_Click"
+                Content="{x:Static resx:AppText.DiagExport}"
+                ToolTip="{x:Static resx:AppText.DiagExportHint}" />
+            <ui:Button
                 x:Name="btnCopy"
                 Appearance="Primary"
                 Click="BtnCopy_Click"

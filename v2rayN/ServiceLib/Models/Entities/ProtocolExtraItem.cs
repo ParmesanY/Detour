@@ -29,6 +29,9 @@ public record ProtocolExtraItem
     public int? WgMtu { get; init; }
     public string? WgDns { get; init; }
 
+    /// <summary>AmneziaWG obfuscation (jc, jmin, jmax, s1–s4, h1–h4, i1–i5…) as a JSON object; null = plain WireGuard.</summary>
+    public string? WgAmnezia { get; init; }
+
     // hysteria2
     public string? SalamanderPass { get; init; }
     public int? UpMbps { get; init; }

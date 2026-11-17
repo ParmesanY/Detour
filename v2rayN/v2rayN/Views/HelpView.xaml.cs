@@ -89,6 +89,11 @@ public partial class HelpView
         new BlockMapWindow { Owner = Window.GetWindow(this) }.Show();
     }
 
+    private void BtnTour_Click(object sender, RoutedEventArgs e)
+    {
+        new TourWindow { Owner = Window.GetWindow(this) }.ShowDialog();
+    }
+
     private void BtnDiagnostics_Click(object sender, RoutedEventArgs e)
     {
         new DiagnosticsWindow { Owner = Window.GetWindow(this) }.Show();

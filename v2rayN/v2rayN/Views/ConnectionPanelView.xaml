@@ -159,6 +159,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid>
                             <TextBlock Style="{StaticResource DetourLabel}" Text="{x:Static resx:AppText.PanelTraffic}" />
@@ -198,6 +199,24 @@
                             Text="{Binding SavingsText}"
                             TextTrimming="CharacterEllipsis"
                             ToolTip="{Binding SavingsDetail}" />
+                        <!--  Provider's traffic / expiry for the current server's subscription  -->
+                        <TextBlock
+                            Grid.Row="3"
+                            Margin="0,2,0,0"
+                            FontSize="10.5"
+                            Text="{Binding SubInfoText}"
+                            TextTrimming="CharacterEllipsis">
+                            <TextBlock.Style>
+                                <Style BasedOn="{StaticResource DetourMono}" TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SubInfoWarning}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource DetourWarnBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </Grid>
 
                     <Button

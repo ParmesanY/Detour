@@ -72,7 +72,8 @@ public static class ConnectionRuleCompiler
             }
             var outbound = mode switch
             {
-                EConnectionMode.Vpn => Global.ProxyTag,
+                // A rule with its own server: resolved by CoreConfigContextBuilder (ServiceServerResolver).
+                EConnectionMode.Vpn => rule.Server.IsNullOrEmpty() ? Global.ProxyTag : ServiceServerResolver.TagPrefix + rule.Server,
                 EConnectionMode.Block => Global.BlockTag,
                 // Resolved by CoreConfigContextBuilder to the WARP local proxy (or the VPN while it's off).
                 EConnectionMode.Warp => Global.WarpOutboundRemarks,

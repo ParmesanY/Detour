@@ -1,0 +1,58 @@
+<ui:FluentWindow
+    x:Class="v2rayN.Views.TourWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:resx="clr-namespace:ServiceLib.Resx;assembly=ServiceLib"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="{x:Static resx:TourContent.WindowTitle}"
+    Width="560"
+    Height="440"
+    ExtendsContentIntoTitleBar="True"
+    ResizeMode="NoResize"
+    WindowBackdropType="None"
+    WindowStartupLocation="CenterOwner">
+    <Grid Background="{DynamicResource ApplicationBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ui:TitleBar Title="{x:Static resx:TourContent.WindowTitle}" ShowMaximize="False" ShowMinimize="False" />
+
+        <StackPanel Grid.Row="1" Margin="28,8,28,0">
+            <TextBlock
+                x:Name="txtCounter"
+                FontFamily="{DynamicResource DetourMonoFont}"
+                FontSize="11"
+                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <ui:TextBlock
+                x:Name="txtTitle"
+                Margin="0,4,0,12"
+                FontTypography="Subtitle" />
+            <TextBlock
+                x:Name="txtBody"
+                LineHeight="20"
+                TextWrapping="Wrap" />
+        </StackPanel>
+
+        <DockPanel Grid.Row="2" Margin="28,12,28,20" LastChildFill="False">
+            <ui:Button
+                x:Name="btnSkip"
+                Appearance="Transparent"
+                Click="BtnSkip_Click"
+                Content="{x:Static resx:TourContent.Skip}"
+                DockPanel.Dock="Left" />
+            <ui:Button
+                x:Name="btnNext"
+                Appearance="Primary"
+                Click="BtnNext_Click"
+                DockPanel.Dock="Right" />
+            <ui:Button
+                x:Name="btnBack"
+                Margin="0,0,8,0"
+                Click="BtnBack_Click"
+                Content="{x:Static resx:TourContent.Back}"
+                DockPanel.Dock="Right" />
+        </DockPanel>
+    </Grid>
+</ui:FluentWindow>

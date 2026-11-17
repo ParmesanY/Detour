@@ -1847,6 +1847,15 @@ public static class ConfigHandler
         }
         foreach (var str in arrData)
         {
+            // A provider deep link (happ://add/https://…): the subscription inside it.
+            if (!isSub && ProviderSubscription.ExtractSubscriptionUrl(str) is { } deepLinkUrl)
+            {
+                if (await AddSubItem(config, deepLinkUrl) == 0)
+                {
+                    countServers++;
+                }
+                continue;
+            }
             //maybe sub
             if (!isSub && (str.StartsWith(Global.HttpsProtocol) || str.StartsWith(Global.HttpProtocol)))
             {
@@ -2423,6 +2432,7 @@ public static class ConfigHandler
             item.AutoUpdateInterval = subItem.AutoUpdateInterval;
             item.UserAgent = subItem.UserAgent;
             item.RequestHeaders = subItem.RequestHeaders;
+            item.SendHwid = subItem.SendHwid;
             item.Sort = subItem.Sort;
             item.Filter = subItem.Filter;
             item.UpdateTime = subItem.UpdateTime;

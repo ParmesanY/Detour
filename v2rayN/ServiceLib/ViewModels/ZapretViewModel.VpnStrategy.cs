@@ -39,6 +39,10 @@ public partial class ZapretViewModel
     {
         var wasWinws = VpnStrategyManager.Find(_config.ZapretItem.VpnStrategy) is { UsesWinws: true };
         VpnStrategyManager.Apply(_config, strategy);
+        if (strategy is { UsesTransport: true })
+        {
+            await VpnStrategyManager.ApplyToServerAsync(_config, strategy);
+        }
         await ConfigHandler.SaveConfig(_config);
         AppEvents.CoreReloadRequested.Publish();
         // winws strategies live in zapret's arguments: restart it with (or without) the VPN section.

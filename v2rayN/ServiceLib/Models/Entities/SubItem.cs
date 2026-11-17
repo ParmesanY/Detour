@@ -38,4 +38,14 @@ public class SubItem
     public ECoreType? CustomCoreType { get; set; }
 
     public string? PreResolver { get; set; }
+
+    /// <summary>Send device headers (X-HWID, X-Device-*): only for providers that bind a subscription to devices.</summary>
+    public bool SendHwid { get; set; }
+
+    // From the provider's "subscription-userinfo" header at the last update (bytes; expire = unix seconds; 0 = unknown).
+    public long InfoUsed { get; set; }
+
+    public long InfoTotal { get; set; }
+
+    public long InfoExpire { get; set; }
 }

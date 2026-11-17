@@ -265,6 +265,11 @@
                         Margin="{StaticResource Margin4}"
                         Text="{x:Static resx:ResUI.SubRequestHeadersTips}"
                         TextWrapping="Wrap" />
+                    <CheckBox
+                        x:Name="chkSendHwid"
+                        Margin="{StaticResource Margin4}"
+                        Content="{x:Static resx:AppText.SubSendHwid}"
+                        ToolTip="{x:Static resx:AppText.SubSendHwidHint}" />
                 </StackPanel>
 
                 <TextBlock

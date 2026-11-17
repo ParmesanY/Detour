@@ -41,6 +41,13 @@ public class SubscriptionHandler(
 
                 // Get all subscription content (main subscription + additional subscriptions)
                 var result = await processor.DownloadAllSubscriptions();
+                if (processor.UserInfo is { } info)
+                {
+                    item.InfoUsed = info.Used;
+                    item.InfoTotal = info.Total;
+                    item.InfoExpire = info.Expire;
+                    await SQLiteHelper.Instance.UpdateAsync(item);
+                }
 
                 // Process download result
                 if (await ProcessDownloadResult(item.Id, result, hashCode))
@@ -125,6 +132,11 @@ public class SubscriptionHandler(
         private readonly SubscriptionHandler _handler;
         private readonly SubItem _item;
 
+        private string? MainUrl { get; set; }
+
+        /// <summary>Traffic and expiry the provider reported with the main subscription, if any.</summary>
+        public ProviderSubscription.UserInfo? UserInfo { get; private set; }
+
         public SubscriptionHandlerProcessor(SubscriptionHandler handler, SubItem item)
         {
             _handler = handler;
@@ -140,6 +152,19 @@ public class SubscriptionHandler(
             }
 
             var userAgent = _item.UserAgent.IsNullOrEmpty() ? Utils.GetVersion(false) : _item.UserAgent;
+            if (_item.SendHwid)
+            {
+                var config = _handler._config;
+                if (config.InstallId.IsNullOrEmpty())
+                {
+                    config.InstallId = Guid.NewGuid().ToString("N");
+                    _ = ConfigHandler.SaveConfig(config);
+                }
+                foreach (var (name, value) in ProviderSubscription.DeviceHeaders(config.InstallId!))
+                {
+                    requestHeaders.TryAdd(name, value); // the user's own headers win
+                }
+            }
             //var proxyDownloadService = new DownloadService
             //{
             //    GetHandlerFunc = () =>
@@ -187,6 +212,10 @@ public class SubscriptionHandler(
                 var result = await downloadService.TryDownloadString(url);
                 if (!result.IsNullOrEmpty())
                 {
+                    if (url == MainUrl && downloadService.LastHeaders?.TryGetValue("subscription-userinfo", out var info) == true)
+                    {
+                        UserInfo = ProviderSubscription.ParseUserInfo(info);
+                    }
                     return result;
                 }
             }
@@ -234,6 +263,7 @@ public class SubscriptionHandler(
             }
 
             // Download and return result directly
+            MainUrl = url;
             return await DownloadSubscriptionContent(url);
         }
 

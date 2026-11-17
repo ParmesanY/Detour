@@ -58,6 +58,24 @@ public static class ConnectionRuleParser
             return null;
         }
 
+        // "… +vpn = Server name": a server for this rule.
+        string? server = null;
+        var eq = text.IndexOf(" =", plusIdx, StringComparison.Ordinal);
+        if (eq > 0)
+        {
+            server = text[(eq + 2)..].Trim();
+            text = text[..eq].TrimEnd();
+            if (server.Length == 0)
+            {
+                error = "no server after =, write a server name or auto";
+                return null;
+            }
+            if (IsAutoServer(server))
+            {
+                server = AutoServer;
+            }
+        }
+
         var target = NormalizeTarget(text[..plusIdx].Trim().Trim('"'));
         var modeWords = text[plusIdx..]
             .Split(['+', ' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
@@ -91,8 +109,19 @@ public static class ConnectionRuleParser
             return null;
         }
 
-        return new ConnectionRule { Target = target, Mode = mode.Value };
+        if (server != null && mode is not (EConnectionMode.Vpn or EConnectionMode.ZapretThenVpn))
+        {
+            error = "a server (= …) only makes sense with +vpn or +zapret+vpn";
+            return null;
+        }
+
+        return new ConnectionRule { Target = target, Mode = mode.Value, Server = server };
     }
+
+    public const string AutoServer = "auto";
+
+    public static bool IsAutoServer(string? server)
+        => server is not null && (server.Equals("auto", StringComparison.OrdinalIgnoreCase) || server.Equals("авто", StringComparison.OrdinalIgnoreCase));
 
     private static EConnectionMode? ResolveMode(HashSet<string> modes, out string error)
     {
@@ -139,7 +168,7 @@ public static class ConnectionRuleParser
             _ => "+vpn",
         };
         var target = rule.Target.Contains(' ') ? $"\"{rule.Target}\"" : rule.Target;
-        return $"{target} {mode}";
+        return rule.Server.IsNullOrEmpty() ? $"{target} {mode}" : $"{target} {mode} = {rule.Server}";
     }
 
     public static EConnectionTarget GetTargetKind(string target)

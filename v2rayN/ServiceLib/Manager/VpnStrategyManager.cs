@@ -7,10 +7,13 @@ namespace ServiceLib.Manager;
 /// </summary>
 /// <param name="Winws">Windows: winws desync arguments applied to the traffic to the VPN server
 /// (fake packets, splits — what Xray can't do); null for Xray fragment strategies.</param>
+/// <param name="Transport">"mux" (Xray multiplexing) or "xmux" (XHTTP connection rotation): changes the
+/// server's own settings instead of cutting packets; null for the other strategies.</param>
 public sealed record VpnStrategy(string Name, string Description, string Packets, string Lengths, string Delays,
-    string MaxSplit = "0", string? Winws = null)
+    string MaxSplit = "0", string? Winws = null, string? Transport = null)
 {
     public bool UsesWinws => Winws.IsNotEmpty();
+    public bool UsesTransport => Transport.IsNotEmpty();
 }
 
 /// <summary>What happened with the server: reachability, and which strategies let traffic through.</summary>
@@ -64,7 +67,60 @@ public static class VpnStrategyManager
             "", "", "", Winws: "--dpi-desync=multisplit --dpi-desync-split-pos=1,sniext+1 --dpi-desync-split-seqovl=1"),
         new("zapret fakedsplit", "zapret: поддельные пакеты вперемешку с кусками рукопожатия, самый сильный вариант. Нужен включённый zapret.",
             "", "", "", Winws: "--dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00"),
+        // Settings of the server itself, saved for this server only.
+        new("mux", "Мультиплексирование: много запросов идут внутри одного соединения, новых рукопожатий меньше. Не для XTLS-Vision. Только для этого сервера.",
+            "", "", "", Transport: "mux"),
+        new("xmux", "Для XHTTP: соединения к серверу сменяются раньше, чем провайдер успевает заморозить поток после ~16 КБ. Только для этого сервера.",
+            "", "", "", Transport: "xmux"),
     ];
+
+    /// <summary>XHTTP connection rotation: short-lived connections that stay under the 16 KB freeze.</summary>
+    private const string XmuxJson = """{"maxConnections":"4-8","cMaxReuseTimes":"2-4","hMaxRequestTimes":"8-16","hMaxReusableSecs":"10-20"}""";
+
+    /// <summary>Whether a mux / xmux strategy makes sense for this server (other strategies always do).</summary>
+    public static bool Fits(VpnStrategy strategy, ProfileItem profile) => strategy.Transport switch
+    {
+        null or "" => true,
+        "mux" => profile.ConfigType is EConfigType.VLESS or EConfigType.VMess or EConfigType.Trojan or EConfigType.Shadowsocks
+                 && (profile.GetProtocolExtra().Flow ?? "").Length == 0
+                 && profile.GetNetwork() != nameof(ETransport.xhttp),
+        "xmux" => profile.GetNetwork() == nameof(ETransport.xhttp),
+        _ => false,
+    };
+
+    /// <summary>A copy of the server with the strategy's own settings (mux on, or xmux in the XHTTP extra).</summary>
+    public static ProfileItem WithTransport(ProfileItem profile, VpnStrategy? strategy)
+    {
+        if (strategy is not { UsesTransport: true } || !Fits(strategy, profile))
+        {
+            return profile;
+        }
+        var copy = JsonUtils.DeepCopy(profile);
+        if (strategy.Transport == "mux")
+        {
+            copy.MuxEnabled = true;
+            return copy;
+        }
+        var transport = copy.GetTransportExtra();
+        var extra = (transport.XhttpExtra.IsNullOrEmpty() ? null : JsonNode.Parse(transport.XhttpExtra!) as JsonObject) ?? new JsonObject();
+        extra["xmux"] = JsonNode.Parse(XmuxJson);
+        copy.SetTransportExtra(transport with { XhttpExtra = extra.ToJsonString() });
+        return copy;
+    }
+
+    /// <summary>Saves a mux / xmux strategy into the selected server (these are per-server settings).</summary>
+    public static async Task ApplyToServerAsync(Config config, VpnStrategy strategy)
+    {
+        if (await CurrentServerAsync(config) is not { CustomJson: null } server)
+        {
+            return;
+        }
+        var updated = WithTransport(server.Profile, strategy);
+        if (!ReferenceEquals(updated, server.Profile))
+        {
+            await SQLiteHelper.Instance.UpdateAsync(updated);
+        }
+    }
 
     private static volatile IReadOnlyList<VpnStrategy> _downloaded = [];
 
@@ -92,7 +148,9 @@ public static class VpnStrategyManager
         var list = JsonUtils.Deserialize<List<VpnStrategy>>(json) ?? [];
         return list.Where(s => s != null && s.Name.IsNotEmpty() && s.Name.Length <= 40 && s.Description.IsNotEmpty())
             .Select(s => s.UsesWinws ? s with { Winws = string.Join(' ', SafeWinwsArgs(s.Winws)) } : s)
-            .Where(s => s.UsesWinws
+            .Where(s => s.UsesTransport
+                ? s.Transport is "mux" or "xmux"
+                : s.UsesWinws
                 ? s.Winws!.Length > 0
                 : (s.Packets == "tlshello" || _range.IsMatch(s.Packets)) && _range.IsMatch(s.Lengths) && _range.IsMatch(s.Delays)
                   && _range.IsMatch(s.MaxSplit.IsNullOrEmpty() ? "0" : s.MaxSplit))
@@ -150,8 +208,8 @@ public static class VpnStrategyManager
     public static void Apply(Config config, VpnStrategy? strategy)
     {
         config.ZapretItem.VpnStrategy = strategy?.Name ?? string.Empty;
-        config.CoreBasicItem.EnableFragment = strategy is { UsesWinws: false };
-        if (strategy is null or { UsesWinws: true })
+        config.CoreBasicItem.EnableFragment = strategy is { UsesWinws: false, UsesTransport: false };
+        if (strategy is null or { UsesWinws: true } or { UsesTransport: true })
         {
             return;
         }
@@ -184,7 +242,9 @@ public static class VpnStrategyManager
         var results = new List<VpnStrategyResult>();
         try
         {
-            foreach (var strategy in new VpnStrategy?[] { null }.Concat(Strategies.Where(s => !s.UsesWinws || zapretRunning)))
+            var candidates = Strategies.Where(s => (!s.UsesWinws || zapretRunning)
+                                                   && (!s.UsesTransport || (customJson == null && Fits(s, profile))));
+            foreach (var strategy in new VpnStrategy?[] { null }.Concat(candidates))
             {
                 ct.ThrowIfCancellationRequested();
                 progress?.Report(string.Format(AppText.VpnDiagTrying, strategy?.Name ?? AppText.VpnStrategyOff));
@@ -194,7 +254,9 @@ public static class VpnStrategyManager
                     await ZapretManager.Instance.StartAsync();
                 }
                 var xray = strategy is { UsesWinws: false } ? strategy : null;
-                var result = customJson != null ? await TestCustomAsync(customJson, xray, ct) : await TestAsync(config, profile, xray, ct);
+                var result = customJson != null
+                    ? await TestCustomAsync(customJson, xray, ct)
+                    : await TestAsync(config, WithTransport(profile, strategy), xray, ct);
                 results.Add(result with { Strategy = strategy });
                 // Without a strategy it already works: nothing to pick.
                 if (strategy == null && result.Works)

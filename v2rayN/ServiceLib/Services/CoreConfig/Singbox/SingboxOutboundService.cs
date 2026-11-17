@@ -371,6 +371,7 @@ public partial class CoreConfigSingboxService
                         endpoint.private_key = _node.Password;
                         endpoint.mtu = protocolExtra.WgMtu > 0 ? protocolExtra.WgMtu : Global.TunMtus.First();
                         endpoint.peers = [peer];
+                        endpoint.amnezia = AmneziaCore.ToJson(protocolExtra.WgAmnezia);
                         break;
                     }
                 case EConfigType.MASQUE:

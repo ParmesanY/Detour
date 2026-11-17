@@ -46,7 +46,21 @@ public class ProfileItem
 
     public List<string>? GetAlpn()
     {
-        return Alpn.IsNullOrEmpty() ? null : Utils.String2List(Alpn);
+        return AlpnForNetwork(Alpn.IsNullOrEmpty() ? null : Utils.String2List(Alpn), GetNetwork());
+    }
+
+    /// <summary>
+    /// WebSocket and HTTPUpgrade need HTTP/1.1: with "h2" offered the server picks HTTP/2 and the upgrade
+    /// fails. Share links often carry alpn=h2,http/1.1 for every transport, so h2 is dropped for these two.
+    /// </summary>
+    public static List<string>? AlpnForNetwork(List<string>? alpn, string network)
+    {
+        if (alpn == null || network is not (nameof(ETransport.ws) or nameof(ETransport.httpupgrade)))
+        {
+            return alpn;
+        }
+        var kept = alpn.Where(a => !a.Equals("h2", StringComparison.OrdinalIgnoreCase) && !a.Equals("h3", StringComparison.OrdinalIgnoreCase)).ToList();
+        return kept.Count > 0 ? kept : ["http/1.1"];
     }
 
     public string GetNetwork()

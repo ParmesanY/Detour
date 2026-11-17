@@ -46,5 +46,17 @@
     "Description": "zapret: поддельные пакеты вперемешку с кусками рукопожатия, самый сильный вариант. Нужен включённый zapret.",
     "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
     "Winws": "--dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00"
+    },
+  {
+    "Name": "mux",
+    "Description": "Мультиплексирование: много запросов идут внутри одного соединения, новых рукопожатий меньше. Не для XTLS-Vision. Только для этого сервера.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "mux"
+  },
+  {
+    "Name": "xmux",
+    "Description": "Для XHTTP: соединения к серверу сменяются раньше, чем провайдер успевает заморозить поток после ~16 КБ. Только для этого сервера.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "xmux"
   }
 ]

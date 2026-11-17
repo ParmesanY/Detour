@@ -99,7 +99,21 @@ public class CoreConfigContextBuilder
                     }
                     continue;
                 }
-                var ruleOutboundNode = await AppManager.Instance.GetProfileItemViaRemarks(ruleItem.OutboundTag);
+                ProfileItem? ruleOutboundNode;
+                if (ruleItem.OutboundTag.StartsWith(ServiceServerResolver.TagPrefix, StringComparison.Ordinal))
+                {
+                    // A connection rule with its own server ("servers per service").
+                    ruleOutboundNode = await ServiceServerResolver.ResolveAsync(ruleItem.OutboundTag, actNode);
+                    if (ruleOutboundNode == null)
+                    {
+                        ruleItem.OutboundTag = Global.ProxyTag;
+                        continue;
+                    }
+                }
+                else
+                {
+                    ruleOutboundNode = await AppManager.Instance.GetProfileItemViaRemarks(ruleItem.OutboundTag);
+                }
                 if (ruleOutboundNode == null)
                 {
                     validatorResult.Warnings.Add(string.Format(ResUI.MsgRoutingRuleOutboundNodeNotFound,

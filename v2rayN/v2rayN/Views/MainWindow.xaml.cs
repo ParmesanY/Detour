@@ -64,6 +64,13 @@ public partial class MainWindow
             if (await FirstRunWindow.ShouldShowAsync(_config))
             {
                 new FirstRunWindow(text => ViewModel.AddServerViaClipboardAsync(text)) { Owner = this }.ShowDialog();
+                // Right after the setup wizard: a short tour of what is where.
+                if (_config.TourShown != true)
+                {
+                    _config.TourShown = true;
+                    await ConfigHandler.SaveConfig(_config);
+                    new TourWindow { Owner = this }.ShowDialog();
+                }
             }
         };
 

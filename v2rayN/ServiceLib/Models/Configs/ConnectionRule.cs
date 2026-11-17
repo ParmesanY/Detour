@@ -18,6 +18,12 @@ public class ConnectionRule
     public string? Remarks { get; set; }
 
     /// <summary>
+    /// VPN server for this rule's traffic ("@youtube +vpn = 🇩🇪 Germany 1"): a server name, "auto" (best
+    /// last ping), or null for the main server. Names, not ids: ids change when a subscription updates.
+    /// </summary>
+    public string? Server { get; set; }
+
+    /// <summary>
     /// For <see cref="EConnectionMode.ZapretThenVpn" />: set when zapret did not work and the
     /// target was moved to VPN. Kept in the config so the decision survives a restart.
     /// </summary>

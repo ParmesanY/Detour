@@ -673,6 +673,11 @@ public sealed class AppManager
 
     public ECoreType GetCoreType(ProfileItem? profileItem, EConfigType eConfigType)
     {
+        // AmneziaWG runs only on the sing-box fork (AmneziaCore); Xray would drop the obfuscation.
+        if (profileItem != null && AmneziaCore.IsAmnezia(profileItem))
+        {
+            return ECoreType.sing_box;
+        }
         if (profileItem?.CoreType != null)
         {
             return (ECoreType)profileItem.CoreType;

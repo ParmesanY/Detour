@@ -260,6 +260,9 @@ public class DownloadService : IDisposable
     /// <summary>
     ///     Tries to download string content with a specified proxy.
     /// </summary>
+    /// <summary>Response headers of the last successful <see cref="TryDownloadString" /> over HttpClient.</summary>
+    public IReadOnlyDictionary<string, string>? LastHeaders { get; private set; }
+
     public async Task<string?> TryDownloadString(string url,
         CancellationToken cancellationToken = default)
     {
@@ -332,7 +335,12 @@ public class DownloadService : IDisposable
             timeoutCts.CancelAfter(Global.ProxyFetch);
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
 
-            return await client.GetStringAsync(url, linkedCts.Token);
+            using var response = await client.GetAsync(url, linkedCts.Token);
+            response.EnsureSuccessStatusCode();
+            LastHeaders = response.Headers.Concat(response.Content.Headers)
+                .GroupBy(h => h.Key, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => string.Join(", ", g.First().Value), StringComparer.OrdinalIgnoreCase);
+            return await response.Content.ReadAsStringAsync(linkedCts.Token);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

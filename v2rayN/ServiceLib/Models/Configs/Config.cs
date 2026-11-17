@@ -53,6 +53,9 @@ public class Config
     /// <summary>While a game runs, never switch servers on the fly (null = on).</summary>
     public bool? GameMode { get; set; }
 
+    /// <summary>Random id of this install, sent as X-HWID only to subscriptions that have it turned on.</summary>
+    public string? InstallId { get; set; }
+
     /// <summary>Extra game exe names (without path) on top of the built-in list.</summary>
     public List<string>? GameProcesses { get; set; }
 
@@ -64,6 +67,9 @@ public class Config
     /// (it restarted the app as administrator and shows again), true = closed, never shown again.
     /// </summary>
     public bool? FirstRunDone { get; set; }
+
+    /// <summary>The short tour after the setup wizard was shown (it can be reopened from Help).</summary>
+    public bool? TourShown { get; set; }
 
     /// <summary>Password-protect the local proxy port in TUN mode (null = on).</summary>
     public bool? ProtectLocalProxy { get; set; }

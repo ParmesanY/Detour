@@ -41,6 +41,13 @@
                         Click="BtnBlockMap_Click"
                         Content="{x:Static resx:AppText.BlockMapButton}" />
                     <ui:Button
+                        Grid.Column="0"
+                        Margin="0,0,8,0"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Click="BtnTour_Click"
+                        Content="{x:Static resx:TourContent.OpenTour}" />
+                    <ui:Button
                         x:Name="btnDiagnostics"
                         Grid.Column="2"
                         Margin="0,0,8,0"

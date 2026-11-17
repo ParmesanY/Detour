@@ -41,7 +41,7 @@ public partial class DiagnosticsWindow
     private void SetBusy(bool busy)
     {
         progress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
-        btnNetCheck.IsEnabled = btnRerun.IsEnabled = btnCopy.IsEnabled = btnSave.IsEnabled = !busy;
+        btnNetCheck.IsEnabled = btnRerun.IsEnabled = btnCopy.IsEnabled = btnSave.IsEnabled = btnExport.IsEnabled = !busy;
     }
 
     private async void BtnRerun_Click(object sender, RoutedEventArgs e) => await RunAsync();
@@ -86,6 +86,36 @@ public partial class DiagnosticsWindow
         catch (Exception ex)
         {
             Logging.SaveLog("Diagnostics", ex);
+        }
+    }
+
+    private async void BtnExport_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = $"detour-help-{DateTime.Now:yyyyMMdd-HHmm}.zip",
+            Filter = "Zip|*.zip",
+            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+        };
+        if (dlg.ShowDialog(this) != true)
+        {
+            return;
+        }
+        SetBusy(true);
+        try
+        {
+            var path = await Task.Run(() => DiagnosticsExport.BuildAsync(AppManager.Instance.Config, txtReport.Text, dlg.FileName));
+            NoticeManager.Instance.Enqueue(string.Format(ServiceLib.Resx.AppText.DiagExported, Path.GetFileName(path)));
+            System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{path}\"");
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog("Diagnostics", ex);
+            NoticeManager.Instance.Enqueue(ex.Message);
+        }
+        finally
+        {
+            SetBusy(false);
         }
     }
 

@@ -184,6 +184,7 @@ public class WireguardFmt : BaseFmt
                 WgReserved = (peerDic.TryGetValue("Reserved", out var reserved) ? reserved : string.Empty).NullIfEmpty(),
                 WgMtu = wgMtu > 0 ? wgMtu : null,
                 WgDns = wgDns,
+                WgAmnezia = AmneziaCore.FromConf(interfaceDic),
             };
 
             var item = new ProfileItem

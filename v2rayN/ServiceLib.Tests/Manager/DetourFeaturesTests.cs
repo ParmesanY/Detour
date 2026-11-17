@@ -66,6 +66,143 @@ public class DetourFeaturesTests
     }
 
     [Test]
+    public async Task ProviderSubscription_LinksAndUserInfo()
+    {
+        await Assert.That(ProviderSubscription.ExtractSubscriptionUrl("happ://add/https://sub.example.com/abc")).IsEqualTo("https://sub.example.com/abc");
+        await Assert.That(ProviderSubscription.ExtractSubscriptionUrl("incy://import/https%3A%2F%2Fx.io%2Fs%2F1")).IsEqualTo("https://x.io/s/1");
+        await Assert.That(ProviderSubscription.ExtractSubscriptionUrl("v2raytun://import/https://x.io/s?t=1")).IsEqualTo("https://x.io/s?t=1");
+        await Assert.That(ProviderSubscription.ExtractSubscriptionUrl("happ://crypt4/AAAA")).IsNull();
+        await Assert.That(ProviderSubscription.ExtractSubscriptionUrl("vless://x@y:1")).IsNull();
+
+        var info = ProviderSubscription.ParseUserInfo("upload=1000; download=2000; total=10737418240; expire=1798761600");
+        await Assert.That(info!.Used).IsEqualTo(3000);
+        await Assert.That(info.Total).IsEqualTo(10737418240);
+        await Assert.That(ProviderSubscription.ParseUserInfo("garbage")).IsNull();
+
+        var (text, warn) = ServiceLib.ViewModels.ConnectionPanelViewModel.FormatSubInfo(95, 100, 0, DateTime.Now);
+        await Assert.That(text).IsNotEmpty();
+        await Assert.That(warn).IsTrue();
+        await Assert.That(ServiceLib.ViewModels.ConnectionPanelViewModel.FormatSubInfo(0, 0, 0, DateTime.Now).Text).IsEmpty();
+    }
+
+    [Test]
+    public async Task Amnezia_ConfImportKeepsObfuscation()
+    {
+        var conf = """
+            [Interface]
+            PrivateKey = cHJpdmF0ZQ==
+            Address = 10.8.0.2/32
+            Jc = 4
+            Jmin = 40
+            Jmax = 70
+            S1 = 0
+            S2 = 0
+            H1 = 100000-200000
+            H2 = 2
+            I1 = <b 0xc700000001>
+
+            [Peer]
+            PublicKey = cHVibGlj
+            Endpoint = 1.2.3.4:51820
+            """;
+        var item = WireguardFmt.ResolveConfig(conf)!.Single();
+        await Assert.That(AmneziaCore.IsAmnezia(item)).IsTrue();
+        var json = AmneziaCore.ToJson(item.GetProtocolExtra().WgAmnezia)!;
+        await Assert.That(json["jc"]!.GetValue<long>()).IsEqualTo(4);
+        await Assert.That(json["h1"]!.GetValue<string>()).IsEqualTo("100000-200000");
+        await Assert.That(json["h2"]!.GetValue<long>()).IsEqualTo(2);
+        await Assert.That(json["i1"]!.GetValue<string>()).IsEqualTo("<b 0xc700000001>");
+        await Assert.That(AppManager.Instance.GetCoreType(item, EConfigType.WireGuard)).IsEqualTo(ECoreType.sing_box);
+        var endpointJson = JsonUtils.Serialize(new Endpoints4Sbox { type = "wireguard", tag = "proxy", amnezia = json });
+        await Assert.That(endpointJson).Contains("\"amnezia\"");
+        await Assert.That(endpointJson).Contains("\"jc\"");
+
+        var plain = WireguardFmt.ResolveConfig("[Interface]\nPrivateKey = a\n[Peer]\nPublicKey = b\nEndpoint = 1.2.3.4:1\n")!.Single();
+        await Assert.That(AmneziaCore.IsAmnezia(plain)).IsFalse();
+    }
+
+    [Test]
+    public async Task ServicServers_ParseAndPick()
+    {
+        var rule = ConnectionRuleParser.Parse("@youtube +vpn = 🇩🇪 Германия 1", out var error);
+        await Assert.That(error).IsEmpty();
+        await Assert.That(rule!.Server).IsEqualTo("🇩🇪 Германия 1");
+        await Assert.That(ConnectionRuleParser.Format(rule)).IsEqualTo("@youtube +vpn = 🇩🇪 Германия 1");
+        await Assert.That(ConnectionRuleParser.Parse("chatgpt.com +vpn = авто", out _)!.Server).IsEqualTo("auto");
+        await Assert.That(ConnectionRuleParser.Parse("youtube.com +zapret = x", out error)).IsNull();
+        await Assert.That(ConnectionRuleParser.Parse("youtube.com +vpn", out _)!.Server).IsNull();
+
+        var compiled = ConnectionRuleCompiler.Compile([rule]);
+        await Assert.That(compiled.RoutingRules.All(r => r.OutboundTag == "server:🇩🇪 Германия 1")).IsTrue();
+
+        var all = new List<ServiceServerResolver.Candidate>
+        {
+            new("main", "🇦🇹 Австрия 6", "s1", 80),
+            new("de1", "🇩🇪 Германия 1", "s1", 120),
+            new("de2", "🇩🇪 Германия 2", "s1", -1),
+            new("fi", "🇫🇮 Финляндия", "s1", 40),
+            new("other", "🇫🇮 Финляндия 9", "s2", 10),
+        };
+        await Assert.That(ServiceServerResolver.Pick("🇩🇪 Германия 1", "main", "s1", all)).IsEqualTo("de1");
+        await Assert.That(ServiceServerResolver.Pick("Германия 2", "main", "s1", all)).IsEqualTo("fi"); // dead → best
+        await Assert.That(ServiceServerResolver.Pick("auto", "main", "s1", all)).IsEqualTo("fi");
+        await Assert.That(ServiceServerResolver.Pick("Австрия", "main", "s1", all)).IsNull(); // = main server
+        await Assert.That(ServiceServerResolver.Pick("auto", "fi", "s1", all)).IsNull();
+    }
+
+    [Test]
+    public async Task VpnStrategy_MuxAndXmuxPerServer()
+    {
+        var mux = VpnStrategyManager.Find("mux")!;
+        var xmux = VpnStrategyManager.Find("xmux")!;
+
+        var tcp = new ProfileItem { ConfigType = EConfigType.VLESS, Network = "tcp", Address = "a", Port = 443 };
+        await Assert.That(VpnStrategyManager.Fits(mux, tcp)).IsTrue();
+        await Assert.That(VpnStrategyManager.Fits(xmux, tcp)).IsFalse();
+        await Assert.That(VpnStrategyManager.WithTransport(tcp, mux).MuxEnabled).IsEqualTo(true);
+        await Assert.That(tcp.MuxEnabled).IsNotEqualTo(true); // the original is untouched
+
+        var xhttp = new ProfileItem { ConfigType = EConfigType.VLESS, Network = "xhttp", Address = "a", Port = 443 };
+        xhttp.SetTransportExtra(new TransportExtraItem { XhttpExtra = """{"noGRPCHeader":true}""" });
+        var withX = VpnStrategyManager.WithTransport(xhttp, xmux).GetTransportExtra().XhttpExtra!;
+        await Assert.That(withX).Contains("xmux");
+        await Assert.That(withX).Contains("noGRPCHeader");
+
+        var config = new Config { ZapretItem = new(), CoreBasicItem = new() };
+        VpnStrategyManager.Apply(config, mux);
+        await Assert.That(config.CoreBasicItem.EnableFragment).IsFalse();
+    }
+
+    [Test]
+    public async Task Alpn_DropsH2ForWebSocket()
+    {
+        await Assert.That(ProfileItem.AlpnForNetwork(["h2", "http/1.1"], "ws")).IsEquivalentTo(new[] { "http/1.1" });
+        await Assert.That(ProfileItem.AlpnForNetwork(["h2"], "httpupgrade")).IsEquivalentTo(new[] { "http/1.1" });
+        await Assert.That(ProfileItem.AlpnForNetwork(["h2", "http/1.1"], "grpc")).IsEquivalentTo(new[] { "h2", "http/1.1" });
+        await Assert.That(ProfileItem.AlpnForNetwork(null, "ws")).IsNull();
+    }
+
+    [Test]
+    public async Task DiagnosticsExport_RemovesSecrets()
+    {
+        var json = """{"outbounds":[{"protocol":"vless","settings":{"vnext":[{"address":"au6.example.org","port":443,"users":[{"id":"0b2c1d6e-1111-2222-3333-444455556666","flow":"xtls-rprx-vision"}]}]},"streamSettings":{"realitySettings":{"serverName":"www.microsoft.com","publicKey":"AbC","shortId":"12ab"}}}]}""";
+        var redacted = DiagnosticsExport.RedactJson(json);
+        await Assert.That(redacted).DoesNotContain("au6.example.org");
+        await Assert.That(redacted).DoesNotContain("0b2c1d6e");
+        await Assert.That(redacted).DoesNotContain("\"AbC\"");
+        await Assert.That(redacted).Contains("xtls-rprx-vision");
+        await Assert.That(redacted).Contains("443");
+
+        var text = "import vless://abc@1.2.3.4:443?x=1#name from https://sub.example.com/sub/SeCrEt123 and https://x.io/a?token=zzz to au6.example.org, visited youtube.com";
+        var t = DiagnosticsExport.RedactText(text, ["au6.example.org"]);
+        await Assert.That(t).DoesNotContain("abc@1.2.3.4");
+        await Assert.That(t).DoesNotContain("SeCrEt123");
+        await Assert.That(t).DoesNotContain("zzz");
+        await Assert.That(t).DoesNotContain("au6.example.org");
+        await Assert.That(t).Contains("youtube.com");
+    }
+
+    [Test]
     public async Task GameMode_FindsKnownAndUserGames()
     {
         var known = GameModeManager.KnownGames.Concat(["MyGame.exe"]);

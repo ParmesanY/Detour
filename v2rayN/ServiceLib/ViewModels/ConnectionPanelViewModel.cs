@@ -52,6 +52,49 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
     [Reactive] public partial string SavingsText { get; set; } = string.Empty;
     [Reactive] public partial string SavingsDetail { get; set; } = string.Empty;
 
+    /// <summary>Traffic and expiry of the current server's subscription, as the provider reported it.</summary>
+    [Reactive] public partial string SubInfoText { get; set; } = string.Empty;
+    [Reactive] public partial bool SubInfoWarning { get; set; }
+
+    private async Task RefreshSubInfoAsync()
+    {
+        try
+        {
+            var server = _config.IndexId.IsNullOrEmpty() ? null : await AppManager.Instance.GetProfileItem(_config.IndexId);
+            var sub = server?.Subid.IsNullOrEmpty() != false ? null : await AppManager.Instance.GetSubItem(server.Subid);
+            var (text, warn) = FormatSubInfo(sub?.InfoUsed ?? 0, sub?.InfoTotal ?? 0, sub?.InfoExpire ?? 0, DateTime.Now);
+            SubInfoText = text;
+            SubInfoWarning = warn;
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog("SubInfo", ex);
+        }
+    }
+
+    /// <summary>"Подписка: 12.3 GB из 100 GB · до 01.12.2026"; warn when ≥90% used or ≤3 days left.</summary>
+    public static (string Text, bool Warning) FormatSubInfo(long used, long total, long expire, DateTime now)
+    {
+        var parts = new List<string>();
+        var warn = false;
+        if (total > 0)
+        {
+            parts.Add(string.Format(AppText.SubInfoTraffic, Utils.HumanFy(used), Utils.HumanFy(total)));
+            warn |= used >= total * 0.9;
+        }
+        else if (used > 0)
+        {
+            parts.Add(string.Format(AppText.SubInfoUsed, Utils.HumanFy(used)));
+        }
+        if (expire > 0)
+        {
+            var until = DateTimeOffset.FromUnixTimeSeconds(expire).LocalDateTime;
+            parts.Add(string.Format(AppText.SubInfoExpire, until.ToString("dd.MM.yyyy")));
+            warn |= until - now <= TimeSpan.FromDays(3);
+        }
+        return parts.Count == 0 ? (string.Empty, false) : (AppText.SubInfoTitle + string.Join(" · ", parts), warn);
+    }
+
     private void RefreshSavings()
     {
         var s = TrafficSplitManager.Instance.Snapshot();
@@ -139,6 +182,10 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
             if (ticks % 5 == 0)
             {
                 RefreshSavings();
+            }
+            if (ticks % 30 == 0)
+            {
+                _ = RefreshSubInfoAsync();
             }
             // Other VPN apps: checked every ~10 s (process scan is not free).
             if (ticks++ % 10 == 0)
