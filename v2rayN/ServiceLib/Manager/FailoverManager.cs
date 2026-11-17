@@ -122,9 +122,10 @@ public sealed class FailoverManager
         var exs = (await ProfileExManager.Instance.GetProfileExs()).ToDictionary(e => e.IndexId, e => e);
         var candidates = group.Select(p => new Candidate(p.IndexId,
                 exs.TryGetValue(p.IndexId, out var ex) ? ex.Delay : 0,
-                exs.TryGetValue(p.IndexId, out var ex2) ? ex2.Sort : 0))
+                exs.TryGetValue(p.IndexId, out var ex2) ? ex2.Sort : 0,
+                ServerNameFormatter.ExitCountry(p.Remarks)))
             .ToList();
-        var next = PickNext(candidates, config.IndexId, _tried.Keys);
+        var next = PickNext(candidates, config.IndexId, _tried.Keys, ServerNameFormatter.ExitCountry(current?.Remarks));
         if (next == null)
         {
             Logging.SaveLog($"{_tag}: no other server to try");
@@ -140,18 +141,21 @@ public sealed class FailoverManager
         SwitchRequested?.Invoke(next, nextItem.Remarks);
     }
 
-    public record Candidate(string IndexId, int Delay, int Sort);
+    public record Candidate(string IndexId, int Delay, int Sort, string? Country = null);
 
     /// <summary>
-    /// Next server: ones that answered the last ping (delay &gt; 0) by delay, then untested ones in list
-    /// order; failed pings (delay &lt; 0) last. The current and recently tried servers are skipped.
+    /// Next server: same exit country as the current one first (people pick a country for a reason:
+    /// a service that only works from there), then the rest. Within that: ones that answered the last
+    /// ping (delay &gt; 0) by delay, then untested ones in list order; failed pings (delay &lt; 0) last.
+    /// The current and recently tried servers are skipped.
     /// </summary>
-    public static string? PickNext(IEnumerable<Candidate> candidates, string currentId, IEnumerable<string> recentlyTried)
+    public static string? PickNext(IEnumerable<Candidate> candidates, string currentId, IEnumerable<string> recentlyTried, string? country = null)
     {
         var skip = new HashSet<string>(recentlyTried) { currentId };
         return candidates
             .Where(c => !skip.Contains(c.IndexId))
-            .OrderBy(c => c.Delay > 0 ? 0 : c.Delay == 0 ? 1 : 2)
+            .OrderBy(c => country != null && c.Country == country ? 0 : 1)
+            .ThenBy(c => c.Delay > 0 ? 0 : c.Delay == 0 ? 1 : 2)
             .ThenBy(c => c.Delay > 0 ? c.Delay : 0)
             .ThenBy(c => c.Sort)
             .Select(c => c.IndexId)

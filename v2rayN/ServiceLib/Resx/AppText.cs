@@ -468,8 +468,8 @@ public static class AppText
     public static string AutoPickCoreSwitched => T("«{0}» лучше работает на ядре {1}: переподключаюсь", "\"{0}\" works better on {1}: reconnecting");
     public static string AutoFailover => T("Авто-смена сервера", "Auto failover");
     public static string AutoFailoverHint => T(
-        "Если текущий сервер перестал пропускать трафик (3 проверки подряд, а обычный интернет есть), Detour переключится на другой сервер той же подписки: сначала с лучшим последним пингом.",
-        "If the active server stops passing traffic (3 checks in a row while the plain internet works), Detour switches to another server of the same subscription, best last ping first.");
+        "Если текущий сервер перестал пропускать трафик (3 проверки подряд, а обычный интернет есть), Detour переключится на другой сервер той же подписки: сначала той же страны (по флагу в названии), потом остальные, с лучшим последним пингом.",
+        "If the active server stops passing traffic (3 checks in a row while the plain internet works), Detour switches to another server of the same subscription: same country first (by the flag in the name), then the rest, best last ping first.");
     public static string AutoFailoverSwitched => T("Сервер не отвечал, переключаюсь на «{0}»", "Server stopped responding, switching to \"{0}\"");
 
     public static string ZapretTpwsNote => T(

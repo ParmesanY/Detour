@@ -66,6 +66,26 @@ public class DetourFeaturesTests
     }
 
     [Test]
+    public async Task Failover_PrefersSameExitCountry()
+    {
+        await Assert.That(ServerNameFormatter.ExitCountry("🇦🇹 КВН Австрия 6 [VL]")).IsEqualTo("AT");
+        await Assert.That(ServerNameFormatter.ExitCountry("🇷🇺🇸🇪 [ДАБ] КВН ШВЕ 3")).IsEqualTo("SE");
+        await Assert.That(ServerNameFormatter.ExitCountry("Server 1")).IsNull();
+
+        var list = new List<FailoverManager.Candidate>
+        {
+            new("at6", 50, 1, "AT"),
+            new("de-fast", 40, 2, "DE"),
+            new("at2-slow", 300, 3, "AT"),
+            new("at3-dead", -1, 4, "AT"),
+        };
+        await Assert.That(FailoverManager.PickNext(list, "at6", [], "AT")).IsEqualTo("at2-slow");
+        await Assert.That(FailoverManager.PickNext(list, "at6", ["at2-slow"], "AT")).IsEqualTo("at3-dead");
+        await Assert.That(FailoverManager.PickNext(list, "at6", ["at2-slow", "at3-dead"], "AT")).IsEqualTo("de-fast");
+        await Assert.That(FailoverManager.PickNext(list, "at6", [])).IsEqualTo("de-fast");
+    }
+
+    [Test]
     public async Task Diagnostics_MasksAddressesHostsAndCredentials()
     {
         var masked = DiagnosticsReport.Mask("dial tcp 203.0.113.7:443 for nl-1.myvpn.example.com via vless://uuid@a.b.net:443 local 127.0.0.1:10808");

@@ -32,6 +32,28 @@ public static class ServerNameFormatter
         return (null, text);
     }
 
+    /// <summary>
+    /// Country the traffic exits in: the last flag of the name ("🇷🇺🇸🇪 …" is a Russian relay to Sweden → "SE"),
+    /// or null when the name has no flag.
+    /// </summary>
+    public static string? ExitCountry(string? remarks)
+    {
+        if (remarks.IsNullOrEmpty())
+        {
+            return null;
+        }
+        string? last = null;
+        for (var i = 0; i < remarks!.Length - 3; i++)
+        {
+            if (TryReadFlag(remarks, i, out var code, out var length))
+            {
+                last = code;
+                i += length - 1;
+            }
+        }
+        return last;
+    }
+
     private static bool TryReadFlag(string text, int index, out string? code, out int length)
     {
         code = null;
