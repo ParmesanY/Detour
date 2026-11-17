@@ -58,6 +58,9 @@ public partial class ZapretManager
 
     public bool IsRunning => _process is { HasExited: false };
 
+    /// <summary>Network card winws was bound to at its last start (--wf-iface); null if unknown.</summary>
+    public int? InterfaceIndex { get; private set; }
+
     public List<string> GetStrategies() => UsesTpws ? [.. TpwsStrategies.Select(s => s.Name)] : ZapretStrategyParser.ListStrategies(ReleaseDir);
 
     #region install / update
@@ -391,7 +394,8 @@ public partial class ZapretManager
         // By default WinDivert catches outgoing packets on every interface, including VPN TUN adapters:
         // winws then mangles traffic inside the tunnel (fake packets, splits) and breaks every listed
         // site even when it goes through the VPN. Limit it to the physical network card.
-        if (PhysicalInterfaceIndex() is { } ifIndex)
+        InterfaceIndex = PhysicalInterfaceIndex();
+        if (InterfaceIndex is { } ifIndex)
         {
             args.Insert(0, $"--wf-iface={ifIndex}");
         }

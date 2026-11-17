@@ -47,6 +47,15 @@ public class Config
     /// <summary>Switch to another server of the group when the active one stops passing traffic.</summary>
     public bool AutoFailover { get; set; }
 
+    /// <summary>Reload the core after sleep or a network change (null = on).</summary>
+    public bool? ResumeReconnect { get; set; }
+
+    /// <summary>While a game runs, never switch servers on the fly (null = on).</summary>
+    public bool? GameMode { get; set; }
+
+    /// <summary>Extra game exe names (without path) on top of the built-in list.</summary>
+    public List<string>? GameProcesses { get; set; }
+
     /// <summary>Test both cores on a server the first time it is picked and keep the better one (null = on).</summary>
     public bool? AutoPickCore { get; set; }
 

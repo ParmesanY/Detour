@@ -422,6 +422,20 @@ public partial class MainWindowViewModel : MyReactiveObject
                 await ProfilesViewModel.SetDefaultServer(indexId);
             });
         FailoverManager.Instance.Start();
+        GameModeManager.Instance.Start();
+        NetworkResumeManager.Instance.ReconnectRequested += cardChanged =>
+            RxSchedulers.MainThreadScheduler.Schedule(async () =>
+            {
+                NoticeManager.Instance.Enqueue(AppText.ResumeReconnecting);
+                // winws is bound to the card index (--wf-iface): a new card needs a new winws.
+                if (cardChanged && ZapretManager.Instance.IsRunning
+                    && ZapretManager.Instance.InterfaceIndex != ZapretManager.PhysicalInterfaceIndex())
+                {
+                    await ZapretManager.Instance.StartAsync();
+                }
+                await Reload();
+            });
+        NetworkResumeManager.Instance.Start();
         if (Utils.IsWindows())
         {
             // An autorun entry of an earlier build starts a second client at logon: two cores on the

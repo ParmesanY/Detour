@@ -66,6 +66,29 @@ public class DetourFeaturesTests
     }
 
     [Test]
+    public async Task GameMode_FindsKnownAndUserGames()
+    {
+        var known = GameModeManager.KnownGames.Concat(["MyGame.exe"]);
+        await Assert.That(GameModeManager.FindGame(["explorer", "SCPSL", "chrome"], known)).IsEqualTo("SCPSL.exe");
+        await Assert.That(GameModeManager.FindGame(["mygame"], known)).IsEqualTo("mygame.exe");
+        await Assert.That(GameModeManager.FindGame(["explorer", "chrome"], known)).IsNull();
+    }
+
+    [Test]
+    public async Task NetworkResume_SleepAndNetworkChange()
+    {
+        var tick = TimeSpan.FromSeconds(5);
+        await Assert.That(NetworkResumeManager.IsSleepGap(tick, TimeSpan.FromSeconds(6))).IsFalse();
+        await Assert.That(NetworkResumeManager.IsSleepGap(tick, TimeSpan.FromHours(5))).IsTrue();
+
+        await Assert.That(NetworkResumeManager.ShouldReconnect(true, "wifi|1|2", "wifi|1|2")).IsTrue();
+        await Assert.That(NetworkResumeManager.ShouldReconnect(false, "wifi|1|2", "wifi|1|2")).IsFalse();
+        await Assert.That(NetworkResumeManager.ShouldReconnect(false, "wifi|1|2", "eth|3|4")).IsTrue();
+        await Assert.That(NetworkResumeManager.ShouldReconnect(false, "wifi|1|2", null)).IsFalse();
+        await Assert.That(NetworkResumeManager.ShouldReconnect(false, null, "wifi|1|2")).IsTrue();
+    }
+
+    [Test]
     public async Task Failover_PrefersSameExitCountry()
     {
         await Assert.That(ServerNameFormatter.ExitCountry("🇦🇹 КВН Австрия 6 [VL]")).IsEqualTo("AT");

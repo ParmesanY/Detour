@@ -25,6 +25,11 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
     [Reactive] public partial bool KillSwitchEnabled { get; set; }
     [Reactive] public partial bool KillSwitchEngaged { get; set; }
     [Reactive] public partial bool AutoFailover { get; set; }
+    [Reactive] public partial bool GameMode { get; set; }
+    [Reactive] public partial bool ResumeReconnect { get; set; }
+
+    /// <summary>"Game: cs2.exe — server pinned" while game mode holds the server; empty otherwise.</summary>
+    [Reactive] public partial string GameText { get; set; } = string.Empty;
 
     [Reactive] public partial bool IsConnected { get; set; }
 
@@ -105,6 +110,21 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
             FailoverManager.Instance.NotifyReloaded();
             await ConfigHandler.SaveConfig(_config);
         });
+        GameMode = _config.GameMode != false;
+        this.WhenAnyValue(x => x.GameMode).Skip(1).SubscribeAsync(async v =>
+        {
+            _config.GameMode = v;
+            await ConfigHandler.SaveConfig(_config);
+        });
+        ResumeReconnect = _config.ResumeReconnect != false;
+        this.WhenAnyValue(x => x.ResumeReconnect).Skip(1).SubscribeAsync(async v =>
+        {
+            _config.ResumeReconnect = v;
+            await ConfigHandler.SaveConfig(_config);
+        });
+        GameModeManager.Instance.StateChanged += game =>
+            RxSchedulers.MainThreadScheduler.Schedule(() =>
+                GameText = game != null && _config.GameMode != false ? string.Format(AppText.GameModeActive, game) : string.Empty);
         var ticks = 0;
         _engagedPoll = new Timer(_ =>
         {

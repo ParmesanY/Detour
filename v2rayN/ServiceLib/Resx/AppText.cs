@@ -470,6 +470,19 @@ public static class AppText
     public static string AutoFailoverHint => T(
         "Если текущий сервер перестал пропускать трафик (3 проверки подряд, а обычный интернет есть), Detour переключится на другой сервер той же подписки: сначала той же страны (по флагу в названии), потом остальные, с лучшим последним пингом.",
         "If the active server stops passing traffic (3 checks in a row while the plain internet works), Detour switches to another server of the same subscription: same country first (by the flag in the name), then the rest, best last ping first.");
+    public static string GameMode => T("Игровой режим", "Game mode");
+    public static string GameModeHint => T(
+        "Пока запущена игра, Detour не меняет сервер на ходу: новый IP посреди матча рвёт игру, а античиты и антифрод (Roblox, Riot) могут забанить аккаунт. Игра идёт по своему правилу: VPN, zapret или напрямую.",
+        "While a game runs, Detour never switches servers on the fly: a new IP mid-match drops the game, and anti-cheat / anti-fraud (Roblox, Riot) may ban the account. The game keeps its own rule: VPN, zapret or direct.");
+    public static string GameModeActive => T("Игра: {0} — сервер закреплён", "Game: {0} — server pinned");
+    public static string GameModeHeldServer => T(
+        "Сервер не отвечает, но запущена {0}: не переключаю, чтобы не сменить IP посреди игры. Смените сервер вручную, если нужно.",
+        "The server isn't answering, but {0} is running: not switching, so the IP doesn't change mid-game. Switch manually if needed.");
+    public static string ResumeReconnect => T("Переподключаться после сна", "Reconnect after sleep");
+    public static string ResumeReconnectHint => T(
+        "После сна компьютера или смены сети (другой Wi‑Fi, кабель, раздача с телефона) Detour дождётся интернета и переподключится сам.",
+        "After the PC sleeps or the network changes (another Wi‑Fi, cable, phone hotspot), Detour waits for the internet and reconnects by itself.");
+    public static string ResumeReconnecting => T("Сеть поменялась или компьютер проснулся — переподключаюсь", "Network changed or the PC woke up — reconnecting");
     public static string AutoFailoverSwitched => T("Сервер не отвечал, переключаюсь на «{0}»", "Server stopped responding, switching to \"{0}\"");
 
     public static string ZapretTpwsNote => T(

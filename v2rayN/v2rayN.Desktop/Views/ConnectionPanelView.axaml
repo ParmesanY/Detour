@@ -129,6 +129,18 @@
                         ToolTip.Tip="{x:Static resx:AppText.AutoFailoverHint}" />
                     <ToggleSwitch
                         Margin="0,0,20,0"
+                        IsChecked="{Binding GameMode}"
+                        OffContent="{x:Static resx:AppText.GameMode}"
+                        OnContent="{x:Static resx:AppText.GameMode}"
+                        ToolTip.Tip="{x:Static resx:AppText.GameModeHint}" />
+                    <ToggleSwitch
+                        Margin="0,0,20,0"
+                        IsChecked="{Binding ResumeReconnect}"
+                        OffContent="{x:Static resx:AppText.ResumeReconnect}"
+                        OnContent="{x:Static resx:AppText.ResumeReconnect}"
+                        ToolTip.Tip="{x:Static resx:AppText.ResumeReconnectHint}" />
+                    <ToggleSwitch
+                        Margin="0,0,20,0"
                         IsChecked="{Binding ConnectOnStartup}"
                         OffContent="{x:Static resx:AppText.ConnectOnStartup}"
                         OnContent="{x:Static resx:AppText.ConnectOnStartup}"

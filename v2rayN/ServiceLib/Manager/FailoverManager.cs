@@ -27,6 +27,7 @@ public sealed class FailoverManager
     private readonly List<DateTime> _switches = [];
     private CancellationTokenSource? _cts;
     private int _failures;
+    private bool _heldNotified;
     private DateTime _quietUntil = DateTime.MinValue;
 
     /// <summary>Raised (any thread) with the server to switch to; the UI applies it like a manual pick.</summary>
@@ -87,6 +88,7 @@ public sealed class FailoverManager
         if (await ProbeProxyAsync(token))
         {
             _failures = 0;
+            _heldNotified = false;
             return;
         }
         _failures++;
@@ -104,6 +106,21 @@ public sealed class FailoverManager
         }
 
         var now = DateTime.Now;
+
+        // A new server mid-game means a new IP: the match drops and anti-fraud may ban the account.
+        if (GameModeManager.Instance.HoldsServer)
+        {
+            Logging.SaveLog($"{_tag}: {GameModeManager.Instance.ActiveGame} is running, not switching");
+            if (!_heldNotified)
+            {
+                _heldNotified = true;
+                NoticeManager.Instance.Enqueue(string.Format(AppText.GameModeHeldServer, GameModeManager.Instance.ActiveGame));
+            }
+            _failures = 0;
+            return;
+        }
+        _heldNotified = false;
+
         _switches.RemoveAll(t => now - t > Window);
         foreach (var key in _tried.Where(kv => now - kv.Value > Window).Select(kv => kv.Key).ToList())
         {
