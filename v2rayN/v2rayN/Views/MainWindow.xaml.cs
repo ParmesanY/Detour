@@ -420,6 +420,9 @@ public partial class MainWindow
         this.OneWayBind(ViewModel, vm => vm.ShowClashUI, v => v.navGroups.Visibility).DisposeWith(disposables);
     }
 
+    /// <summary>Home page tools: site check and block check sit on the rules page.</summary>
+    public void ShowRulesPage() => navRules.IsChecked = true;
+
     private void ShowPage(FrameworkElement page)
     {
         foreach (var p in new FrameworkElement[] { pageServers, pageRules, pageZapret, pageTelegram, pageWarp, pageConnections, pageGroups, pageLog, pageHelp })

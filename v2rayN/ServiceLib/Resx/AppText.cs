@@ -160,6 +160,8 @@ public static class AppText
     public static string RulesLearnDone => T("{0}: найдено доменов {1}, IP {2}.", "{0}: found {1} domains, {2} IPs.");
     // Detour Map (block map window)
     public static string BlockMapButton => T("Карта блокировок", "Block map");
+    public static string ToolsTitle => T("ИНСТРУМЕНТЫ", "TOOLS");
+    public static string ToolsDiagnostics => T("Диагностика и проверка сети", "Diagnostics and network check");
     public static string BlockMapTitle => T("Карта блокировок", "Block map");
     public static string BlockMapIntro => T(
         "Detour Map — общая карта блокировок в России: что заблокировано, у какого провайдера, в каком регионе и каким способом. "

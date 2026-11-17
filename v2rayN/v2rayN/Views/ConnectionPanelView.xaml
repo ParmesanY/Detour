@@ -323,5 +323,51 @@
                 </WrapPanel>
             </DockPanel>
         </Border>
+
+        <!--  ===== Tools: the checks that used to hide in Help / Diagnostics =====  -->
+        <Border
+            Margin="0,8,0,0"
+            Padding="12,8"
+            Style="{StaticResource DetourPanel}">
+            <DockPanel>
+                <TextBlock
+                    Margin="0,0,16,0"
+                    VerticalAlignment="Center"
+                    DockPanel.Dock="Left"
+                    Style="{StaticResource DetourLabel}"
+                    Text="{x:Static resx:AppText.ToolsTitle}" />
+                <WrapPanel Orientation="Horizontal">
+                    <ui:Button
+                        Margin="0,0,8,0"
+                        Padding="10,4"
+                        Appearance="Secondary"
+                        Click="BtnSiteCheck_Click"
+                        Content="{x:Static resx:AppText.SiteTitle}"
+                        Icon="{ui:SymbolIcon GlobeSearch24}"
+                        ToolTip="{x:Static resx:AppText.SiteHint}" />
+                    <ui:Button
+                        Margin="0,0,8,0"
+                        Padding="10,4"
+                        Appearance="Secondary"
+                        Click="BtnBlockCheck_Click"
+                        Content="{x:Static resx:AppText.CheckTitle}"
+                        Icon="{ui:SymbolIcon ShieldTask24}"
+                        ToolTip="{x:Static resx:AppText.CheckHint}" />
+                    <ui:Button
+                        Margin="0,0,8,0"
+                        Padding="10,4"
+                        Appearance="Secondary"
+                        Click="BtnDiagnostics_Click"
+                        Content="{x:Static resx:AppText.ToolsDiagnostics}"
+                        Icon="{ui:SymbolIcon Stethoscope24}" />
+                    <ui:Button
+                        Padding="10,4"
+                        Appearance="Secondary"
+                        Click="BtnBlockMap_Click"
+                        Content="{x:Static resx:AppText.BlockMapButton}"
+                        Icon="{ui:SymbolIcon Map24}" />
+                </WrapPanel>
+            </DockPanel>
+        </Border>
     </StackPanel>
 </reactiveui:ReactiveUserControl>
