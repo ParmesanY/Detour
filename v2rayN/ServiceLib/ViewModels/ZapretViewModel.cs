@@ -85,6 +85,10 @@ public partial class ZapretViewModel : MyReactiveObject
                 return;
             }
             _config.ZapretItem.Strategy = s!;
+            // Picking a .bat by hand drops a registry strategy laid over the previous one.
+            _config.ZapretItem.Desync = null;
+            _config.ZapretItem.DesyncNote = null;
+            RegistryNote = string.Empty;
             await ConfigHandler.SaveConfig(_config);
             await RestartIfRunning();
         });
@@ -104,10 +108,21 @@ public partial class ZapretViewModel : MyReactiveObject
             _config.ZapretItem.AutoHeal = v;
             await ConfigHandler.SaveConfig(_config);
         });
+        RegistryHints = _config.ZapretItem.RegistryHints;
+        this.WhenAnyValue(x => x.RegistryHints).Skip(1).SubscribeAsync(async v =>
+        {
+            _config.ZapretItem.RegistryHints = v;
+            await ConfigHandler.SaveConfig(_config);
+        });
         InitVpnStrategy();
     }
 
     [Reactive] public partial bool AutoHeal { get; set; }
+
+    [Reactive] public partial bool RegistryHints { get; set; }
+
+    /// <summary>"from the Detour Map registry: …" while a registry strategy rides on the .bat, else empty.</summary>
+    [Reactive] public partial string RegistryNote { get; set; } = string.Empty;
 
     private void Refresh()
     {
@@ -121,6 +136,7 @@ public partial class ZapretViewModel : MyReactiveObject
             Strategies.Clear();
             Strategies.AddRange(ZapretManager.Instance.GetStrategies());
             SelectedStrategy = item.Strategy;
+            RegistryNote = item.Desync.IsNullOrEmpty() ? string.Empty : "+ " + (item.DesyncNote ?? string.Empty);
             GameFilterMode = item.GameFilterMode;
             Enabled = item.Enabled;
             VersionText = IsInstalled ? string.Format(AppText.ZapretInstalled, item.InstalledVersion ?? ZapretManager.BundledVersion ?? "?") : AppText.ZapretNotInstalled;
@@ -217,7 +233,7 @@ public partial class ZapretViewModel : MyReactiveObject
                 return Task.CompletedTask;
             });
             ProgressText = best is { Passed: > 0 }
-                ? string.Format(AppText.ZapretAutoResult, best.Strategy, best.Passed, best.Total)
+                ? string.Format(AppText.ZapretAutoResult, ZapretManager.DisplayStrategy(_config.ZapretItem), best.Passed, best.Total)
                 : all.Count == 0 ? AppText.ZapretSelectBusy : AppText.ZapretAutoNothing;
             Refresh();
         }

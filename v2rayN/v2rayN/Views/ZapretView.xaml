@@ -97,6 +97,22 @@
                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                             Text="{x:Static resx:AppText.ZapretStrategyHint}"
                             TextWrapping="Wrap" />
+                        <TextBlock
+                            Margin="0,4,24,0"
+                            FontSize="12"
+                            Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                            Text="{Binding RegistryNote}"
+                            TextWrapping="Wrap">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding RegistryNote}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </StackPanel>
                 </ui:CardControl.Header>
                 <StackPanel Orientation="Horizontal">
@@ -128,6 +144,24 @@
                     </StackPanel>
                 </ui:CardControl.Header>
                 <ui:ToggleSwitch IsChecked="{Binding AutoHeal}" />
+            </ui:CardControl>
+
+            <ui:CardControl
+                Margin="0,0,0,4"
+                Icon="{ui:SymbolIcon Map24}"
+                Visibility="{Binding IsWinws, Converter={StaticResource BoolToVis}}">
+                <ui:CardControl.Header>
+                    <StackPanel>
+                        <TextBlock FontWeight="SemiBold" Text="{x:Static resx:AppText.ZapretRegistryHints}" />
+                        <TextBlock
+                            Margin="0,2,24,0"
+                            FontSize="12"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                            Text="{x:Static resx:AppText.ZapretRegistryHintsHint}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </ui:CardControl.Header>
+                <ui:ToggleSwitch IsChecked="{Binding RegistryHints}" />
             </ui:CardControl>
 
             <ui:CardControl Margin="0,0,0,4" Icon="{ui:SymbolIcon Games24}">

@@ -376,7 +376,14 @@ public static class AppText
     public static string ZapretNeedsAdmin => T(
         "Для zapret нужны права администратора (драйвер WinDivert). Перезапустите клиент от имени администратора.",
         "zapret needs administrator rights (WinDivert driver). Restart the client as administrator.");
-    public static string ZapretAutoResult => T("Лучшая стратегия: {0} ({1} из {2} сайтов открылись).", "Best strategy: {0} ({1} of {2} sites opened).");
+    public static string ZapretRegistryAsking => T("Спрашиваю Detour Map, что работает у вашего провайдера…", "Asking Detour Map what works on your ISP…");
+    public static string ZapretRegistryNote => T("из реестра Detour Map: сработала у {0} из {1} человек в сети {2}", "from the Detour Map registry: worked for {0} of {1} people on {2}");
+    public static string ZapretWithRegistry => T("{0} + стратегия из реестра", "{0} + registry strategy");
+    public static string ZapretRegistryHints => T("Подсказки Detour Map", "Detour Map hints");
+    public static string ZapretRegistryHintsHint => T(
+        "При подборе стратегии сначала пробовать те, что сработали у других людей с тем же провайдером. Каждая проверяется у вас перед включением. Запрос показывает серверу карты только ваш провайдер; результаты отправляются, только если включена помощь карте блокировок.",
+        "When picking a strategy, first try the ones that worked for other people on the same ISP. Each is checked here before it is used. The request only shows the map server your ISP; results are sent only with the block map opt-in on.");
+    public static string ZapretAutoResult =>T("Лучшая стратегия: {0} ({1} из {2} сайтов открылись).", "Best strategy: {0} ({1} of {2} sites opened).");
     public static string ZapretAutoNothing => T("Ни одна стратегия не помогла. Возможно, сайты заблокированы по IP — тогда нужен VPN.",
         "No strategy helped. The sites may be blocked by IP, then only VPN helps.");
     public static string ZapretSelectBusy => T("Стратегия уже подбирается (возможно, в фоне). Подождите пару минут.",

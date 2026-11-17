@@ -58,7 +58,7 @@ public static class ZapretHealer
             return null;
         }
         LastHeal = DateTime.Now;
-        var before = config.ZapretItem.Strategy;
+        var before = (config.ZapretItem.Strategy, config.ZapretItem.Desync);
         Logging.SaveLog($"{_tag}: zapret→VPN rules stuck on VPN, picking a new strategy (now {before})");
 
         var (best, _) = await zapret.AutoSelectStrategyAsync(config, true, null, cancellationToken);
@@ -100,8 +100,10 @@ public static class ZapretHealer
         {
             return update + AppText.HealNothing;
         }
-        var strategy = config.ZapretItem.Strategy;
-        return update + (strategy.Equals(before, StringComparison.OrdinalIgnoreCase)
+        var strategy = ZapretManager.DisplayStrategy(config.ZapretItem);
+        var same = config.ZapretItem.Strategy.Equals(before.Strategy, StringComparison.OrdinalIgnoreCase)
+                   && config.ZapretItem.Desync == before.Desync;
+        return update + (same
             ? string.Format(AppText.HealKept, strategy, best.Passed, best.Total)
             : string.Format(AppText.HealPicked, strategy, best.Passed, best.Total));
     }

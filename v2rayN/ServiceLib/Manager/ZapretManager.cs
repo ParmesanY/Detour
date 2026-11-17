@@ -375,6 +375,19 @@ public partial class ZapretManager
             return (false, $"{item.Strategy}: {error}");
         }
 
+        // A strategy from the Detour Map registry replaces the general profile's desync.
+        if (ZapretDesync.Tokens(item.Desync) is { } desync)
+        {
+            if (ZapretDesync.Apply(args, desync, BinDir) is { } layered)
+            {
+                args = layered;
+            }
+            else
+            {
+                Logging.SaveLog($"{_tag}: {item.Strategy} has no general profile, registry strategy not applied");
+            }
+        }
+
         // By default WinDivert catches outgoing packets on every interface, including VPN TUN adapters:
         // winws then mangles traffic inside the tunnel (fake packets, splits) and breaks every listed
         // site even when it goes through the VPN. Limit it to the physical network card.
@@ -516,6 +529,10 @@ public partial class ZapretManager
 
     public record StrategyScore(string Strategy, int Passed, int Total, long ElapsedMs);
 
+    /// <summary>The strategy as the user should see it: the .bat, plus a note when a registry strategy rides on it.</summary>
+    public static string DisplayStrategy(ZapretItem item) =>
+        item.Desync.IsNullOrEmpty() ? item.Strategy : string.Format(AppText.ZapretWithRegistry, item.Strategy);
+
     /// <summary>
     /// URLs to check strategies against: domains of zapret and zapret→VPN rules, the latter even
     /// while on VPN fallback (the strategy is picked to get them off it). Probes go direct, so VPN
@@ -563,14 +580,41 @@ public partial class ZapretManager
         Func<string, Task>? progress, CancellationToken cancellationToken)
     {
         var item = config.ZapretItem;
-        var original = item.Strategy;
+        var original = (item.Strategy, item.Desync, item.DesyncNote);
         var urls = GetCheckUrls(config);
+        var bats = GetStrategies();
+        // Registry strategies replace only the general profile: they ride on the current .bat (or the default one).
+        var baseStrategy = bats.Contains(item.Strategy) ? item.Strategy
+            : bats.Contains(ZapretStrategyParser.DefaultStrategy) ? ZapretStrategyParser.DefaultStrategy
+            : bats.FirstOrDefault() ?? item.Strategy;
+
+        await Report(progress, AppText.ZapretRegistryAsking);
+        var hints = await StrategyRegistry.CandidatesAsync(config, urls, cancellationToken);
+        var hintByName = hints.ToDictionary(h => h.Name);
+
+        // With the Detour Map opt-in, the results go to the registry; that needs the sites without any bypass first.
+        bool[]? baseline = null;
+        if (StrategyRegistry.Sharing(config))
+        {
+            await StopAsync();
+            baseline = await StrategyRegistry.BaselineAsync(urls, cancellationToken);
+        }
+        var perUrl = new Dictionary<string, bool[]>();
+        var current = "";
 
         var (best, all) = await SelectStrategyAsync(
-            GetStrategies(),
+            [.. hints.Select(h => h.Name), .. bats],
             async strategy =>
             {
-                item.Strategy = strategy;
+                current = strategy;
+                if (hintByName.TryGetValue(strategy, out var hint))
+                {
+                    (item.Strategy, item.Desync, item.DesyncNote) = (baseStrategy, hint.Desync, hint.Note);
+                }
+                else
+                {
+                    (item.Strategy, item.Desync, item.DesyncNote) = (strategy, null, null);
+                }
                 var (ok, msg) = await StartAsync();
                 if (!ok)
                 {
@@ -583,12 +627,41 @@ public partial class ZapretManager
                 // Let winws hook in and old connections drop before measuring.
                 await Task.Delay(1500, ct);
                 var results = await Task.WhenAll(urls.Select(u => ZapretWatchdog.ProbeAsync(u, ct)));
+                perUrl[current] = results;
                 return results.Count(r => r);
             },
             urls.Count, stopAtFirstFullPass, progress, cancellationToken);
 
-        item.Strategy = best is { Passed: > 0 } ? best.Strategy : original;
+        if (best is { Passed: > 0 } && hintByName.TryGetValue(best.Strategy, out var won))
+        {
+            (item.Strategy, item.Desync, item.DesyncNote) = (baseStrategy, won.Desync, won.Note);
+        }
+        else if (best is { Passed: > 0 })
+        {
+            (item.Strategy, item.Desync, item.DesyncNote) = (best.Strategy, null, null);
+        }
+        else
+        {
+            (item.Strategy, item.Desync, item.DesyncNote) = original;
+        }
         await ConfigHandler.SaveConfig(config);
+
+        if (baseline is not null)
+        {
+            var desyncByName = new Dictionary<string, string>();
+            foreach (var name in perUrl.Keys)
+            {
+                var desync = hintByName.TryGetValue(name, out var h) ? h.Desync : StrategyRegistry.DesyncOf(name, item.GameFilterMode);
+                if (desync is not null)
+                {
+                    desyncByName[name] = desync;
+                }
+            }
+            if (StrategyRegistry.BuildReport(config, urls, baseline, perUrl, desyncByName, StrategyRegistry.GoogleHosts()) is { } report)
+            {
+                _ = StrategyRegistry.ShareAsync(report);
+            }
+        }
         if (item.Enabled)
         {
             await StartAsync();
