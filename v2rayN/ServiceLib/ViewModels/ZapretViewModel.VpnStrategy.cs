@@ -64,7 +64,9 @@ public partial class ZapretViewModel
             VpnDiagText = report.Text;
             VpnDiagDetails = string.Join(Environment.NewLine, report.Results.Select(r => string.Format(AppText.VpnStrategyResultLine,
                 r.Strategy?.Name ?? AppText.VpnStrategyOff,
-                r.Works ? string.Format(AppText.VpnStrategyOk, r.DelayMs) : r.Handshake ? AppText.VpnStrategyFreeze : AppText.VpnStrategyFail)));
+                r.Works ? string.Format(AppText.VpnStrategyOk, r.DelayMs)
+                : r.Handshake ? (r.FrozenAtBytes > 0 ? string.Format(AppText.VpnStrategyFreezeAt, r.FrozenAtBytes / 1024) : AppText.VpnStrategyFreeze)
+                : AppText.VpnStrategyFail)));
             if (report.Best != null)
             {
                 _settingStrategy = true;

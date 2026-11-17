@@ -58,5 +58,59 @@
     "Description": "Для XHTTP: соединения к серверу сменяются раньше, чем провайдер успевает заморозить поток после ~16 КБ. Только для этого сервера.",
     "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
     "Transport": "xmux"
+  },
+  {
+    "Name": "xmux 3",
+    "Description": "Для XHTTP: не больше 3 соединений к серверу. Против заморозки, когда к одному адресу открывают много соединений сразу.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "xmux3"
+  },
+  {
+    "Name": "xmux 6",
+    "Description": "Для XHTTP: ровно 6 соединений к серверу (значение по умолчанию в Xray с лета 2026).",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "xmux6"
+  },
+  {
+    "Name": "отпечаток firefox",
+    "Description": "Рукопожатие как у Firefox. На части сетей отпечаток Chrome зависает, а Firefox проходит. Только для этого сервера.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "fp:firefox"
+  },
+  {
+    "Name": "отпечаток chrome",
+    "Description": "Рукопожатие как у Chrome. Только для этого сервера.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "fp:chrome"
+  },
+  {
+    "Name": "отпечаток safari",
+    "Description": "Рукопожатие как у Safari. Только для этого сервера.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "fp:safari"
+  },
+  {
+    "Name": "отпечаток qq",
+    "Description": "Рукопожатие как у браузера QQ. Только для этого сервера.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "fp:qq"
+  },
+  {
+    "Name": "отпечаток random",
+    "Description": "Случайный браузерный отпечаток при каждом подключении. Только для этого сервера.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "fp:random"
+  },
+  {
+    "Name": "zapret fake vk",
+    "Description": "zapret: поддельный пакет с адресом vk.com вместо гугловского — российские имена ТСПУ пропускает охотнее. Нужен включённый zapret.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Winws": "--dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com"
+  },
+  {
+    "Name": "zapret fake max",
+    "Description": "zapret: то же с адресом max.ru и разрезом рукопожатия. Нужен включённый zapret.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Winws": "--dpi-desync=fake,multisplit --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-split-pos=1,sniext+1 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=max.ru"
   }
 ]

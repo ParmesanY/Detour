@@ -17,7 +17,9 @@ public sealed record VpnStrategy(string Name, string Description, string Packets
 }
 
 /// <summary>What happened with the server: reachability, and which strategies let traffic through.</summary>
-public sealed record VpnStrategyResult(VpnStrategy? Strategy, bool Handshake, bool BigTransfer, int DelayMs)
+/// <param name="FrozenAtBytes">When the big download stalled: how many bytes came before it froze (the
+/// "16–20 KB" block shows up as ~14–25 KB); 0 when it completed or never started.</param>
+public sealed record VpnStrategyResult(VpnStrategy? Strategy, bool Handshake, bool BigTransfer, int DelayMs, int FrozenAtBytes = 0)
 {
     public bool Works => Handshake && BigTransfer;
 }
@@ -67,25 +69,57 @@ public static class VpnStrategyManager
             "", "", "", Winws: "--dpi-desync=multisplit --dpi-desync-split-pos=1,sniext+1 --dpi-desync-split-seqovl=1"),
         new("zapret fakedsplit", "zapret: поддельные пакеты вперемешку с кусками рукопожатия, самый сильный вариант. Нужен включённый zapret.",
             "", "", "", Winws: "--dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00"),
+        // A fake ClientHello with a Russian name: DPI that expects google.com in fakes lets vk.com / max.ru through
+        // (a 2026 measurement: 230 KB/s against 48 B/s with the Google fake).
+        new("zapret fake vk", "zapret: поддельный пакет с адресом vk.com вместо гугловского — российские имена ТСПУ пропускает охотнее. Нужен включённый zapret.",
+            "", "", "", Winws: "--dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com"),
+        new("zapret fake max", "zapret: то же с адресом max.ru и разрезом рукопожатия. Нужен включённый zapret.",
+            "", "", "", Winws: "--dpi-desync=fake,multisplit --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-split-pos=1,sniext+1 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=max.ru"),
         // Settings of the server itself, saved for this server only.
         new("mux", "Мультиплексирование: много запросов идут внутри одного соединения, новых рукопожатий меньше. Не для XTLS-Vision. Только для этого сервера.",
             "", "", "", Transport: "mux"),
         new("xmux", "Для XHTTP: соединения к серверу сменяются раньше, чем провайдер успевает заморозить поток после ~16 КБ. Только для этого сервера.",
             "", "", "", Transport: "xmux"),
+        // ТСПУ (2026) freezes a SNI after >3 near-simultaneous handshakes; whether 3 or 6 connections works better differs by ISP.
+        new("xmux 3", "Для XHTTP: не больше 3 соединений к серверу. Против заморозки, когда к одному адресу открывают много соединений сразу.",
+            "", "", "", Transport: "xmux3"),
+        new("xmux 6", "Для XHTTP: ровно 6 соединений к серверу (значение по умолчанию в Xray с лета 2026).",
+            "", "", "", Transport: "xmux6"),
+        // TLS fingerprint of the handshake: some networks time out on one browser's fingerprint and pass another.
+        new("отпечаток firefox", "Рукопожатие как у Firefox. На части сетей отпечаток Chrome зависает, а Firefox проходит. Только для этого сервера.",
+            "", "", "", Transport: "fp:firefox"),
+        new("отпечаток chrome", "Рукопожатие как у Chrome. Только для этого сервера.", "", "", "", Transport: "fp:chrome"),
+        new("отпечаток safari", "Рукопожатие как у Safari. Только для этого сервера.", "", "", "", Transport: "fp:safari"),
+        new("отпечаток qq", "Рукопожатие как у браузера QQ. Только для этого сервера.", "", "", "", Transport: "fp:qq"),
+        new("отпечаток random", "Случайный браузерный отпечаток при каждом подключении. Только для этого сервера.", "", "", "", Transport: "fp:random"),
     ];
 
     /// <summary>XHTTP connection rotation: short-lived connections that stay under the 16 KB freeze.</summary>
     private const string XmuxJson = """{"maxConnections":"4-8","cMaxReuseTimes":"2-4","hMaxRequestTimes":"8-16","hMaxReusableSecs":"10-20"}""";
 
-    /// <summary>Whether a mux / xmux strategy makes sense for this server (other strategies always do).</summary>
+    private static readonly Regex _transport = new(@"^(mux|xmux[36]?|fp:(chrome|firefox|safari|ios|android|edge|360|qq|random|randomized))$");
+
+    private static bool HasTls(ProfileItem profile)
+        => profile.StreamSecurity == Global.StreamSecurity || profile.StreamSecurity == Global.StreamSecurityReality;
+
+    /// <summary>Whether a per-server strategy makes sense for this server (other strategies always do).</summary>
     public static bool Fits(VpnStrategy strategy, ProfileItem profile) => strategy.Transport switch
     {
         null or "" => true,
         "mux" => profile.ConfigType is EConfigType.VLESS or EConfigType.VMess or EConfigType.Trojan or EConfigType.Shadowsocks
                  && (profile.GetProtocolExtra().Flow ?? "").Length == 0
                  && profile.GetNetwork() != nameof(ETransport.xhttp),
-        "xmux" => profile.GetNetwork() == nameof(ETransport.xhttp),
+        "xmux" or "xmux3" or "xmux6" => profile.GetNetwork() == nameof(ETransport.xhttp),
+        { } fp when fp.StartsWith("fp:", StringComparison.Ordinal) => HasTls(profile)
+                                                                  && !fp[3..].Equals(profile.Fingerprint ?? "", StringComparison.OrdinalIgnoreCase),
         _ => false,
+    };
+
+    private static string XmuxFor(string transport) => transport switch
+    {
+        "xmux3" => """{"maxConnections":3}""",
+        "xmux6" => """{"maxConnections":6}""",
+        _ => XmuxJson,
     };
 
     /// <summary>A copy of the server with the strategy's own settings (mux on, or xmux in the XHTTP extra).</summary>
@@ -101,9 +135,14 @@ public static class VpnStrategyManager
             copy.MuxEnabled = true;
             return copy;
         }
+        if (strategy.Transport!.StartsWith("fp:", StringComparison.Ordinal))
+        {
+            copy.Fingerprint = strategy.Transport[3..];
+            return copy;
+        }
         var transport = copy.GetTransportExtra();
         var extra = (transport.XhttpExtra.IsNullOrEmpty() ? null : JsonNode.Parse(transport.XhttpExtra!) as JsonObject) ?? new JsonObject();
-        extra["xmux"] = JsonNode.Parse(XmuxJson);
+        extra["xmux"] = JsonNode.Parse(XmuxFor(strategy.Transport));
         copy.SetTransportExtra(transport with { XhttpExtra = extra.ToJsonString() });
         return copy;
     }
@@ -149,7 +188,7 @@ public static class VpnStrategyManager
         return list.Where(s => s != null && s.Name.IsNotEmpty() && s.Name.Length <= 40 && s.Description.IsNotEmpty())
             .Select(s => s.UsesWinws ? s with { Winws = string.Join(' ', SafeWinwsArgs(s.Winws)) } : s)
             .Where(s => s.UsesTransport
-                ? s.Transport is "mux" or "xmux"
+                ? _transport.IsMatch(s.Transport!)
                 : s.UsesWinws
                 ? s.Winws!.Length > 0
                 : (s.Packets == "tlshello" || _range.IsMatch(s.Packets)) && _range.IsMatch(s.Lengths) && _range.IsMatch(s.Delays)
@@ -330,8 +369,8 @@ public static class VpnStrategyManager
             handler.ConnectTimeout = TimeSpan.FromSeconds(8);
             using var client = new HttpClient(handler, false) { Timeout = Timeout.InfiniteTimeSpan };
             var delay = await ConnectionHandler.GetRealPingTime(client, ct);
-            var big = delay > 0 && await BigTransferAsync(client, ct);
-            return new(strategy, delay > 0, big, delay);
+            var (big, bytes) = delay > 0 ? await BigTransferAsync(client, ct) : (false, 0);
+            return new(strategy, delay > 0, big, delay, big ? 0 : bytes);
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -406,7 +445,9 @@ public static class VpnStrategyManager
     /// </summary>
     public static List<string> SafeWinwsArgs(string? args)
         => (args ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Where(a => Regex.IsMatch(a, @"^--dpi-desync[a-z0-9-]*(=[A-Za-z0-9,.:+_-]*)?$"))
+            // "=" inside the value is needed for --dpi-desync-fake-tls-mod=rnd,sni=vk.com; args go through
+            // ProcessStartInfo.ArgumentList (no shell), so it carries no meaning beyond winws' own parser.
+            .Where(a => Regex.IsMatch(a, @"^--dpi-desync[a-z0-9-]*(=[A-Za-z0-9,.:+_=-]*)?$"))
             .ToList();
 
     private static string? ReadCustomConfig(string? address)
@@ -452,8 +493,8 @@ public static class VpnStrategyManager
             handler.ConnectTimeout = TimeSpan.FromSeconds(8);
             using var client = new HttpClient(handler, false) { Timeout = Timeout.InfiniteTimeSpan };
             var delay = await ConnectionHandler.GetRealPingTime(client, ct);
-            var big = delay > 0 && await BigTransferAsync(client, ct);
-            return new(strategy, delay > 0, big, delay);
+            var (big, bytes) = delay > 0 ? await BigTransferAsync(client, ct) : (false, 0);
+            return new(strategy, delay > 0, big, delay, big ? 0 : bytes);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
@@ -462,30 +503,31 @@ public static class VpnStrategyManager
         }
     }
 
-    private static async Task<bool> BigTransferAsync(HttpClient client, CancellationToken ct)
+    /// <summary>A 64 KB download: whether it completed, and how many bytes arrived (where it froze if not).</summary>
+    private static async Task<(bool Ok, int Bytes)> BigTransferAsync(HttpClient client, CancellationToken ct)
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(TimeSpan.FromSeconds(12));
+        var total = 0;
         try
         {
             using var response = await client.GetAsync(BigTransferUrl, HttpCompletionOption.ResponseHeadersRead, cts.Token);
             await using var stream = await response.Content.ReadAsStreamAsync(cts.Token);
-            var buffer = new byte[16384];
-            var total = 0;
+            var buffer = new byte[4096];
             int read;
             while ((read = await stream.ReadAsync(buffer, cts.Token)) > 0)
             {
                 total += read;
                 if (total >= _bigTransferBytes)
                 {
-                    return true;
+                    return (true, total);
                 }
             }
-            return total >= 20 * 1024;
+            return (total >= 20 * 1024, total);
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or OperationCanceledException && !ct.IsCancellationRequested)
         {
-            return false;
+            return (false, total);
         }
     }
 

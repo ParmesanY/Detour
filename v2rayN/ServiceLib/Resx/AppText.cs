@@ -263,6 +263,7 @@ public static class AppText
     public static string VpnStrategyResultLine => T("{0}: {1}", "{0}: {1}");
     public static string VpnStrategyOk => T("работает, {0} мс", "works, {0} ms");
     public static string VpnStrategyFreeze => T("рукопожатие есть, большие данные зависают", "handshake OK, big transfers freeze");
+    public static string VpnStrategyFreezeAt => T("рукопожатие есть, загрузка встала на {0} КБ", "handshake OK, the download froze at {0} KB");
     public static string VpnStrategyFail => T("не работает", "doesn't work");
     public static string VpnDiagReach => T("Проверяю, отвечает ли адрес сервера…", "Checking whether the server address answers…");
     public static string VpnDiagTrying => T("Пробую стратегию: {0}…", "Trying strategy: {0}…");
@@ -382,6 +383,9 @@ public static class AppText
         "zapret needs administrator rights (WinDivert driver). Restart the client as administrator.");
     public static string ZapretRegistryAsking => T("Спрашиваю Detour Map, что работает у вашего провайдера…", "Asking Detour Map what works on your ISP…");
     public static string ZapretRegistryNote => T("из реестра Detour Map: сработала у {0} из {1} человек в сети {2}", "from the Detour Map registry: worked for {0} of {1} people on {2}");
+    public static string ZapretExperimentalNote => T(
+        "экспериментальная: поддельный пакет с российским адресом (vk.com / max.ru). Если вы участвуете в Detour Map, результат поможет понять, у каких провайдеров она работает",
+        "experimental: a fake packet with a Russian name (vk.com / max.ru). With Detour Map on, the result shows which ISPs it works for");
     public static string ZapretWithRegistry => T("{0} + стратегия из реестра", "{0} + registry strategy");
     public static string ZapretRegistryHints => T("Подсказки Detour Map", "Detour Map hints");
     public static string ZapretRegistryHintsHint => T(

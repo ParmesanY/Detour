@@ -86,6 +86,19 @@ public class DetourFeaturesTests
     }
 
     [Test]
+    public async Task Registry_ExperimentsAfterHints()
+    {
+        await Assert.That(StrategyRegistry.Experimental.All(e => ZapretDesync.Tokens(e.Desync) is not null)).IsTrue();
+        await Assert.That(StrategyRegistry.Experimental.All(e => e.Name.StartsWith(ZapretDesync.RegistryPrefix))).IsTrue();
+
+        var hint = new StrategyRegistry.Candidate("registry:abc", StrategyRegistry.Experimental[0].Desync, "note");
+        var list = StrategyRegistry.WithExperiments([hint], true);
+        await Assert.That(list[0].Name).IsEqualTo("registry:abc");
+        await Assert.That(list.Count).IsEqualTo(StrategyRegistry.Experimental.Count); // the duplicate experiment is dropped
+        await Assert.That(StrategyRegistry.WithExperiments([hint], false).Count).IsEqualTo(1);
+    }
+
+    [Test]
     public async Task Amnezia_ConfImportKeepsObfuscation()
     {
         var conf = """
@@ -167,6 +180,19 @@ public class DetourFeaturesTests
         var withX = VpnStrategyManager.WithTransport(xhttp, xmux).GetTransportExtra().XhttpExtra!;
         await Assert.That(withX).Contains("xmux");
         await Assert.That(withX).Contains("noGRPCHeader");
+
+        var xmux3 = VpnStrategyManager.Find("xmux 3")!;
+        await Assert.That(VpnStrategyManager.WithTransport(xhttp, xmux3).GetTransportExtra().XhttpExtra!).Contains("\"maxConnections\":3");
+
+        var firefox = VpnStrategyManager.Find("отпечаток firefox")!;
+        var reality = new ProfileItem { ConfigType = EConfigType.VLESS, Network = "tcp", Address = "a", Port = 443, StreamSecurity = "reality", Fingerprint = "chrome" };
+        await Assert.That(VpnStrategyManager.Fits(firefox, reality)).IsTrue();
+        await Assert.That(VpnStrategyManager.WithTransport(reality, firefox).Fingerprint).IsEqualTo("firefox");
+        await Assert.That(VpnStrategyManager.Fits(VpnStrategyManager.Find("отпечаток chrome")!, reality)).IsFalse(); // already chrome
+        await Assert.That(VpnStrategyManager.Fits(firefox, tcp)).IsFalse(); // no TLS: nothing to fingerprint
+
+        await Assert.That(VpnStrategyManager.SafeWinwsArgs("--dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com --wf-l3=x"))
+            .IsEquivalentTo(new[] { "--dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com" });
 
         var config = new Config { ZapretItem = new(), CoreBasicItem = new() };
         VpnStrategyManager.Apply(config, mux);
@@ -486,7 +512,7 @@ public class DetourFeaturesTests
         // The published file is the built-in list: keep them in sync.
         await Assert.That(published.Count).IsEqualTo(builtin.Count);
         await Assert.That(published.Select(s => s.Name)).IsEquivalentTo(builtin.Select(s => s.Name));
-        await Assert.That(published.Count(s => s.UsesWinws)).IsEqualTo(3);
+        await Assert.That(published.Count(s => s.UsesWinws)).IsEqualTo(5);
 
         var hostile = """
             [{"Name":"x","Description":"d","Packets":"","Lengths":"","Delays":"","Winws":"--dpi-desync=fake --wf-tcp=1-65535 --hostlist=C:\\evil.txt --dpi-desync-fake-tls=..\\..\\x.bin"},

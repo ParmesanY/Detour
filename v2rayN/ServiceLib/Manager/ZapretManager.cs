@@ -593,7 +593,8 @@ public partial class ZapretManager
             : bats.FirstOrDefault() ?? item.Strategy;
 
         await Report(progress, AppText.ZapretRegistryAsking);
-        var hints = await StrategyRegistry.CandidatesAsync(config, urls, cancellationToken);
+        var hints = StrategyRegistry.WithExperiments(await StrategyRegistry.CandidatesAsync(config, urls, cancellationToken),
+            config.ZapretItem.RegistryHints);
         var hintByName = hints.ToDictionary(h => h.Name);
 
         // With the Detour Map opt-in, the results go to the registry; that needs the sites without any bypass first.
