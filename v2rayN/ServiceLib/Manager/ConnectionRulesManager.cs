@@ -16,7 +16,10 @@ public class ConnectionRulesManager
     {
         var compiled = ConnectionRuleCompiler.Compile(config.ConnectionRules, config.ConnectionRulesOverride, IsZapretExpected(config),
             // tpws not running: zapret rules go direct, as with winws off.
-            ZapretManager.UsesTpws && ZapretManager.Instance.IsRunning ? Global.ZapretOutboundRemarks : Global.DirectTag);
+            ZapretManager.UsesTpws && ZapretManager.Instance.IsRunning ? Global.ZapretOutboundRemarks
+            // Windows "TLS records" mode: the core cuts the handshake, winws keeps out (see SyncZapretAsync).
+            : ZapretManager.SiteRecords(config.ZapretItem) != null ? Global.RecordsTag
+            : Global.DirectTag);
         if (config.TgWsProxyItem?.Enabled == true)
         {
             compiled.RoutingRules.Insert(0, TgWsProxyManager.DirectRule());
@@ -102,7 +105,13 @@ public class ConnectionRulesManager
                 return compiled.UsesZapret ? "zapret rules exist but zapret is not installed" : null;
             }
 
-            var changed = ZapretManager.WriteUserLists(compiled.ZapretDomains, compiled.ZapretIps, compiled.ZapretExcludeDomains,
+            // "TLS records" mode: the rules' sites are cut by the core; winws must leave them alone, or its desync
+            // (positions found by parsing the ClientHello) lands on an already cut handshake.
+            var records = ZapretManager.SiteRecords(config.ZapretItem) != null;
+            var changed = ZapretManager.WriteUserLists(
+                records ? [] : compiled.ZapretDomains,
+                records ? [] : compiled.ZapretIps,
+                records ? [.. compiled.ZapretExcludeDomains, .. compiled.ZapretDomains] : compiled.ZapretExcludeDomains,
                 await ZapretManager.GetVpnServerIpsAsync());
             var shouldRun = config.ZapretItem.Enabled;
 

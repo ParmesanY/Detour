@@ -86,6 +86,11 @@ public class CoreConfigContextBuilder
                     }
                     continue;
                 }
+                if (ruleItem.OutboundTag == Global.RecordsTag)
+                {
+                    // Windows zapret rules in "TLS records" mode: a direct outbound of the core itself.
+                    continue;
+                }
                 if (ruleItem.OutboundTag == Global.ZapretOutboundRemarks)
                 {
                     // macOS/Linux zapret rules: the tpws SOCKS proxy; direct while it isn't running (as winws off).

@@ -175,7 +175,7 @@ public static class StrategyRegistry
             Logging.SaveLog($"{_tag}: another DPI bypass is running, results won't be shared");
             return null;
         }
-        return await Task.WhenAll(urls.Select(u => ZapretWatchdog.ProbeAsync(u, ct)));
+        return await Task.WhenAll(urls.Select(u => ZapretWatchdog.ProbeInternetAsync(u, ct)));
     }
 
     /// <summary>The report for the registry, or null when there's nothing to say (no general URL blocked, nothing ran).</summary>

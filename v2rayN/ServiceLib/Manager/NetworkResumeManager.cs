@@ -115,7 +115,7 @@ public sealed class NetworkResumeManager
 
         // Reloading before the network is up just fails again: wait for the plain internet.
         var deadline = DateTime.UtcNow + WaitForInternet;
-        while (!await ZapretWatchdog.ProbeAsync(InternetProbeUrl, token))
+        while (!await ZapretWatchdog.ProbeInternetAsync(InternetProbeUrl, token))
         {
             if (DateTime.UtcNow > deadline)
             {

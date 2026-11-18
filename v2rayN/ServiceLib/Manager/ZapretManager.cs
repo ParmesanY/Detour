@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 
 namespace ServiceLib.Manager;
 
@@ -535,7 +535,21 @@ public partial class ZapretManager
 
     /// <summary>The strategy as the user should see it: the .bat, plus a note when a registry strategy rides on it.</summary>
     public static string DisplayStrategy(ZapretItem item) =>
-        item.Desync.IsNullOrEmpty() ? item.Strategy : string.Format(AppText.ZapretWithRegistry, item.Strategy);
+        SiteRecords(item) is { } records ? RecordsPrefix + records.Name
+        : item.Desync.IsNullOrEmpty() ? item.Strategy : string.Format(AppText.ZapretWithRegistry, item.Strategy);
+
+    /// <summary>Picker name prefix of the core's TLS-record split for sites ("ядро: records").</summary>
+    public const string RecordsPrefix = "ядро: ";
+
+    /// <summary>The TLS-record split zapret rules' sites use instead of winws; null = winws (or not Windows).</summary>
+    public static VpnStrategy? SiteRecords(ZapretItem? item)
+        => !UsesTpws && item?.SiteRecords is { Length: > 0 } name && VpnStrategyManager.Find(name) is { } s && VpnStrategyManager.IsRecordSplit(s)
+            ? s
+            : null;
+
+    /// <summary>Record-split candidates for the picker, after the registry hints and before the .bat files.</summary>
+    public static List<string> RecordsCandidates()
+        => UsesTpws ? [] : [.. VpnStrategyManager.Strategies.Where(VpnStrategyManager.IsRecordSplit).Select(s => RecordsPrefix + s.Name)];
 
     /// <summary>
     /// URLs to check strategies against: domains of zapret and zapret→VPN rules, the latter even
@@ -584,7 +598,7 @@ public partial class ZapretManager
         Func<string, Task>? progress, CancellationToken cancellationToken)
     {
         var item = config.ZapretItem;
-        var original = (item.Strategy, item.Desync, item.DesyncNote);
+        var original = (item.Strategy, item.Desync, item.DesyncNote, item.SiteRecords);
         var urls = GetCheckUrls(config);
         var bats = GetStrategies();
         // Registry strategies replace only the general profile: they ride on the current .bat (or the default one).
@@ -608,11 +622,23 @@ public partial class ZapretManager
         var current = "";
 
         var (best, all) = await SelectStrategyAsync(
-            [.. hints.Select(h => h.Name), .. bats],
+            [.. hints.Select(h => h.Name), .. RecordsCandidates(), .. bats],
             async strategy =>
             {
                 current = strategy;
-                if (hintByName.TryGetValue(strategy, out var hint))
+                var records = strategy.StartsWith(RecordsPrefix, StringComparison.Ordinal) ? strategy[RecordsPrefix.Length..] : string.Empty;
+                if (records != item.SiteRecords)
+                {
+                    // The record split takes zapret rules' sites away from winws (exclude list) and back;
+                    // the probes do the same split themselves (ZapretWatchdog).
+                    item.SiteRecords = records;
+                    await ConnectionRulesManager.Instance.SyncZapretAsync(config);
+                }
+                if (records.Length > 0)
+                {
+                    (item.Strategy, item.Desync, item.DesyncNote) = (baseStrategy, null, null);
+                }
+                else if (hintByName.TryGetValue(strategy, out var hint))
                 {
                     (item.Strategy, item.Desync, item.DesyncNote) = (baseStrategy, hint.Desync, hint.Note);
                 }
@@ -641,15 +667,30 @@ public partial class ZapretManager
         {
             (item.Strategy, item.Desync, item.DesyncNote) = (baseStrategy, won.Desync, won.Note);
         }
+        else if (best is { Passed: > 0 } && best.Strategy.StartsWith(RecordsPrefix, StringComparison.Ordinal))
+        {
+            (item.Strategy, item.Desync, item.DesyncNote) = (baseStrategy, null, null);
+            item.SiteRecords = best.Strategy[RecordsPrefix.Length..];
+        }
         else if (best is { Passed: > 0 })
         {
             (item.Strategy, item.Desync, item.DesyncNote) = (best.Strategy, null, null);
         }
         else
         {
-            (item.Strategy, item.Desync, item.DesyncNote) = original;
+            (item.Strategy, item.Desync, item.DesyncNote, item.SiteRecords) = original;
+        }
+        if (best is { Passed: > 0 } && !best.Strategy.StartsWith(RecordsPrefix, StringComparison.Ordinal))
+        {
+            item.SiteRecords = string.Empty;
         }
         await ConfigHandler.SaveConfig(config);
+        // Lists for the final choice; the cores route zapret rules differently with and without the record split.
+        await ConnectionRulesManager.Instance.SyncZapretAsync(config);
+        if (item.SiteRecords != original.SiteRecords)
+        {
+            AppEvents.CoreReloadRequested.Publish();
+        }
 
         if (baseline is not null)
         {

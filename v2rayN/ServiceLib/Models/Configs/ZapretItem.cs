@@ -32,6 +32,13 @@ public class ZapretItem
     /// </summary>
     public string? Desync { get; set; }
 
+    /// <summary>
+    /// Windows: a record-split VPN strategy name ("records", "records tiny first"). When set, zapret rules' sites
+    /// don't go through winws but through the core, which cuts their TLS ClientHello into several TLS records
+    /// (winws can't). Picked by the strategy picker; empty = winws as usual.
+    /// </summary>
+    public string SiteRecords { get; set; } = string.Empty;
+
     /// <summary>Where <see cref="Desync" /> came from, for the UI ("registry: 4 of 4 people on AS12389").</summary>
     public string? DesyncNote { get; set; }
 

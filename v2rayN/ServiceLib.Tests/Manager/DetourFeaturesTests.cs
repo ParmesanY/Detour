@@ -195,11 +195,56 @@ public class DetourFeaturesTests
         await Assert.That(VpnStrategyManager.Fits(VpnStrategyManager.Find("отпечаток chrome")!, reality)).IsFalse(); // already chrome
         await Assert.That(VpnStrategyManager.Fits(firefox, tcp)).IsFalse(); // no TLS: nothing to fingerprint
 
+        // TLS record split: plain TLS only (REALITY turns tlshello into a TCP split); ordinary fragments fit anything.
+        var records = VpnStrategyManager.Find("records tiny first")!;
+        var tls = new ProfileItem { ConfigType = EConfigType.VLESS, Network = "ws", Address = "a", Port = 443, StreamSecurity = "tls" };
+        await Assert.That(VpnStrategyManager.IsRecordSplit(records)).IsTrue();
+        await Assert.That(VpnStrategyManager.Fits(records, tls)).IsTrue();
+        await Assert.That(VpnStrategyManager.Fits(records, reality)).IsFalse();
+        await Assert.That(VpnStrategyManager.Fits(records, tcp)).IsFalse();
+        await Assert.That(VpnStrategyManager.Fits(VpnStrategyManager.Find("general")!, reality)).IsTrue();
+    }
+
+    [Test]
+    public async Task TlsRecordSplit_CutsClientHelloIntoRecords()
+    {
+        // A fake 100-byte handshake record followed by 3 bytes of something else.
+        var payload = Enumerable.Range(0, 100).Select(i => (byte)i).ToArray();
+        byte[] hello = [0x16, 0x03, 0x01, 0x00, 100, .. payload, 0xAA, 0xBB, 0xCC];
+
+        var cut = TlsRecordSplitStream.Split(hello, "10-30", 0, new Random(1))!;
+        var records = new List<byte[]>();
+        var i = 0;
+        while (i + 5 <= cut.Length && cut[i] == 0x16)
+        {
+            var len = (cut[i + 3] << 8) | cut[i + 4];
+            await Assert.That(len).IsBetween(1, 30);
+            records.Add(cut[(i + 5)..(i + 5 + len)]);
+            i += 5 + len;
+        }
+        await Assert.That(records.Count).IsGreaterThan(3);
+        await Assert.That(records.SelectMany(r => r).ToArray()).IsEquivalentTo(payload);
+        await Assert.That(cut[i..]).IsEquivalentTo(new byte[] { 0xAA, 0xBB, 0xCC });
+
+        // First record 1–3 bytes, the rest in the second.
+        var tiny = TlsRecordSplitStream.Split(hello, "1-3", 2)!;
+        var first = (tiny[3] << 8) | tiny[4];
+        await Assert.That(first).IsBetween(1, 3);
+        await Assert.That((tiny[5 + first + 3] << 8) | tiny[5 + first + 4]).IsEqualTo(100 - first);
+
+        // Not a handshake / incomplete record: left alone.
+        await Assert.That(TlsRecordSplitStream.Split("GET / HTTP/1.1\r\n"u8, "10-30", 0)).IsNull();
+        await Assert.That(TlsRecordSplitStream.Split(hello[..50], "10-30", 0)).IsNull();
+
+        await Assert.That(ZapretManager.SiteRecords(new ZapretItem { SiteRecords = "records" })?.Name).IsEqualTo("records");
+        await Assert.That(ZapretManager.SiteRecords(new ZapretItem { SiteRecords = "general" })).IsNull(); // not a record split
+        await Assert.That(ZapretManager.SiteRecords(new ZapretItem())).IsNull();
+
         await Assert.That(VpnStrategyManager.SafeWinwsArgs("--dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com --wf-l3=x"))
             .IsEquivalentTo(new[] { "--dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com" });
 
         var config = new Config { ZapretItem = new(), CoreBasicItem = new() };
-        VpnStrategyManager.Apply(config, mux);
+        VpnStrategyManager.Apply(config, VpnStrategyManager.Find("mux")!);
         await Assert.That(config.CoreBasicItem.EnableFragment).IsFalse();
     }
 

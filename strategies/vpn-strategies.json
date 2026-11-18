@@ -30,6 +30,16 @@
     "Packets": "tlshello", "Lengths": "100-200", "Delays": "5-10", "MaxSplit": "2"
   },
   {
+    "Name": "records",
+    "Description": "Рукопожатие разрезано на TLS-записи по 10–30 байт и уходит без пауз: граница попадает внутрь имени сайта. Против DPI, который склеивает TCP, но читает только первую TLS-запись. Не для REALITY.",
+    "Packets": "tlshello", "Lengths": "10-30", "Delays": "0", "MaxSplit": "0"
+  },
+  {
+    "Name": "records tiny first",
+    "Description": "Первая TLS-запись 1–3 байта, остальное сразу следом: DPI не находит начало рукопожатия. Не для REALITY.",
+    "Packets": "tlshello", "Lengths": "1-3", "Delays": "0", "MaxSplit": "2"
+  },
+  {
     "Name": "zapret fake",
     "Description": "zapret: перед рукопожатием уходит поддельный пакет, который сервер отбросит, а DPI примет за настоящий. Нужен включённый zapret.",
     "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",

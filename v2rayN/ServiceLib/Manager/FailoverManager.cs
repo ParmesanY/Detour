@@ -98,7 +98,7 @@ public sealed class FailoverManager
             return;
         }
 
-        if (!await ZapretWatchdog.ProbeAsync(InternetProbeUrl, token))
+        if (!await ZapretWatchdog.ProbeInternetAsync(InternetProbeUrl, token))
         {
             Logging.SaveLog($"{_tag}: the direct path is down too, no internet: not switching");
             _failures = 0;

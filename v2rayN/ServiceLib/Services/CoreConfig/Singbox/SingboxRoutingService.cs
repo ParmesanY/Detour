@@ -351,7 +351,10 @@ public partial class CoreConfigSingboxService
             {
                 return;
             }
-            item.OutboundTag = GenRoutingUserRuleOutbound(item.OutboundTag ?? Global.ProxyTag);
+            // zapret rules in "TLS records" mode: direct, with sing-box cutting the ClientHello into TLS records
+            // (route option; sing-box picks the cut points itself, the strategy's lengths are Xray's).
+            var records = item.OutboundTag == Global.RecordsTag;
+            item.OutboundTag = records ? Global.DirectTag : GenRoutingUserRuleOutbound(item.OutboundTag ?? Global.ProxyTag);
             var rules = _coreConfig.route.rules;
 
             var rule = new Rule4Sbox();
@@ -362,6 +365,7 @@ public partial class CoreConfigSingboxService
             else
             {
                 rule.outbound = item.OutboundTag;
+                rule.tls_record_fragment = records ? true : null;
             }
 
             if (item.Port.IsNotEmpty())

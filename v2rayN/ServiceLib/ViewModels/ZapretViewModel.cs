@@ -88,9 +88,17 @@ public partial class ZapretViewModel : MyReactiveObject
             // Picking a .bat by hand drops a registry strategy laid over the previous one.
             _config.ZapretItem.Desync = null;
             _config.ZapretItem.DesyncNote = null;
+            // ...and the core's "TLS records" mode: the sites go back to winws.
+            var hadRecords = _config.ZapretItem.SiteRecords.Length > 0;
+            _config.ZapretItem.SiteRecords = string.Empty;
             RegistryNote = string.Empty;
             await ConfigHandler.SaveConfig(_config);
             await RestartIfRunning();
+            if (hadRecords)
+            {
+                await ConnectionRulesManager.Instance.SyncZapretAsync(_config);
+                AppEvents.CoreReloadRequested.Publish();
+            }
         });
         this.WhenAnyValue(x => x.GameFilterMode).Skip(1).Where(s => s.IsNotEmpty()).SubscribeAsync(async m =>
         {

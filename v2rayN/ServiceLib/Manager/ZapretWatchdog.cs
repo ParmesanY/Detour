@@ -199,8 +199,12 @@ public class ZapretWatchdog
     public static Task<bool> ProbeAsync(string url, CancellationToken cancellationToken)
         => ProbeAsync(url, ZapretManager.UsesTpws, cancellationToken);
 
+    /// <summary>The same path without the "TLS records" cut: internet checks and the no-bypass baseline.</summary>
+    public static Task<bool> ProbeInternetAsync(string url, CancellationToken cancellationToken)
+        => ProbeAsync(url, ZapretManager.UsesTpws, cancellationToken, splitRecords: false);
+
     /// <param name="viaTpws">macOS/Linux: through the tpws SOCKS proxy (the zapret path) or plain direct.</param>
-    public static async Task<bool> ProbeAsync(string url, bool viaTpws, CancellationToken cancellationToken)
+    public static async Task<bool> ProbeAsync(string url, bool viaTpws, CancellationToken cancellationToken, bool splitRecords = true)
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         cts.CancelAfter(_probeTimeout);
@@ -210,6 +214,8 @@ public class ZapretWatchdog
             // macOS/Linux: zapret is the tpws SOCKS proxy, so the check goes through it (tpws itself
             // connects directly: under TUN the cores route its process past the tunnel).
             var tpwsPort = viaTpws && ZapretManager.UsesTpws ? AppManager.Instance.Config.ZapretItem.SocksPort : 0;
+            // Windows "TLS records" mode: the sites go through the core, which cuts the handshake; the probe does the same.
+            var records = splitRecords ? ZapretManager.SiteRecords(AppManager.Instance.Config?.ZapretItem) : null;
             using var handler = tpwsPort > 0
                 ? new SocketsHttpHandler
                 {
@@ -224,7 +230,10 @@ public class ZapretWatchdog
                     ConnectCallback = async (ctx, ct) =>
                     {
                         var addresses = await ResolveDirectAsync(ctx.DnsEndPoint.Host, localAddress, ct);
-                        return await ConnectBoundAsync(addresses, ctx.DnsEndPoint.Port, localAddress, ct);
+                        var stream = await ConnectBoundAsync(addresses, ctx.DnsEndPoint.Port, localAddress, ct);
+                        return records is null
+                            ? stream
+                            : new TlsRecordSplitStream(stream, records.Lengths, int.TryParse(records.MaxSplit, out var ms) ? ms : 0);
                     },
                 };
             using var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };

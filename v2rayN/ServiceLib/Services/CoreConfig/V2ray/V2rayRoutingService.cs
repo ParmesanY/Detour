@@ -177,11 +177,56 @@ public partial class CoreConfigV2rayService
         }
     }
 
+    /// <summary>
+    /// zapret rules in "TLS records" mode: a copy of the direct outbound whose TLS ClientHello goes out cut into
+    /// TLS records (fragment mask, tlshello: every piece gets its own record header) with the picked lengths.
+    /// </summary>
+    private string GenRecordsOutbound()
+    {
+        if (_coreConfig.outbounds.Any(o => o.tag == Global.RecordsTag))
+        {
+            return Global.RecordsTag;
+        }
+        var direct = _coreConfig.outbounds.FirstOrDefault(o => o is { protocol: "freedom", tag: Global.DirectTag });
+        if (direct == null || ZapretManager.SiteRecords(_config.ZapretItem) is not { } strategy)
+        {
+            return Global.DirectTag;
+        }
+        var records = JsonUtils.DeepCopy(direct);
+        records.tag = Global.RecordsTag;
+        records.streamSettings ??= new();
+        records.streamSettings.finalmask = JsonUtils.SerializeToNode(new Finalmask4Ray
+        {
+            tcp =
+            [
+                new Mask4Ray
+                {
+                    type = "fragment",
+                    settings = new MaskSettings4Ray
+                    {
+                        packets = strategy.Packets,
+                        lengths = [strategy.Lengths],
+                        delays = [strategy.Delays],
+                        maxSplit = int.TryParse(strategy.MaxSplit, out var maxSplit) ? maxSplit : 0,
+                        length = strategy.Lengths,
+                        delay = strategy.Delays,
+                    },
+                },
+            ],
+        }) as JsonObject;
+        _coreConfig.outbounds.Add(records);
+        return Global.RecordsTag;
+    }
+
     private string GenRoutingUserRuleOutbound(string outboundTag)
     {
         if (Global.OutboundTags.Contains(outboundTag))
         {
             return outboundTag;
+        }
+        if (outboundTag == Global.RecordsTag)
+        {
+            return GenRecordsOutbound();
         }
 
         var node = context.AllProxiesMap.GetValueOrDefault($"remark:{outboundTag}");

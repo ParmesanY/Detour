@@ -39,7 +39,7 @@ public static class BlockCheckManager
     public static async Task<List<BlockCheckResult>> CheckAsync(Config config, IProgress<int>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        return await CheckAsync(config, ZapretWatchdog.ProbeAsync, progress, cancellationToken);
+        return await CheckAsync(config, (url, viaZapret, ct) => ZapretWatchdog.ProbeAsync(url, viaZapret, ct, splitRecords: viaZapret), progress, cancellationToken);
     }
 
     /// <param name="probe">url, via zapret (tpws only) → data came through.</param>

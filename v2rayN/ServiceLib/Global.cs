@@ -127,6 +127,9 @@ public class Global
     /// <summary>Outbound "remarks" of zapret rules on macOS/Linux; mapped to the tpws SOCKS proxy (direct while it's off).</summary>
     public const string ZapretOutboundRemarks = "Detour zapret";
 
+    /// <summary>zapret rules in "TLS records" mode: direct, with the ClientHello cut into TLS records by the core.</summary>
+    public const string RecordsTag = "direct-records";
+
     /// <summary>Foreign DoH by IP (no bootstrap), dialled directly: Russian resolvers drop VPN domains.</summary>
     public const string CoreDirectDoHServer = "8.8.8.8";
     public const string SingboxRemoteDNSTag = "remote-dns-1";

@@ -62,6 +62,15 @@ public static class VpnStrategyManager
         new("slow", "Куски 30–60 байт с долгими паузами 50–100 мс: DPI не дожидается конца рукопожатия.", "tlshello", "30-60", "50-100"),
         new("first packets", "Режет первые три записи соединения, а не только рукопожатие: для протоколов без TLS.", "1-3", "40-80", "10-20"),
         new("split 2", "Только два куска: самый быстрый вариант, если провайдер мягкий.", "tlshello", "100-200", "5-10", "2"),
+        // TLS record split without TCP pauses: Xray's tlshello writes every piece as its own TLS record and, with
+        // interval 0, sends them at once (freedom combines them into one TCP packet, #3663). Against a DPI that reassembles TCP (ТСПУ does) but parses
+        // only the first record. CircumVolve (CCS 2026, table 5) and Niere et al. (S&P 2025): record splits with the
+        // boundary inside the SNI / a first record under 4 bytes passed China, Pakistan, Kazakhstan; ~92% of servers
+        // accept them. Not for REALITY: v2rayN turns tlshello into a TCP split there (#10428), see Fits.
+        new("records", "Рукопожатие разрезано на TLS-записи по 10–30 байт и уходит без пауз: граница попадает внутрь имени сайта. Против DPI, который склеивает TCP, но читает только первую TLS-запись. Не для REALITY.",
+            "tlshello", "10-30", "0"),
+        new("records tiny first", "Первая TLS-запись 1–3 байта, остальное сразу следом: DPI не находит начало рукопожатия. Не для REALITY.",
+            "tlshello", "1-3", "0", "2"),
         // Windows: winws on the traffic to the VPN server. Needs zapret turned on (administrator rights).
         new("zapret fake", "zapret: перед рукопожатием уходит поддельный пакет, который сервер отбросит, а DPI примет за настоящий. Нужен включённый zapret.",
             "", "", "", Winws: "--dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=badseq"),
@@ -111,7 +120,7 @@ public static class VpnStrategyManager
     /// <summary>Whether a per-server strategy makes sense for this server (other strategies always do).</summary>
     public static bool Fits(VpnStrategy strategy, ProfileItem profile) => strategy.Transport switch
     {
-        null or "" => true,
+        null or "" => !IsRecordSplit(strategy) || profile.StreamSecurity == Global.StreamSecurity,
         "mux" => profile.ConfigType is EConfigType.VLESS or EConfigType.VMess or EConfigType.Trojan or EConfigType.Shadowsocks
                  && (profile.GetProtocolExtra().Flow ?? "").Length == 0
                  && profile.GetNetwork() != nameof(ETransport.xhttp),
@@ -120,6 +129,10 @@ public static class VpnStrategyManager
                                                                   && !fp[3..].Equals(profile.Fingerprint ?? "", StringComparison.OrdinalIgnoreCase),
         _ => false,
     };
+
+    /// <summary>TLS records in one packet (no pauses): only TLS servers, REALITY gets a plain TCP split instead.</summary>
+    public static bool IsRecordSplit(VpnStrategy strategy)
+        => strategy is { UsesWinws: false, UsesTransport: false, Packets: "tlshello", Delays: "0" or "0-0" };
 
     private static string XmuxFor(string transport) => transport switch
     {
@@ -288,7 +301,8 @@ public static class VpnStrategyManager
         try
         {
             var candidates = Strategies.Where(s => (!s.UsesWinws || zapretRunning)
-                                                   && (!s.UsesTransport || (customJson == null && Fits(s, profile))));
+                                                   // custom JSON: no server settings to change or check
+                                                   && (customJson != null ? !s.UsesTransport : Fits(s, profile)));
             foreach (var strategy in new VpnStrategy?[] { null }.Concat(candidates))
             {
                 ct.ThrowIfCancellationRequested();
