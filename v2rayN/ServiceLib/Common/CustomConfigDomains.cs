@@ -23,12 +23,16 @@ public static class CustomConfigDomains
         {
             return [];
         }
-        if (root?["outbounds"] is not JsonArray outbounds)
+        // One config is an object; a subscription of several full configs is an array of them.
+        IEnumerable<JsonObject> configs = root switch
         {
-            return [];
-        }
+            JsonObject obj => [obj],
+            JsonArray arr => arr.OfType<JsonObject>(),
+            _ => [],
+        };
+        var outbounds = configs.Select(c => c["outbounds"]).OfType<JsonArray>().SelectMany(a => a.OfType<JsonObject>());
 
-        foreach (var ob in outbounds.OfType<JsonObject>())
+        foreach (var ob in outbounds)
         {
             // sing-box
             Add(ob["server"]);
@@ -55,9 +59,12 @@ public static class CustomConfigDomains
                 }
             }
             // XHTTP split download via another address
-            Add(ob["streamSettings"]?["xhttpSettings"]?["extra"]?["downloadSettings"]?["address"]);
+            Add(Obj(Obj(Obj(Obj(ob["streamSettings"])?["xhttpSettings"])?["extra"])?["downloadSettings"])?["address"]);
         }
         return [.. result];
+
+        // Indexing a JsonValue or JsonArray by name throws; hostile or odd configs must just yield nothing.
+        static JsonObject? Obj(JsonNode? node) => node as JsonObject;
 
         void Add(JsonNode? node)
         {

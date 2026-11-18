@@ -1,0 +1,38 @@
+{
+    "xray":  {
+                 "repo":  "XTLS/Xray-core",
+                 "tag":  "v26.11.9",
+                 "sha256":  {
+                                "Xray-windows-64.zip":  "1262522266337b824f07beb8e1375786b437683b3890105469088f8e17e0a69d",
+                                "Xray-linux-64.zip":  "b651f7e1d9966ee2c1b1ee1bf8b52c72771824d3065dce96bbc8bcc19ed95f82",
+                                "Xray-linux-arm64-v8a.zip":  "64ed6858982a7f5eb85d88b811089063bd4f17561f4c8f44e0f1dc8e6f6430be",
+                                "Xray-macos-64.zip":  "488963e676e06f5e48547f9dd38116aaca8de4234959b4272ae8f284e658dfd0",
+                                "Xray-macos-arm64-v8a.zip":  "233f0c66681cd0726f81a6b2b6ed6a5710869e312047b522e46ed53035bebd26"
+                            }
+             },
+    "singbox":  {
+                    "repo":  "SagerNet/sing-box",
+                    "tag":  "v1.14.4",
+                    "sha256":  {
+                                   "sing-box-1.14.4-windows-amd64.zip":  "99185d75d314a07dbba4a130c8ad986cbeb629a07927975636b341ca61f991df",
+                                   "sing-box-1.14.4-linux-amd64.tar.gz":  "699a1b510aa4396b2176d32d1181920399ebf1e267835da6f3b598d0f7c24968",
+                                   "sing-box-1.14.4-linux-arm64.tar.gz":  "436441f76ee2f7fe21b5b2d426d3cb261a480455a704865789ad533e4273ec26",
+                                   "sing-box-1.14.4-darwin-amd64.tar.gz":  "eae86b9b033bba50b7c44ab719e4bfac0aca05efd28483390ed3aa510f32db25",
+                                   "sing-box-1.14.4-darwin-arm64.tar.gz":  "0d8c7f5ed5d587b0f1a5e9772a708ec3bfa4ac4c9329604b01d8d9c2ba406838"
+                               }
+                },
+    "zapret":  {
+                   "repo":  "Flowseal/zapret-discord-youtube",
+                   "tag":  "1.10.4",
+                   "sha256":  {
+                                  "zapret-discord-youtube-1.10.4.zip":  "291af673bd0238506f9548e0e94ca0abf244000f4c9a06960544fb01c5f97b34"
+                              }
+               },
+    "tpws":  {
+                 "repo":  "bol-van/zapret",
+                 "tag":  "v72.13",
+                 "sha256":  {
+                                "zapret-v72.13.zip":  "c493e33a0dc4eba23a8686efdaba55f59755ad6ade3564aebd9d13f4c65e2e0c"
+                            }
+             }
+}

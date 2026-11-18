@@ -222,7 +222,7 @@ public sealed class TrafficSplitManager
     {
         try
         {
-            using var httpClient = HttpClientHelper.Instance.GetHttpClient(false);
+            using var httpClient = ClashApiManager.NewClient();
             var json = await httpClient.GetStringAsync($"{Global.HttpProtocol}{Global.Loopback}:{AppManager.Instance.StatePort2}/connections");
             return JsonUtils.Deserialize<ClashConnections>(json);
         }

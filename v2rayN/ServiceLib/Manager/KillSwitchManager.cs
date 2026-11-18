@@ -196,7 +196,28 @@ public class KillSwitchManager
         };
     }
 
-    private static string Quote(string s) => "'" + s.Replace("'", "''") + "'";
+    /// <summary>
+    /// A PowerShell single-quoted literal. PowerShell also ends such strings at the typographic quotes
+    /// U+2018–U+201B, so every one of them is doubled too; otherwise a path like C:\Users\O’Brien\… breaks out
+    /// of the string in a script that runs elevated. Control characters never belong in a path or profile name.
+    /// </summary>
+    public static string Quote(string s)
+    {
+        var sb = new StringBuilder("'");
+        foreach (var c in s)
+        {
+            if (char.IsControl(c))
+            {
+                throw new ArgumentException("control character in a PowerShell argument", nameof(s));
+            }
+            sb.Append(c);
+            if (c is '\'' or '\u2018' or '\u2019' or '\u201A' or '\u201B')
+            {
+                sb.Append(c);
+            }
+        }
+        return sb.Append('\'').ToString();
+    }
 
     private static async Task<(int ExitCode, string Output)> RunPowerShellAsync(string script)
     {

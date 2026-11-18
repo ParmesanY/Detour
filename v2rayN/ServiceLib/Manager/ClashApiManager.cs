@@ -10,9 +10,24 @@ public sealed class ClashApiManager
 
     private static string ApiUrl => $"{Global.HttpProtocol}{Global.Loopback}:{AppManager.Instance.StatePort2}";
 
+    /// <summary>
+    /// The controller's secret for this run of Detour, written into the core config. Without it any program on
+    /// the PC could read the connections (sites, the server) and switch proxies through 127.0.0.1, and a web page
+    /// could do the same via DNS rebinding.
+    /// </summary>
+    public static string Secret { get; } = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
+
+    /// <summary>A direct client that authenticates to the controller.</summary>
+    public static HttpClient NewClient()
+    {
+        var client = HttpClientHelper.Instance.GetHttpClient(false);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", Secret);
+        return client;
+    }
+
     public async Task<ClashItem?> GetProxies()
     {
-        using var httpClient = HttpClientHelper.Instance.GetHttpClient(false);
+        using var httpClient = NewClient();
         for (var i = 0; i < 3; i++)
         {
             ClashProxies? clashProxies = null;
@@ -98,7 +113,7 @@ public sealed class ClashApiManager
     {
         try
         {
-            using var httpClient = HttpClientHelper.Instance.GetHttpClient(false);
+            using var httpClient = NewClient();
             var result = await httpClient.GetStringAsync(url);
             var jsonObject = JsonUtils.ParseJson(result) as JsonObject;
             return jsonObject?["delay"] is { } n && n.GetValueKind() == JsonValueKind.Number &&
@@ -117,7 +132,7 @@ public sealed class ClashApiManager
     {
         try
         {
-            using var httpClient = HttpClientHelper.Instance.GetHttpClient(false);
+            using var httpClient = NewClient();
             var url = $"{ApiUrl}/proxies/{Utils.UrlEncode(groupName)}";
             var jsonObject = new JsonObject
             {
@@ -148,7 +163,7 @@ public sealed class ClashApiManager
         {
             var urlBase = $"{ApiUrl}/configs";
 
-            using var httpClient = HttpClientHelper.Instance.GetHttpClient(false);
+            using var httpClient = NewClient();
             var jsonString = JsonUtils.Serialize(jsonObject);
             var buffer = Encoding.UTF8.GetBytes(jsonString);
             var byteContent = new ByteArrayContent(buffer);
@@ -194,7 +209,7 @@ public sealed class ClashApiManager
         try
         {
             var url = $"{ApiUrl}/configs";
-            using var httpClient = HttpClientHelper.Instance.GetHttpClient(false);
+            using var httpClient = NewClient();
             var result = await httpClient.GetStringAsync(url);
             var jsonNode = JsonUtils.ParseJson(result);
             if (jsonNode is not JsonObject jsonObject)
@@ -215,7 +230,7 @@ public sealed class ClashApiManager
         try
         {
             var url = $"{ApiUrl}/connections";
-            using var httpClient = HttpClientHelper.Instance.GetHttpClient(false);
+            using var httpClient = NewClient();
             var result = await httpClient.GetStringAsync(url);
             var clashConnections = JsonUtils.Deserialize<ClashConnections>(result);
 
@@ -234,7 +249,7 @@ public sealed class ClashApiManager
         try
         {
             var url = $"{ApiUrl}/connections/{id}";
-            using var httpClient = HttpClientHelper.Instance.GetHttpClient(false);
+            using var httpClient = NewClient();
             await httpClient.DeleteAsync(url);
         }
         catch (Exception ex)

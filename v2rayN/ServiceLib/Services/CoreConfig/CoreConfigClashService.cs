@@ -80,8 +80,9 @@ public class CoreConfigClashService(Config config, bool isTunEnabled)
             //external-controller
             //fileContent["external-controller"] = $"{Global.Loopback}:{AppManager.Instance.StatePort2}";
             fileContent.Children[new YamlScalarNode("external-controller")] = new YamlScalarNode($"{Global.Loopback}:{AppManager.Instance.StatePort2}");
-            //fileContent.Remove("secret");
-            fileContent.Children.Remove(new YamlScalarNode("secret"));
+            // A per-session secret: without it any program on the PC (or a web page via DNS rebinding) could
+            // read connections and switch proxies through the controller.
+            fileContent.Children[new YamlScalarNode("secret")] = new YamlScalarNode(ClashApiManager.Secret);
             //allow-lan
             if (config.Inbound.First().AllowLANConn)
             {

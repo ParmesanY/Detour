@@ -111,6 +111,15 @@ public sealed class AppUpdateManager
                 return $"download failed: {downloadError ?? release.ZipUrl}";
             }
 
+            // Nothing from the archive runs or lands in the app dir before its signature checks out.
+            var sigText = await downloadService.TryDownloadString(release.ZipUrl + ReleaseSignature.Suffix, cancellationToken);
+            var signatureError = CheckSignature(zipPath, sigText);
+            if (signatureError != null)
+            {
+                Logging.SaveLog($"{_tag}: {release.Tag} rejected: {signatureError}");
+                return signatureError;
+            }
+
             if (progress != null)
             {
                 await progress("Unpacking");
@@ -154,6 +163,21 @@ public sealed class AppUpdateManager
                 // temp leftovers are harmless
             }
         }
+    }
+
+    /// <summary>Null when the archive is signed by the release key, otherwise why the update is refused.</summary>
+    public static string? CheckSignature(string zipPath, string? sigText, string? publicKey = null)
+    {
+        publicKey ??= ReleaseSignature.PublicKey;
+        if (publicKey.Length == 0)
+        {
+            return AppText.UpdateNoKey;
+        }
+        if (ReleaseSignature.Parse(sigText) is null)
+        {
+            return AppText.UpdateNotSigned;
+        }
+        return ReleaseSignature.VerifyFile(zipPath, sigText, publicKey) ? null : AppText.UpdateBadSignature;
     }
 
     /// <summary>The folder inside the extracted zip that holds the exe (zips have a "Detour" top folder).</summary>

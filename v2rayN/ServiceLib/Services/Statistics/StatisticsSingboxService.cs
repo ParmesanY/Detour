@@ -48,6 +48,7 @@ public class StatisticsSingboxService
                     continue;
                 }
                 using var ws = new ClientWebSocket();
+                ws.Options.SetRequestHeader("Authorization", $"Bearer {ClashApiManager.Secret}");
                 await ws.ConnectAsync(new Uri(Url), token).ConfigureAwait(false);
 
                 var buffer = new byte[1024];

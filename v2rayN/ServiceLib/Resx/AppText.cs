@@ -483,6 +483,12 @@ public static class AppText
     public static string UpdateConfirm => T("Скачать {0} и перезапустить Detour? Серверы, правила и настройки сохранятся.",
         "Download {0} and restart Detour? Servers, rules and settings are kept.");
     public static string UpdateFailed => T("Не удалось обновить: {0}", "Update failed: {0}");
+    public static string UpdateNotSigned => T("релиз ещё не подписан. Попробуйте позже или скачайте архив со страницы релиза.",
+        "the release isn't signed yet. Try later or download the archive from the release page.");
+    public static string UpdateBadSignature => T("подпись архива не совпала, обновление не установлено. Возможно, файл подменили: скачайте релиз вручную и сверьте SHA256SUMS.txt.",
+        "the archive's signature didn't match, nothing was installed. The file may have been replaced: download the release by hand and check SHA256SUMS.txt.");
+    public static string UpdateNoKey => T("в этой сборке нет ключа подписи релизов, обновите вручную со страницы релиза.",
+        "this build has no release signing key; update by hand from the release page.");
 
     public static string AutoPickCoreSwitched => T("«{0}» лучше работает на ядре {1}: переподключаюсь", "\"{0}\" works better on {1}: reconnecting");
     public static string AutoFailover => T("Авто-смена сервера", "Auto failover");

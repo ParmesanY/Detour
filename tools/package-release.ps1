@@ -27,13 +27,24 @@ function Retry([scriptblock]$action) {
         try { return & $action } catch { if ($i -ge 3) { throw }; Write-Host "  retry ${i}: $($_.Exception.Message)"; Start-Sleep -Seconds (5 * $i) }
     }
 }
-function Latest([string]$repo) {
-    Retry { Invoke-RestMethod -Headers $headers "https://api.github.com/repos/$repo/releases/latest" }
-}
-function Fetch([string]$url, [string]$file, [int]$minSize = 1000) {
+# Core versions and their SHA-256 are pinned in cores.lock.json (tools/update-cores-lock.ps1): a release
+# never ships whatever "latest" happens to be, and a replaced asset fails the build.
+$lock = Get-Content (Join-Path $PSScriptRoot 'cores.lock.json') -Raw | ConvertFrom-Json
+function Pinned([string]$key) { $lock.$key }
+function Fetch([string]$url, [string]$file, [int]$minSize = 1000, [string]$sha256 = '') {
     Write-Host "  $url"
     Retry { Invoke-WebRequest -Headers $headers -Uri $url -OutFile $file }
     if ((Get-Item $file).Length -lt $minSize) { throw "download too small: $url" }
+    if ($sha256) {
+        $got = (Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($got -ne $sha256) { throw "SHA-256 mismatch for ${url}: expected $sha256, got $got" }
+    }
+}
+function FetchPinned([string]$key, [string]$asset, [string]$file) {
+    $p = Pinned $key
+    $sha = $p.sha256.$asset
+    if (-not $sha) { throw "cores.lock.json: no hash for $key/$asset" }
+    Fetch "https://github.com/$($p.repo)/releases/download/$($p.tag)/$asset" $file 1000 $sha
 }
 function Unzip-Into([string]$zip, [string]$dest) {
     $x = Join-Path $tmp ([IO.Path]::GetRandomFileName())
@@ -80,15 +91,15 @@ function Untar-Into([string]$tgz, [string]$dest) {
 }
 
 Write-Host 'Xray'
-$xr = Latest 'XTLS/Xray-core'
-Fetch "https://github.com/XTLS/Xray-core/releases/download/$($xr.tag_name)/$xrAsset" "$tmp\xray.zip"
+$xr = Pinned 'xray'
+FetchPinned 'xray' $xrAsset "$tmp\xray.zip"
 Unzip-Into "$tmp\xray.zip" "$bin\xray"
 
 Write-Host 'sing-box'
-$sb = Latest 'SagerNet/sing-box'
-$sbVer = $sb.tag_name.TrimStart('v')
+$sb = Pinned 'singbox'
+$sbVer = $sb.tag.TrimStart('v')
 $sbFile = Join-Path $tmp ("sing-box." + $(if ($sbSuffix.EndsWith('.zip')) { 'zip' } else { 'tar.gz' }))
-Fetch "https://github.com/SagerNet/sing-box/releases/download/$($sb.tag_name)/sing-box-$sbVer-$sbSuffix" $sbFile
+FetchPinned 'singbox' "sing-box-$sbVer-$sbSuffix" $sbFile
 if ($sbSuffix.EndsWith('.zip')) { Unzip-Into $sbFile "$bin\sing_box" } else { Untar-Into $sbFile "$bin\sing_box" }
 
 Write-Host 'Geo files'
@@ -104,22 +115,22 @@ foreach ($rs in @(@('geosite', 'category-ru'), @('geosite', 'private'), @('geoip
 
 if ($isWin) {
     Write-Host 'zapret (Flowseal)'
-    $zp = Latest 'Flowseal/zapret-discord-youtube'
-    Fetch "https://github.com/Flowseal/zapret-discord-youtube/releases/download/$($zp.tag_name)/zapret-discord-youtube-$($zp.tag_name).zip" "$tmp\zapret.zip"
+    $zp = Pinned 'zapret'
+    FetchPinned 'zapret' "zapret-discord-youtube-$($zp.tag).zip" "$tmp\zapret.zip"
     Unzip-Into "$tmp\zapret.zip" "$bin\zapret\current"
     if (-not (Test-Path "$bin\zapret\current\bin\winws.exe")) { throw 'winws.exe not found in the zapret release' }
-    Set-Content -Path "$bin\zapret\current\.version" -Value $zp.tag_name -NoNewline -Encoding ascii
+    Set-Content -Path "$bin\zapret\current\.version" -Value $zp.tag -NoNewline -Encoding ascii
 } else {
     Write-Host 'zapret (bol-van, tpws)'
-    $zp = Latest 'bol-van/zapret'
-    Fetch "https://github.com/bol-van/zapret/releases/download/$($zp.tag_name)/zapret-$($zp.tag_name).zip" "$tmp\zapret.zip"
+    $zp = Pinned 'tpws'
+    FetchPinned 'tpws' "zapret-$($zp.tag).zip" "$tmp\zapret.zip"
     $x = Join-Path $tmp 'zapret-src'
     Expand-Archive -Path "$tmp\zapret.zip" -DestinationPath $x -Force
     $tpws = Get-ChildItem $x -Recurse -File -Filter 'tpws' | Where-Object { $_.Directory.Name -eq $tpwsFolder } | Select-Object -First 1
     if (-not $tpws) { throw "binaries/$tpwsFolder/tpws not found in the zapret release" }
     New-Item -ItemType Directory -Force "$bin\zapret\tpws" | Out-Null
     Copy-Item $tpws.FullName "$bin\zapret\tpws\tpws" -Force
-    Set-Content -Path "$bin\zapret\tpws\.version" -Value $zp.tag_name -NoNewline -Encoding ascii
+    Set-Content -Path "$bin\zapret\tpws\.version" -Value $zp.tag -NoNewline -Encoding ascii
 }
 
 $readme = if ($isWin) { 'release-readme.txt' } else { 'release-readme-unix.txt' }
@@ -144,5 +155,8 @@ if ($isWin) {
     if ($LASTEXITCODE) { throw 'tar failed' }
 }
 Remove-Item $tmp -Recurse -Force
+# "<hash>  <name>", the format sha256sum -c and the release's SHA256SUMS.txt use.
+$hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText("$zip.sha256", "$hash  $name`n")
 Write-Host "Done: $zip ($([math]::Round((Get-Item $zip).Length / 1MB)) MB)"
-Write-Host "Xray $($xr.tag_name), sing-box $($sb.tag_name), zapret $($zp.tag_name)"
+Write-Host "Xray $($xr.tag), sing-box $($sb.tag), zapret $($zp.tag)"

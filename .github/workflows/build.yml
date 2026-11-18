@@ -7,8 +7,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Build and test steps get a read-only token; only the publish job below may write (the release).
 permissions:
-  contents: write
+  contents: read
 
 # A newer push to the same branch cancels the run still in progress; tag builds are never cancelled.
 concurrency:
@@ -16,17 +17,23 @@ concurrency:
   cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
-  build:
+  test:
     strategy:
       fail-fast: false
-      # macOS runners are scarce and often time out in the queue: build them only for release tags.
       matrix:
-        include: ${{ fromJSON(github.ref_type == 'tag' && '[{"os":"windows-latest","rid":"win-x64","test":true},{"os":"ubuntu-latest","rid":"linux-x64","test":false},{"os":"macos-latest","rid":"osx-arm64","test":false},{"os":"macos-latest","rid":"osx-x64","test":false}]' || '[{"os":"windows-latest","rid":"win-x64","test":true},{"os":"ubuntu-latest","rid":"linux-x64","test":false}]') }}
+        include:
+          - os: windows-latest
+            required: true
+          # Linux runs the same tests to catch platform assumptions; not yet a release gate.
+          - os: ubuntu-latest
+            required: false
     runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ !matrix.required }}
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          persist-credentials: false
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -38,13 +45,35 @@ jobs:
           key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', 'global.json') }}
           restore-keys: nuget-${{ runner.os }}-
 
-      # Tags point at commits already tested on main.
       - name: Test
-        if: matrix.test && github.ref_type != 'tag'
         run: dotnet test --project v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj
 
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      # macOS runners are scarce and often time out in the queue: build them only for release tags.
+      matrix:
+        include: ${{ fromJSON(github.ref_type == 'tag' && '[{"os":"windows-latest","rid":"win-x64"},{"os":"ubuntu-latest","rid":"linux-x64"},{"os":"macos-latest","rid":"osx-arm64"},{"os":"macos-latest","rid":"osx-x64"}]' || '[{"os":"windows-latest","rid":"win-x64"},{"os":"ubuntu-latest","rid":"linux-x64"}]') }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.*.props', 'global.json') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       # Full package: app + Xray + sing-box + geo files + rule sets + zapret (winws or tpws),
-      # so the first start works where GitHub is blocked.
+      # so the first start works where GitHub is blocked. Core versions and hashes: tools/cores.lock.json.
       - name: Package
         shell: pwsh
         env:
@@ -53,18 +82,55 @@ jobs:
           $ver = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { '' }
           ./tools/package-release.ps1 -OutDir out -Version $ver -Rid ${{ matrix.rid }}
 
+      # Smoke check: the archive unpacks and holds the app and every core it promises.
+      - name: Check archive
+        shell: pwsh
+        run: |
+          $x = Join-Path $env:RUNNER_TEMP 'smoke'
+          New-Item -ItemType Directory -Force $x | Out-Null
+          $a = Get-ChildItem out -File | Where-Object { $_.Name -match '^Detour.*\.(zip|tar\.gz)$' } | Select-Object -First 1
+          if ($a.Name.EndsWith('.zip')) { Expand-Archive $a.FullName $x } else { tar -xzf $a.FullName -C $x; if ($LASTEXITCODE) { throw 'tar failed' } }
+          $win = '${{ matrix.rid }}' -eq 'win-x64'
+          $need = if ($win) { 'Detour.exe', 'bin/xray/xray.exe', 'bin/sing_box/sing-box.exe', 'bin/zapret/current/bin/winws.exe' }
+                  else { 'Detour', 'bin/xray/xray', 'bin/sing_box/sing-box', 'bin/zapret/tpws/tpws' }
+          foreach ($f in $need + 'bin/geoip.dat', 'bin/geosite.dat') {
+            if (-not (Test-Path (Join-Path $x "Detour/$f"))) { throw "missing in archive: $f" }
+          }
+          $line = (Get-Content "$($a.FullName).sha256").Split(' ')[0]
+          if ($line -ne (Get-FileHash $a.FullName -Algorithm SHA256).Hash.ToLowerInvariant()) { throw 'sha256 file does not match' }
+          Write-Host "OK: $($a.Name)"
+
       - uses: actions/upload-artifact@v4
         with:
           name: Detour-${{ matrix.rid }}
           path: |
             out/Detour*.zip
             out/Detour*.tar.gz
+            out/Detour*.sha256
+
+  # One job publishes the release once all builds are done (one description, one set of checksums).
+  publish:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd dist
+          cat *.sha256 | sort -k2 > SHA256SUMS.txt
+          rm *.sha256
+          sha256sum -c SHA256SUMS.txt
 
       - name: GitHub release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        # v2.6.2, pinned by commit: a moved tag can't change what runs with write access.
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
-          files: |
-            out/Detour-*.zip
-            out/Detour-*.tar.gz
+          files: dist/*
           generate_release_notes: true

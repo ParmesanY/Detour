@@ -1410,12 +1410,8 @@ public class Utils
             return string.Empty;
         }
 
-        if (fileName.Contains(' '))
-        {
-            fileName = fileName.AppendQuotes();
-        }
-        var arg = new List<string>() { "-c", $"chmod +x {fileName}" };
-        return await GetCliWrapOutput(Global.LinuxBash, arg);
+        // chmod itself with separate arguments: a path is never parsed by a shell.
+        return await GetCliWrapOutput("chmod", new List<string>() { "+x", "--", fileName });
     }
 
     public static bool SetUnixFileMode(string? fileName)
