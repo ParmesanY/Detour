@@ -69,12 +69,18 @@ public static class VpnStrategyManager
             "", "", "", Winws: "--dpi-desync=multisplit --dpi-desync-split-pos=1,sniext+1 --dpi-desync-split-seqovl=1"),
         new("zapret fakedsplit", "zapret: поддельные пакеты вперемешку с кусками рукопожатия, самый сильный вариант. Нужен включённый zapret.",
             "", "", "", Winws: "--dpi-desync=fake,fakedsplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fakedsplit-pattern=0x00"),
-        // A fake ClientHello with a Russian name: DPI that expects google.com in fakes lets vk.com / max.ru through
-        // (a 2026 measurement: 230 KB/s against 48 B/s with the Google fake).
-        new("zapret fake vk", "zapret: поддельный пакет с адресом vk.com вместо гугловского — российские имена ТСПУ пропускает охотнее. Нужен включённый zapret.",
+        // A fake ClientHello with a whitelisted name: the 16–20 KB freeze spares whitelisted SNIs (net4people #490),
+        // and a fork test (podkop-engine, 8 Oct 2026) passed 19/21 with spoofed whitelisted SNI + wrong seq/md5/timestamp,
+        // 0/2 with a wrong checksum. Names from the cheburcheck whitelist (vk.com, yandex.ru, onetrust.com; max.ru isn't
+        // there — and Flowseal's "max_ru" ClientHello file actually carries www.onetrust.com).
+        new("zapret fake vk", "zapret: поддельный пакет с адресом vk.com (из белого списка) — DPI пропускает соединение как разрешённое. Нужен включённый zapret.",
             "", "", "", Winws: "--dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com"),
-        new("zapret fake max", "zapret: то же с адресом max.ru и разрезом рукопожатия. Нужен включённый zapret.",
-            "", "", "", Winws: "--dpi-desync=fake,multisplit --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-split-pos=1,sniext+1 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=max.ru"),
+        new("zapret fake vk md5", "zapret: то же, но поддельный пакет помечен TCP-MD5, а не сдвигом номера: другой способ, которым сервер его отбрасывает. Нужен включённый zapret.",
+            "", "", "", Winws: "--dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=md5sig --dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com"),
+        new("zapret fake yandex", "zapret: поддельный пакет с адресом yandex.ru и разрезом рукопожатия, отбрасывается по устаревшей метке времени. Нужен включённый zapret.",
+            "", "", "", Winws: "--dpi-desync=fake,multisplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-split-pos=1,sniext+1 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=yandex.ru"),
+        new("zapret fake onetrust", "zapret: поддельный пакет с адресом www.onetrust.com (из белого списка; именно он стоял в замере 230 КБ/с против 48 Б/с). Нужен включённый zapret.",
+            "", "", "", Winws: "--dpi-desync=fake,multisplit --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-split-pos=1,sniext+1 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=www.onetrust.com"),
         // Settings of the server itself, saved for this server only.
         new("mux", "Мультиплексирование: много запросов идут внутри одного соединения, новых рукопожатий меньше. Не для XTLS-Vision. Только для этого сервера.",
             "", "", "", Transport: "mux"),

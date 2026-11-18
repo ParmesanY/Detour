@@ -103,14 +103,26 @@
   },
   {
     "Name": "zapret fake vk",
-    "Description": "zapret: поддельный пакет с адресом vk.com вместо гугловского — российские имена ТСПУ пропускает охотнее. Нужен включённый zapret.",
+    "Description": "zapret: поддельный пакет с адресом vk.com (из белого списка) — DPI пропускает соединение как разрешённое. Нужен включённый zapret.",
     "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
     "Winws": "--dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com"
   },
   {
-    "Name": "zapret fake max",
-    "Description": "zapret: то же с адресом max.ru и разрезом рукопожатия. Нужен включённый zapret.",
+    "Name": "zapret fake vk md5",
+    "Description": "zapret: то же, но поддельный пакет помечен TCP-MD5, а не сдвигом номера: другой способ, которым сервер его отбрасывает. Нужен включённый zapret.",
     "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
-    "Winws": "--dpi-desync=fake,multisplit --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-split-pos=1,sniext+1 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=max.ru"
+    "Winws": "--dpi-desync=fake --dpi-desync-repeats=6 --dpi-desync-fooling=md5sig --dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com"
+  },
+  {
+    "Name": "zapret fake yandex",
+    "Description": "zapret: поддельный пакет с адресом yandex.ru и разрезом рукопожатия, отбрасывается по устаревшей метке времени. Нужен включённый zapret.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Winws": "--dpi-desync=fake,multisplit --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-split-pos=1,sniext+1 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=yandex.ru"
+  },
+  {
+    "Name": "zapret fake onetrust",
+    "Description": "zapret: поддельный пакет с адресом www.onetrust.com (из белого списка; именно он стоял в замере 230 КБ/с против 48 Б/с). Нужен включённый zapret.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Winws": "--dpi-desync=fake,multisplit --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-split-pos=1,sniext+1 --dpi-desync-fake-tls-mod=rnd,dupsid,sni=www.onetrust.com"
   }
 ]

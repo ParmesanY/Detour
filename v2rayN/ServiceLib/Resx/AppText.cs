@@ -384,8 +384,8 @@ public static class AppText
     public static string ZapretRegistryAsking => T("Спрашиваю Detour Map, что работает у вашего провайдера…", "Asking Detour Map what works on your ISP…");
     public static string ZapretRegistryNote => T("из реестра Detour Map: сработала у {0} из {1} человек в сети {2}", "from the Detour Map registry: worked for {0} of {1} people on {2}");
     public static string ZapretExperimentalNote => T(
-        "экспериментальная: поддельный пакет с российским адресом (vk.com / max.ru). Если вы участвуете в Detour Map, результат поможет понять, у каких провайдеров она работает",
-        "experimental: a fake packet with a Russian name (vk.com / max.ru). With Detour Map on, the result shows which ISPs it works for");
+        "экспериментальная: поддельный пакет с адресом из белого списка (vk.com, yandex.ru, onetrust.com). Если вы участвуете в Detour Map, результат поможет понять, у каких провайдеров она работает",
+        "experimental: a fake packet with a whitelisted name (vk.com, yandex.ru, onetrust.com). With Detour Map on, the result shows which ISPs it works for");
     public static string ZapretWithRegistry => T("{0} + стратегия из реестра", "{0} + registry strategy");
     public static string ZapretRegistryHints => T("Подсказки Detour Map", "Detour Map hints");
     public static string ZapretRegistryHintsHint => T(

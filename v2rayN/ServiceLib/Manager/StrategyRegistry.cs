@@ -22,30 +22,44 @@ public static class StrategyRegistry
     /// New strategies from community findings, tried by the picker after the registry hints and before the .bat files.
     /// With the Detour Map opt-in their results go to the registry like any other, so within days the map shows on which
     /// ISPs they work; the ones that do then come back to everyone as ordinary registry hints. Current batch (2026-11):
-    /// fakes carrying a Russian name instead of google.com (Flowseal #17334 measured 230 KB/s against 48 B/s).
+    /// fakes with whitelisted names instead of google.com. Flowseal #17334 measured 230 KB/s against 48 B/s with a
+    /// "max_ru" fake — whose file actually holds www.onetrust.com (checked); max.ru isn't on the cheburcheck whitelist.
     /// </summary>
     public static IReadOnlyList<Candidate> Experimental =>
     [
+        // McMrool's exact line from #17334 (Crelcom, Win Mobile; Sept 2026): seqovl 480 = 4 × the 120-byte stun2.bin.
+        new($"{ZapretDesync.RegistryPrefix}exp-seqovl480-stun2-onetrust",
+            "--dpi-desync=fake,multisplit --dpi-desync-split-seqovl=480 --dpi-desync-split-pos=1 --dpi-desync-fooling=ts --dpi-desync-repeats=4 "
+            + "--dpi-desync-split-seqovl-pattern=%BIN%stun2.bin --dpi-desync-fake-tls=%BIN%tls_clienthello_max_ru.bin",
+            AppText.ZapretExperimentalNote),
         new($"{ZapretDesync.RegistryPrefix}exp-fake-vk",
             "--dpi-desync=fake,multisplit --dpi-desync-split-pos=1,sniext+1 --dpi-desync-repeats=6 --dpi-desync-fooling=badseq --dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com",
             AppText.ZapretExperimentalNote),
-        new($"{ZapretDesync.RegistryPrefix}exp-fake-max",
-            "--dpi-desync=fake,multisplit --dpi-desync-split-pos=1,sniext+1 --dpi-desync-repeats=6 --dpi-desync-fooling=ts --dpi-desync-fake-tls-mod=rnd,dupsid,sni=max.ru",
+        new($"{ZapretDesync.RegistryPrefix}exp-fake-yandex-md5",
+            "--dpi-desync=fake,multisplit --dpi-desync-split-pos=1,sniext+1 --dpi-desync-repeats=6 --dpi-desync-fooling=md5sig --dpi-desync-fake-tls-mod=rnd,dupsid,sni=yandex.ru",
             AppText.ZapretExperimentalNote),
         new($"{ZapretDesync.RegistryPrefix}exp-hostfakesplit-vk",
             "--dpi-desync=fake,hostfakesplit --dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com --dpi-desync-hostfakesplit-mod=host=vk.com,altorder=1 --dpi-desync-fooling=ts",
             AppText.ZapretExperimentalNote),
     ];
 
-    /// <summary>Registry hints first, then the experiments not already among them (same args = same strategy).</summary>
-    public static List<Candidate> WithExperiments(IReadOnlyList<Candidate> hints, bool enabled)
+    /// <summary>
+    /// Registry hints first, then the experiments not already among them (same args = same strategy) whose files
+    /// (%BIN%…) are in the installed zapret release.
+    /// </summary>
+    public static List<Candidate> WithExperiments(IReadOnlyList<Candidate> hints, bool enabled, Func<IEnumerable<string>, bool>? filesExist = null)
     {
         if (!enabled || ZapretManager.UsesTpws)
         {
             return [.. hints];
         }
+        filesExist ??= FilesExist;
         var known = hints.Select(h => h.Desync).ToHashSet(StringComparer.Ordinal);
-        return [.. hints, .. Experimental.Where(e => ZapretDesync.Tokens(e.Desync) is not null && !known.Contains(e.Desync))];
+        return
+        [
+            .. hints,
+            .. Experimental.Where(e => ZapretDesync.Tokens(e.Desync) is { } tokens && filesExist(tokens) && !known.Contains(e.Desync)),
+        ];
     }
 
     /// <summary>Registry strategies for this ISP, ready for the picker; empty when off, unreachable or nothing fits.</summary>

@@ -92,9 +92,13 @@ public class DetourFeaturesTests
         await Assert.That(StrategyRegistry.Experimental.All(e => e.Name.StartsWith(ZapretDesync.RegistryPrefix))).IsTrue();
 
         var hint = new StrategyRegistry.Candidate("registry:abc", StrategyRegistry.Experimental[0].Desync, "note");
-        var list = StrategyRegistry.WithExperiments([hint], true);
+        var list = StrategyRegistry.WithExperiments([hint], true, _ => true);
         await Assert.That(list[0].Name).IsEqualTo("registry:abc");
         await Assert.That(list.Count).IsEqualTo(StrategyRegistry.Experimental.Count); // the duplicate experiment is dropped
+        // Without the zapret release files (%BIN%stun2.bin…) the file-based experiment is skipped.
+        var noFiles = StrategyRegistry.WithExperiments([], true, tokens => !tokens.Any(t => t.Contains("%BIN%")));
+        await Assert.That(noFiles.Count).IsEqualTo(StrategyRegistry.Experimental.Count - 1);
+        await Assert.That(StrategyRegistry.Experimental.Any(e => e.Desync.Contains("max.ru"))).IsFalse();
         await Assert.That(StrategyRegistry.WithExperiments([hint], false).Count).IsEqualTo(1);
     }
 
@@ -512,7 +516,7 @@ public class DetourFeaturesTests
         // The published file is the built-in list: keep them in sync.
         await Assert.That(published.Count).IsEqualTo(builtin.Count);
         await Assert.That(published.Select(s => s.Name)).IsEquivalentTo(builtin.Select(s => s.Name));
-        await Assert.That(published.Count(s => s.UsesWinws)).IsEqualTo(5);
+        await Assert.That(published.Count(s => s.UsesWinws)).IsEqualTo(7);
 
         var hostile = """
             [{"Name":"x","Description":"d","Packets":"","Lengths":"","Delays":"","Winws":"--dpi-desync=fake --wf-tcp=1-65535 --hostlist=C:\\evil.txt --dpi-desync-fake-tls=..\\..\\x.bin"},
