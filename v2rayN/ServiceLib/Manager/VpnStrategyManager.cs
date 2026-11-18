@@ -34,6 +34,8 @@ public enum VpnDiagnosis
     FreezesAfterHandshake,
     /// <summary>The server's address doesn't answer at all: IP block or the server is down.</summary>
     Unreachable,
+    /// <summary>The address answers ping but not TCP: the ISP blocked this IP (the server itself is up).</summary>
+    IpBlocked,
     /// <summary>The address answers, but nothing gets through, whatever the strategy.</summary>
     Blocked,
     /// <summary>The server can't be tested (no server selected, custom JSON config…).</summary>
@@ -295,6 +297,16 @@ public static class VpnStrategyManager
         progress?.Report(AppText.VpnDiagReach);
         var reachable = await TcpReachableAsync(host, port, ct);
 
+        // Network level: a blocked IP still answers ping; a whole hosting network may be frozen.
+        progress?.Report(AppText.VpnDiagNetwork);
+        var ip = await FirstAddressAsync(host, ct);
+        var pingOk = !reachable && ip != null && await ServerNetworkCheck.PingAsync(ip, ct);
+        var network = ip != null ? await ServerNetworkCheck.LookupAsync(ip, ct) : null;
+        if (network != null)
+        {
+            Logging.SaveLog($"{_tag}: server network AS{network.Asn} {network.AsName}{(network.Frozen != null ? " (frozen list)" : "")}");
+        }
+
         // winws strategies need zapret running: they restart it with a section for this server.
         var zapretRunning = ZapretManager.Instance.IsRunning;
         var results = new List<VpnStrategyResult>();
@@ -332,11 +344,35 @@ public static class VpnStrategyManager
                 await ZapretManager.Instance.StartAsync();
             }
         }
-        return Summarize(reachable, results);
+        return Summarize(reachable, results, pingOk, network);
     }
 
-    /// <summary>Pure decision part, kept separate for tests.</summary>
-    public static VpnDiagnosisReport Summarize(bool reachable, List<VpnStrategyResult> results)
+    private static async Task<IPAddress?> FirstAddressAsync(string host, CancellationToken ct)
+    {
+        try
+        {
+            var addresses = IPAddress.TryParse(host.Trim('[', ']'), out var ip)
+                ? [ip]
+                : await ZapretWatchdog.ResolveDirectAsync(host, ZapretWatchdog.PhysicalIPv4Address(), ct);
+            return addresses.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);
+        }
+        catch (Exception ex) when (ex is SocketException or IOException or HttpRequestException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Pure decision part, kept separate for tests. A frozen hosting network adds its note to any failure.</summary>
+    public static VpnDiagnosisReport Summarize(bool reachable, List<VpnStrategyResult> results, bool pingOk = false,
+        ServerNetwork? network = null)
+    {
+        var report = SummarizeCore(reachable, results, pingOk);
+        return network?.Frozen is { } frozen && report.Diagnosis != VpnDiagnosis.Works
+            ? report with { Text = report.Text + "\n" + string.Format(AppText.VpnDiagFrozenNetwork, frozen.Name, network.Asn) }
+            : report;
+    }
+
+    private static VpnDiagnosisReport SummarizeCore(bool reachable, List<VpnStrategyResult> results, bool pingOk)
     {
         var plain = results.FirstOrDefault(r => r.Strategy == null);
         var best = results.Where(r => r.Strategy != null && r.Works).OrderBy(r => r.DelayMs).FirstOrDefault();
@@ -353,7 +389,9 @@ public static class VpnStrategyManager
         }
         if (!reachable)
         {
-            return new(VpnDiagnosis.Unreachable, null, results, AppText.VpnDiagUnreachable);
+            return pingOk
+                ? new(VpnDiagnosis.IpBlocked, null, results, AppText.VpnDiagIpBlocked)
+                : new(VpnDiagnosis.Unreachable, null, results, AppText.VpnDiagUnreachable);
         }
         if (results.Any(r => r.Handshake))
         {

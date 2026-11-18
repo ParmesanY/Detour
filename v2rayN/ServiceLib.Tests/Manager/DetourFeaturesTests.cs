@@ -206,6 +206,37 @@ public class DetourFeaturesTests
     }
 
     [Test]
+    public async Task ServerNetwork_FrozenHostingNetworks()
+    {
+        await Assert.That(ServerNetworkCheck.ParseOriginAsn("\"16276 | 51.68.0.0/16 | FR | ripencc | 2014-09-05\"")).IsEqualTo(16276);
+        await Assert.That(ServerNetworkCheck.ParseOriginAsn("\"24940 213230 | 1.2.3.0/24 | DE | ripencc |\"")).IsEqualTo(24940);
+        await Assert.That(ServerNetworkCheck.ParseOriginAsn(null)).IsEqualTo(0);
+        await Assert.That(ServerNetworkCheck.ParseAsName("\"14061 | US | arin | 2012-09-25 | DIGITALOCEAN-ASN, US\"")).IsEqualTo("DIGITALOCEAN-ASN, US");
+
+        await Assert.That(ServerNetworkCheck.FindFrozen(24940, "")?.Name).IsEqualTo("Hetzner");
+        await Assert.That(ServerNetworkCheck.FindFrozen(99999, "AS-CHOOPA, US")?.Name).IsEqualTo("Vultr"); // by name
+        await Assert.That(ServerNetworkCheck.FindFrozen(15169, "GOOGLE, US")).IsNull();
+
+        // The published list is the built-in one.
+        var root = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(root, "strategies", "frozen-networks.json")))
+        {
+            root = Path.GetDirectoryName(root)!;
+        }
+        var published = ServerNetworkCheck.ParseList(File.ReadAllText(Path.Combine(root, "strategies", "frozen-networks.json")));
+        var builtin = ServerNetworkCheck.ParseList(ServerNetworkCheck.BuiltinJson());
+        await Assert.That(published.Select(n => n.Name)).IsEquivalentTo(builtin.Select(n => n.Name));
+        await Assert.That(ServerNetworkCheck.ParseList("""[{"Name":"x"},{"Name":"y","Patterns":["Y"]}]""").Select(n => n.Name)).IsEquivalentTo(new[] { "y" });
+
+        // Failover: within the same country a server on a frozen network goes after the others.
+        var picked = FailoverManager.PickNext(
+            [new("a", 50, 0, "AT", FrozenNetwork: true), new("b", 300, 1, "AT"), new("c", 20, 2, "DE")],
+            "cur", [], "AT");
+        await Assert.That(picked).IsEqualTo("b");
+        await Assert.That(ServerNetworkCheck.UsesUdp(new ProfileItem { ConfigType = EConfigType.Hysteria2 })).IsTrue();
+    }
+
+    [Test]
     public async Task TlsRecordSplit_CutsClientHelloIntoRecords()
     {
         // A fake 100-byte handshake record followed by 3 bytes of something else.
@@ -491,6 +522,12 @@ public class DetourFeaturesTests
         await Assert.That(VpnStrategyManager.Summarize(true, [R(null, true, false), R(general, true, false)]).Best).IsNull();
         await Assert.That(VpnStrategyManager.Summarize(false, [R(null, false, false), R(general, false, false)]).Diagnosis).IsEqualTo(VpnDiagnosis.Unreachable);
         await Assert.That(VpnStrategyManager.Summarize(true, [R(null, false, false), R(general, false, false)]).Diagnosis).IsEqualTo(VpnDiagnosis.Blocked);
+        // Ping answers, TCP doesn't: the IP is blocked, not the server down.
+        await Assert.That(VpnStrategyManager.Summarize(false, [R(null, false, false)], pingOk: true).Diagnosis).IsEqualTo(VpnDiagnosis.IpBlocked);
+        // A frozen hosting network adds its note to a failure, never to a working server.
+        var ovh = new ServerNetwork(16276, "OVH, FR", ServerNetworkCheck.FindFrozen(16276, "OVH, FR"));
+        await Assert.That(VpnStrategyManager.Summarize(true, [R(null, true, false)], network: ovh).Text).Contains("AS16276");
+        await Assert.That(VpnStrategyManager.Summarize(true, [R(null, true, true)], network: ovh).Text).DoesNotContain("AS16276");
 
         var config = new Config { ZapretItem = new(), CoreBasicItem = new() };
         VpnStrategyManager.Apply(config, fine);

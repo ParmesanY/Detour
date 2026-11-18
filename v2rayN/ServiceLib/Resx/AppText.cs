@@ -279,6 +279,11 @@ public static class AppText
         "The connection freezes after the first ~16 KB and fragmentation doesn't help. Ask your VPN provider for another transport (XHTTP, gRPC) or server.");
     public static string VpnDiagUnreachable => T("Адрес сервера не отвечает даже на простое подключение: IP заблокирован или сервер выключен. Дробление тут не поможет, нужен другой сервер.",
         "The server address doesn't answer even a plain connection: the IP is blocked or the server is down. Fragmentation won't help, use another server.");
+    public static string VpnDiagIpBlocked => T("Сервер отвечает на ping, но TCP-подключения до него не проходят: похоже, провайдер заблокировал IP этого сервера (соседние адреса обычно живы). Дробление не поможет: нужен другой адрес — попросите у провайдера VPN новый IP или возьмите другой сервер.",
+        "The server answers ping, but TCP connections to it don't get through: your ISP seems to have blocked this server's IP (neighbouring addresses usually work). Fragmentation won't help: you need another address — ask your VPN provider for a new IP or use another server.");
+    public static string VpnDiagFrozenNetwork => T("Сервер в сети {0} (AS{1}). По замерам ноября 2026 российские провайдеры замораживают TCP ко всей этой сети через несколько пакетов (на мобильном — ещё до конца рукопожатия), порт и протокол не важны. Обычно помогают UDP-протоколы (Hysteria2, TUIC, AmneziaWG) или сервер в другой сети; дробление здесь только тратит пакеты.",
+        "The server is in the {0} network (AS{1}). Measured in November 2026, Russian ISPs freeze TCP to this whole network after a few packets (on mobile, before the handshake even ends), whatever the port or protocol. UDP protocols (Hysteria2, TUIC, AmneziaWG) or a server in another network usually help; fragmentation only spends packets here.");
+    public static string VpnDiagNetwork => T("Проверяю сеть сервера (ping, хостинг)…", "Checking the server's network (ping, hosting)…");
     public static string VpnDiagBlocked => T("Сервер отвечает, но через него ничего не проходит ни с одной стратегией. Возможно, истекла подписка или сервер заблокирован по протоколу.",
         "The server answers, but nothing gets through with any strategy. The subscription may have expired, or the protocol is blocked.");
 

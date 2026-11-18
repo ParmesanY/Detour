@@ -47,6 +47,7 @@ public sealed class PresetListManager
     public void LoadCached()
     {
         VpnStrategyManager.LoadCachedList();
+        ServerNetworkCheck.LoadCachedList();
         try
         {
             if (!File.Exists(CachePath))
@@ -102,6 +103,7 @@ public sealed class PresetListManager
                 }
             }
             await VpnStrategyManager.UpdateListAsync(client, cancellationToken);
+            await ServerNetworkCheck.UpdateListAsync(client, cancellationToken);
             if (failed == Sources.Count)
             {
                 return "не удалось скачать ни один список";

@@ -1,0 +1,15 @@
+[
+  { "Name": "OVH", "Patterns": ["OVH"], "Asns": [16276] },
+  { "Name": "Hetzner", "Patterns": ["HETZNER"], "Asns": [24940, 213230, 212317] },
+  { "Name": "DigitalOcean", "Patterns": ["DIGITALOCEAN"], "Asns": [14061] },
+  { "Name": "Vultr", "Patterns": ["VULTR", "CHOOPA"], "Asns": [20473] },
+  { "Name": "M247", "Patterns": ["M247"], "Asns": [9009] },
+  { "Name": "Scaleway", "Patterns": ["SCALEWAY", "ONLINE S.A.S"], "Asns": [12876] },
+  { "Name": "GTHost", "Patterns": ["GTHOST"], "Asns": [63023] },
+  { "Name": "HostPapa", "Patterns": ["HOSTPAPA"], "Asns": [] },
+  { "Name": "BuyVM", "Patterns": ["FRANTECH", "BUYVM"], "Asns": [53667] },
+  { "Name": "Clouvider", "Patterns": ["CLOUVIDER"], "Asns": [62240] },
+  { "Name": "Glesys", "Patterns": ["GLESYS"], "Asns": [42708] },
+  { "Name": "iomart", "Patterns": ["IOMART"], "Asns": [20860] },
+  { "Name": "TransitX", "Patterns": ["TRANSITX"], "Asns": [] }
+]

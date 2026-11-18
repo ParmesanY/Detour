@@ -137,10 +137,22 @@ public sealed class FailoverManager
         var current = await AppManager.Instance.GetProfileItem(config.IndexId);
         var group = await AppManager.Instance.ProfileItems(current?.Subid ?? config.SubIndexId) ?? [];
         var exs = (await ProfileExManager.Instance.GetProfileExs()).ToDictionary(e => e.IndexId, e => e);
+        // Servers on hosting networks Russian ISPs freeze as a whole go last (within the same country).
+        HashSet<string> frozen;
+        try
+        {
+            using var lookup = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            frozen = await ServerNetworkCheck.FrozenServersAsync(group.Where(p => p.IndexId != config.IndexId), lookup.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            frozen = [];
+        }
         var candidates = group.Select(p => new Candidate(p.IndexId,
                 exs.TryGetValue(p.IndexId, out var ex) ? ex.Delay : 0,
                 exs.TryGetValue(p.IndexId, out var ex2) ? ex2.Sort : 0,
-                ServerNameFormatter.ExitCountry(p.Remarks)))
+                ServerNameFormatter.ExitCountry(p.Remarks),
+                frozen.Contains(p.IndexId)))
             .ToList();
         var next = PickNext(candidates, config.IndexId, _tried.Keys, ServerNameFormatter.ExitCountry(current?.Remarks));
         if (next == null)
@@ -158,7 +170,7 @@ public sealed class FailoverManager
         SwitchRequested?.Invoke(next, nextItem.Remarks);
     }
 
-    public record Candidate(string IndexId, int Delay, int Sort, string? Country = null);
+    public record Candidate(string IndexId, int Delay, int Sort, string? Country = null, bool FrozenNetwork = false);
 
     /// <summary>
     /// Next server: same exit country as the current one first (people pick a country for a reason:
@@ -172,6 +184,7 @@ public sealed class FailoverManager
         return candidates
             .Where(c => !skip.Contains(c.IndexId))
             .OrderBy(c => country != null && c.Country == country ? 0 : 1)
+            .ThenBy(c => c.FrozenNetwork ? 1 : 0)
             .ThenBy(c => c.Delay > 0 ? 0 : c.Delay == 0 ? 1 : 2)
             .ThenBy(c => c.Delay > 0 ? c.Delay : 0)
             .ThenBy(c => c.Sort)

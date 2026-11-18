@@ -38,6 +38,11 @@ public static class StrategyRegistry
         new($"{ZapretDesync.RegistryPrefix}exp-fake-yandex-md5",
             "--dpi-desync=fake,multisplit --dpi-desync-split-pos=1,sniext+1 --dpi-desync-repeats=6 --dpi-desync-fooling=md5sig --dpi-desync-fake-tls-mod=rnd,dupsid,sni=yandex.ru",
             AppText.ZapretExperimentalNote),
+        // Flowseal #18739 (10 Nov 2026, Dom.ru Volgograd): replaced hostfakesplit on the Google list; here on the general profile.
+        new($"{ZapretDesync.RegistryPrefix}exp-multidisorder-midsld-google",
+            "--dpi-desync=fake,multidisorder --dpi-desync-split-pos=1,midsld --dpi-desync-repeats=11 --dpi-desync-fooling=badseq "
+            + "--dpi-desync-fake-tls-mod=rnd,dupsid,sni=www.google.com --ip-id=zero",
+            AppText.ZapretExperimentalNote),
         new($"{ZapretDesync.RegistryPrefix}exp-hostfakesplit-vk",
             "--dpi-desync=fake,hostfakesplit --dpi-desync-fake-tls-mod=rnd,dupsid,sni=vk.com --dpi-desync-hostfakesplit-mod=host=vk.com,altorder=1 --dpi-desync-fooling=ts",
             AppText.ZapretExperimentalNote),

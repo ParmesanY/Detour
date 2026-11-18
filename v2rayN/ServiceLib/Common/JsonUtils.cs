@@ -275,6 +275,7 @@ public class JsonUtils
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(List<int>))]
 [JsonSerializable(typeof(List<VpnStrategy>))]
+[JsonSerializable(typeof(List<FrozenNetwork>))]
 [JsonSerializable(typeof(PresetListManager.Cache))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(Dictionary<string, object>))]
