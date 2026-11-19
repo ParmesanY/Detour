@@ -52,6 +52,8 @@ jobs:
   # come off cleanly, also after a client crash. Never run these tests on a developer's PC.
   killswitch:
     runs-on: windows-latest
+    # A block that cuts the runner itself off would otherwise hang the job for hours (0.3.11's first run did).
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,14 +64,27 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Firewall on
+      # Built before the block: nothing has to be downloaded while outbound traffic is cut.
+      - name: Build tests
+        run: dotnet build v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj
+
+      # The kill switch blocks every program it doesn't know, the runner's own agent included: it would no longer
+      # reach GitHub, and the job would hang. Allow the agent (not part of what's tested: curl stands for "others").
+      - name: Firewall on, runner allowed
         shell: pwsh
-        run: Set-NetFirewallProfile -All -Enabled True
+        run: |
+          Set-NetFirewallProfile -All -Enabled True
+          $agents = Get-Process Runner.Listener, Runner.Worker -ErrorAction SilentlyContinue | ForEach-Object Path | Sort-Object -Unique
+          foreach ($p in $agents) {
+            New-NetFirewallRule -DisplayName "ci runner $([IO.Path]::GetFileName($p))" -Group 'ci-runner' -Direction Outbound -Action Allow -Program $p | Out-Null
+            Write-Host "allowed $p"
+          }
+          if (-not $agents) { throw 'runner processes not found' }
 
       - name: Kill switch tests
         env:
           DETOUR_LIVE_KILLSWITCH: '1'
-        run: dotnet test --project v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj -- --treenode-filter "/*/*/KillSwitchLiveTests/*"
+        run: dotnet test --no-build --project v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj -- --treenode-filter "/*/*/KillSwitchLiveTests/*"
 
   build:
     # Not on killswitch yet: make it a gate once it has run green on GitHub a few times.
