@@ -48,13 +48,41 @@ jobs:
       - name: Test
         run: dotnet test --project v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj
 
+  # The kill switch for real on a throwaway runner (elevated): the firewall rule must cut other programs off and
+  # come off cleanly, also after a client crash. Never run these tests on a developer's PC.
+  killswitch:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Firewall on
+        shell: pwsh
+        run: Set-NetFirewallProfile -All -Enabled True
+
+      - name: Kill switch tests
+        env:
+          DETOUR_LIVE_KILLSWITCH: '1'
+        run: dotnet test --project v2rayN/ServiceLib.Tests/ServiceLib.Tests.csproj -- --treenode-filter "/*/*/KillSwitchLiveTests/*"
+
   build:
+    # Not on killswitch yet: make it a gate once it has run green on GitHub a few times.
     needs: test
     strategy:
       fail-fast: false
-      # macOS runners are scarce and often time out in the queue: build them only for release tags.
+      # macOS runners are scarce and can sit in the queue for hours: they build after the release is out (build-macos).
       matrix:
-        include: ${{ fromJSON(github.ref_type == 'tag' && '[{"os":"windows-latest","rid":"win-x64"},{"os":"ubuntu-latest","rid":"linux-x64"},{"os":"macos-latest","rid":"osx-arm64"},{"os":"macos-latest","rid":"osx-x64"}]' || '[{"os":"windows-latest","rid":"win-x64"},{"os":"ubuntu-latest","rid":"linux-x64"}]') }}
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -108,7 +136,7 @@ jobs:
             out/Detour*.tar.gz
             out/Detour*.sha256
 
-  # One job publishes the release once all builds are done (one description, one set of checksums).
+  # One job publishes the release once Windows and Linux are built (one description, one SHA256SUMS.txt).
   publish:
     needs: build
     if: startsWith(github.ref, 'refs/tags/v')
@@ -134,3 +162,66 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+
+  # macOS for release tags, after the release is published: a long runner queue no longer holds it back.
+  build-macos:
+    needs: publish
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [osx-arm64, osx-x64]
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Package
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./tools/package-release.ps1 -OutDir out -Version $env:GITHUB_REF_NAME -Rid ${{ matrix.rid }}
+
+      - name: Check archive
+        shell: pwsh
+        run: |
+          $x = Join-Path $env:RUNNER_TEMP 'smoke'
+          New-Item -ItemType Directory -Force $x | Out-Null
+          $a = Get-ChildItem out -File -Filter 'Detour*.tar.gz' | Select-Object -First 1
+          tar -xzf $a.FullName -C $x; if ($LASTEXITCODE) { throw 'tar failed' }
+          foreach ($f in 'Detour', 'bin/xray/xray', 'bin/sing_box/sing-box', 'bin/zapret/tpws/tpws', 'bin/geoip.dat', 'bin/geosite.dat') {
+            if (-not (Test-Path (Join-Path $x "Detour/$f"))) { throw "missing in archive: $f" }
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Detour-${{ matrix.rid }}
+          path: |
+            out/Detour*.tar.gz
+            out/Detour*.sha256
+
+  # Adds the macOS archives (and their .sha256) to the release published above.
+  publish-macos:
+    needs: build-macos
+    if: always() && startsWith(github.ref, 'refs/tags/v') && needs.build-macos.result != 'skipped' && needs.build-macos.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Detour-osx-*
+          path: dist
+          merge-multiple: true
+
+      - name: Add to release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
+        with:
+          files: dist/*

@@ -28,6 +28,11 @@ public class ZapretDesyncTests
     [Test]
     public async Task Apply_replaces_only_the_general_profile_desync()
     {
+        // Windows paths and winws-only behaviour (Linux and macOS use tpws).
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
         var result = ZapretDesync.Apply(Args(), ["--dpi-desync=fake", "--dpi-desync-fooling=ts", "--dpi-desync-fake-tls=%BIN%tls_clienthello_www_google_com.bin"], Bin)!;
         await result.Should().NotBeNull();
         var (start, end) = ZapretDesync.GeneralProfile(result)!.Value;

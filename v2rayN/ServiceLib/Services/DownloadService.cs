@@ -316,6 +316,48 @@ public class DownloadService : IDisposable
     /// <summary>
     ///     Downloads string content via HttpClient.
     /// </summary>
+    /// <summary>Subscriptions, lists and API answers are far smaller; a bigger body is hostile or broken.</summary>
+    public const long MaxTextBytes = 32L * 1024 * 1024;
+
+    /// <summary>Reads a text body, refusing anything over <paramref name="maxBytes"/> before it fills memory.</summary>
+    public static async Task<string> ReadLimitedAsync(HttpContent content, long maxBytes, CancellationToken ct)
+    {
+        if (content.Headers.ContentLength > maxBytes)
+        {
+            throw new InvalidDataException($"response too large: {content.Headers.ContentLength} bytes");
+        }
+        await using var stream = await content.ReadAsStreamAsync(ct);
+        using var ms = new MemoryStream();
+        var buffer = new byte[81920];
+        int read;
+        while ((read = await stream.ReadAsync(buffer, ct)) > 0)
+        {
+            if (ms.Length + read > maxBytes)
+            {
+                throw new InvalidDataException($"response larger than {maxBytes} bytes");
+            }
+            ms.Write(buffer, 0, read);
+        }
+        var charset = content.Headers.ContentType?.CharSet;
+        Encoding encoding;
+        try
+        {
+            encoding = charset.IsNullOrEmpty() ? Encoding.UTF8 : Encoding.GetEncoding(charset!.Trim('"'));
+        }
+        catch (ArgumentException)
+        {
+            encoding = Encoding.UTF8;
+        }
+        // Strip a BOM like ReadAsStringAsync does.
+        var bytes = ms.GetBuffer().AsSpan(0, (int)ms.Length);
+        var preamble = encoding.Preamble;
+        if (preamble.Length > 0 && bytes.StartsWith(preamble))
+        {
+            bytes = bytes[preamble.Length..];
+        }
+        return encoding.GetString(bytes);
+    }
+
     private async Task<string?> DownloadStringAsync(string url,
         CancellationToken cancellationToken = default)
     {
@@ -340,7 +382,7 @@ public class DownloadService : IDisposable
             LastHeaders = response.Headers.Concat(response.Content.Headers)
                 .GroupBy(h => h.Key, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => string.Join(", ", g.First().Value), StringComparer.OrdinalIgnoreCase);
-            return await response.Content.ReadAsStringAsync(linkedCts.Token);
+            return await ReadLimitedAsync(response.Content, MaxTextBytes, linkedCts.Token);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

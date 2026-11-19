@@ -102,7 +102,13 @@ public static class FileUtils
                     {
                         continue;
                     }
-                    entry.ExtractToFile(Path.Combine(toPath, entry.Name), true);
+                    // entry.Name of a zip made on Unix keeps backslashes, so "..\..\x" would leave toPath on Windows.
+                    if (SafeEntryPath(toPath, entry.Name) is not { } target)
+                    {
+                        Logging.SaveLog($"{_tag}: skipped unsafe zip entry {entry.FullName}");
+                        continue;
+                    }
+                    entry.ExtractToFile(target, true);
                 }
                 catch (IOException ex)
                 {
@@ -116,6 +122,22 @@ public static class FileUtils
             return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// The full path of a flat (file-name-only) entry inside <paramref name="dir"/>, or null when the name is
+    /// rooted, has a directory part in either separator, or would resolve outside the folder.
+    /// </summary>
+    public static string? SafeEntryPath(string dir, string name)
+    {
+        if (name.Length == 0 || name.IndexOfAny(['/', '\\', ':']) >= 0 || name is "." or ".." || Path.IsPathRooted(name))
+        {
+            return null;
+        }
+        var root = Path.GetFullPath(dir);
+        var target = Path.GetFullPath(Path.Combine(root, name));
+        var rootWithSep = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
+        return target.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase) ? target : null;
     }
 
     public static List<string>? GetFilesFromZip(string fileName)

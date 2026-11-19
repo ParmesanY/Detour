@@ -35,6 +35,16 @@ public static partial class DiagnosticsReport
 
         W($"=== Detour diagnostics {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         W($"app {AppUpdateManager.CurrentVersion} (base {Utils.GetVersionInfo()}), {Environment.OSVersion}, admin={Utils.IsAdministrator()}");
+        if (AppFolderAccess.NonAdminWriters(Utils.StartupPath()) is { Count: > 0 } writers)
+        {
+            W($"app folder writable without admin rights by: {string.Join(", ", writers)}"
+              + (Utils.IsAdministrator() ? " (Detour runs elevated: a program could swap its files; Program Files is safer)" : ""));
+        }
+        if (Environment.GetEnvironmentVariable(Global.LocalAppData) == "1"
+            && AppFolderAccess.NonAdminWriters(Utils.GetBinPath("")) is { Count: > 0 } binWriters)
+        {
+            W($"cores run from {Utils.GetBinPath("")} (settings in LocalAppData), writable by: {string.Join(", ", binWriters)}");
+        }
 
         W();
         W("--- processes");

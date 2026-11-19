@@ -88,6 +88,11 @@ public class DetourFeaturesTests
     [Test]
     public async Task Registry_ExperimentsAfterHints()
     {
+        // Windows paths and winws-only behaviour (Linux and macOS use tpws).
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
         await Assert.That(StrategyRegistry.Experimental.All(e => ZapretDesync.Tokens(e.Desync) is not null)).IsTrue();
         await Assert.That(StrategyRegistry.Experimental.All(e => e.Name.StartsWith(ZapretDesync.RegistryPrefix))).IsTrue();
 
@@ -239,6 +244,11 @@ public class DetourFeaturesTests
     [Test]
     public async Task TlsRecordSplit_CutsClientHelloIntoRecords()
     {
+        // Windows paths and winws-only behaviour (Linux and macOS use tpws).
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
         // A fake 100-byte handshake record followed by 3 bytes of something else.
         var payload = Enumerable.Range(0, 100).Select(i => (byte)i).ToArray();
         byte[] hello = [0x16, 0x03, 0x01, 0x00, 100, .. payload, 0xAA, 0xBB, 0xCC];

@@ -78,7 +78,7 @@ public sealed class PresetListManager
             var cache = new Cache { Updated = DateTime.Now };
             var failed = 0;
             using var handler = HttpClientHelper.Instance.CreateFallbackHandler(true);
-            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
+            using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30), MaxResponseContentBufferSize = 8 * 1024 * 1024 };
             foreach (var (id, file) in Sources)
             {
                 List<string>? domains = null;

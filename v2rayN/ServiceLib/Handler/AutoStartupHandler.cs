@@ -61,7 +61,7 @@ public static class AutoStartupHandler
         {
             var autoRunName = GetAutoRunNameWindows();
             var exePath = Utils.GetExePath();
-            if (Utils.IsAdministrator())
+            if (Utils.IsAdministrator() && ElevatedAutoRunIsSafe(Path.GetDirectoryName(exePath)!))
             {
                 AutoStartTaskService(autoRunName, exePath, "");
             }
@@ -75,6 +75,35 @@ public static class AutoStartupHandler
             Logging.SaveLog(_tag, ex);
         }
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// The logon task starts Detour elevated without asking. From a folder any program of the user can write to,
+    /// that hands admin rights to whoever swaps Detour.exe or a DLL there. Then the plain Run entry is used instead:
+    /// Detour starts without rights and asks for them through UAC (it does so itself when zapret is on).
+    /// </summary>
+    public static bool ElevatedAutoRunIsSafe(string appDir)
+    {
+        var writers = AppFolderAccess.NonAdminWriters(appDir);
+        if (writers.Count == 0)
+        {
+            return true;
+        }
+        Logging.SaveLog($"{_tag}: {appDir} is writable by {string.Join(", ", writers)}: autorun without silent elevation");
+        // Once: the next UAC prompt at logon would otherwise come out of nowhere.
+        var marker = Utils.GetConfigPath("autorun-uac-noted");
+        if (!File.Exists(marker))
+        {
+            NoticeManager.Instance.Enqueue(AppText.AutoRunNotElevated);
+            try
+            {
+                File.WriteAllText(marker, "");
+            }
+            catch (IOException)
+            {
+            }
+        }
+        return false;
     }
 
     /// <summary>

@@ -34,5 +34,13 @@
                  "sha256":  {
                                 "zapret-v72.13.zip":  "c493e33a0dc4eba23a8686efdaba55f59755ad6ade3564aebd9d13f4c65e2e0c"
                             }
+             },
+    "tgws":  {
+                 "repo":  "Flowseal/tg-ws-proxy",
+                 "tag":  "v1.11.4",
+                 "sha256":  {
+                                "TgWsProxy_windows.exe":  "454205cbcf76f333934108d893b58a528373bce8096624e27f0b6dc16eea660f",
+                                "TgWsProxy_windows_arm64.exe":  "6db3e04c531060328339357d6f2cd805cbc4f8276b76d4e4223dcaa4c971dc64"
+                            }
              }
 }

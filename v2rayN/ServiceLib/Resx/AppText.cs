@@ -487,6 +487,18 @@ public static class AppText
         "the release isn't signed yet. Try later or download the archive from the release page.");
     public static string UpdateBadSignature => T("подпись архива не совпала, обновление не установлено. Возможно, файл подменили: скачайте релиз вручную и сверьте SHA256SUMS.txt.",
         "the archive's signature didn't match, nothing was installed. The file may have been replaced: download the release by hand and check SHA256SUMS.txt.");
+    public static string TrustedListUnavailable => T(
+        "не удалось получить подписанный список проверенных версий Detour (GitHub недоступен?). Без проверки программа не ставится; попробуйте с включённым VPN.",
+        "couldn't get Detour's signed list of checked versions (GitHub unreachable?). Nothing is installed unchecked; try with the VPN on.");
+    public static string TrustedNotListed => T(
+        "версию {0} Detour ещё не проверил. Она станет доступна, когда попадёт в список проверенных; пока работает текущая.",
+        "Detour hasn't checked {0} yet. It becomes available once it's on the checked list; the current one keeps working.");
+    public static string TrustedMismatch => T(
+        "файл не совпал с проверенной версией (подменён или повреждён), не установлен.",
+        "the file doesn't match the checked version (replaced or damaged), not installed.");
+    public static string AutoRunNotElevated => T(
+        "Автозапуск без тихих прав администратора: в папку Detour может писать любая программа, и подменённый файл получил бы права. При входе Windows спросит разрешение (UAC). Чтобы без вопроса — положите Detour в C:\\Program Files.",
+        "Autorun without silent admin rights: any program can write to Detour's folder, and a swapped file would get them. At logon Windows asks (UAC). To skip the prompt, put Detour in C:\\Program Files.");
     public static string UpdateNoKey => T("в этой сборке нет ключа подписи релизов, обновите вручную со страницы релиза.",
         "this build has no release signing key; update by hand from the release page.");
 

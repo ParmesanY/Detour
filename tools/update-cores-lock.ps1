@@ -2,7 +2,8 @@ param(
     [string]$Xray = '',      # tag, empty = latest
     [string]$SingBox = '',
     [string]$Zapret = '',    # Flowseal/zapret-discord-youtube
-    [string]$Tpws = ''       # bol-van/zapret
+    [string]$Tpws = '',      # bol-van/zapret
+    [string]$TgWs = ''       # Flowseal/tg-ws-proxy (installed by the app, not shipped in the archive)
 )
 # Pins the cores a release ships: writes tools/cores.lock.json with each release tag and the SHA-256 of
 # every asset package-release.ps1 downloads. Hashes come from GitHub's asset digests. Run it on purpose
@@ -34,7 +35,9 @@ $lock = [ordered]@{
     singbox = Pin 'SagerNet/sing-box' $SingBox @('sing-box-{ver}-windows-amd64.zip', 'sing-box-{ver}-linux-amd64.tar.gz', 'sing-box-{ver}-linux-arm64.tar.gz', 'sing-box-{ver}-darwin-amd64.tar.gz', 'sing-box-{ver}-darwin-arm64.tar.gz')
     zapret = Pin 'Flowseal/zapret-discord-youtube' $Zapret @('zapret-discord-youtube-{tag}.zip')
     tpws = Pin 'bol-van/zapret' $Tpws @('zapret-{tag}.zip')
+    tgws = Pin 'Flowseal/tg-ws-proxy' $TgWs @('TgWsProxy_windows.exe', 'TgWsProxy_windows_arm64.exe')
 }
 $path = Join-Path $PSScriptRoot 'cores.lock.json'
 [IO.File]::WriteAllText($path, ($lock | ConvertTo-Json -Depth 5) + "`n", (New-Object Text.UTF8Encoding $false))
-Write-Host "Pinned: Xray $($lock.xray.tag), sing-box $($lock.singbox.tag), zapret $($lock.zapret.tag), tpws $($lock.tpws.tag) -> $path"
+Write-Host "Pinned: Xray $($lock.xray.tag), sing-box $($lock.singbox.tag), zapret $($lock.zapret.tag), tpws $($lock.tpws.tag), TG WS $($lock.tgws.tag) -> $path"
+Write-Host "Next: tools/sign-trusted-assets.ps1 signs the list the app installs from, then commit both."

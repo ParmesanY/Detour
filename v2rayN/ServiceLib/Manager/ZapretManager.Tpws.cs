@@ -85,7 +85,12 @@ public partial class ZapretManager
         var zipPath = Utils.GetTempPath($"zapret-{Utils.GetGuid()}.zip");
         try
         {
-            if (version.IsNullOrEmpty())
+            if (version.IsNullOrEmpty() && AppUpdateManager.IsConfigured)
+            {
+                // Release builds install the version on Detour's signed list.
+                version = TrustedAssets.TagFor(await TrustedAssets.LoadAsync(downloadService, cancellationToken), TpwsRepoUrl, ".zip");
+            }
+            else if (version.IsNullOrEmpty())
             {
                 var location = await downloadService.ResolveFinalUrlAsync($"{TpwsRepoUrl}/releases/latest", cancellationToken);
                 version = ParseReleaseTag(location);
@@ -103,6 +108,10 @@ public partial class ZapretManager
             if (!File.Exists(zipPath) || new FileInfo(zipPath).Length == 0)
             {
                 return (false, $"download failed: {downloadError ?? url}");
+            }
+            if (await TrustedAssets.CheckAsync(downloadService, TpwsRepoUrl, version!, $"zapret-{version}.zip", zipPath, cancellationToken) is { } digestError)
+            {
+                return (false, digestError);
             }
 
             await Report(progress, "Unpacking");

@@ -49,11 +49,19 @@ public partial class UpdateService(DownloadService downloadService, Config confi
     {
         var url = string.Empty;
         var fileName = string.Empty;
+        string? expectedSha256 = null;
 
         downloadService.UpdateCompleted += (sender2, args) =>
         {
             if (args.Success)
             {
+                // Cores run elevated: an archive that differs from GitHub's published hash is never unpacked.
+                if (GitHubDigest.Check(fileName, expectedSha256) is { } digestError)
+                {
+                    Logging.SaveLog($"{_tag}: {url}: {digestError}");
+                    _ = UpdateFunc(false, digestError);
+                    return;
+                }
                 _ = UpdateFunc(false, ResUI.MsgDownloadV2rayCoreSuccessfully);
                 _ = UpdateFunc(false, ResUI.MsgUnpacking);
 
@@ -86,6 +94,23 @@ public partial class UpdateService(DownloadService downloadService, Config confi
             url = result.Url!;
             var ext = url.Contains(".tar.gz") ? ".tar.gz" : Path.GetExtension(url);
             fileName = Utils.GetTempPath(Utils.GetGuid() + ext);
+            if (AppUpdateManager.IsConfigured)
+            {
+                // Release builds: only a version on Detour's signed list, with its hash (fail closed).
+                var list = await TrustedAssets.LoadAsync(downloadService, cancellationToken);
+                if (list is null || !list.TryGetValue(url, out expectedSha256))
+                {
+                    // Not on the list (or no list): Check only builds the message, the file isn't read.
+                    var listError = TrustedAssets.Check(list, url, "");
+                    Logging.SaveLog($"{_tag}: {url}: {listError}");
+                    await UpdateFunc(false, listError ?? AppText.TrustedListUnavailable);
+                    return;
+                }
+            }
+            else if (GitHubDigest.ParseAssetUrl(url) is { } asset)
+            {
+                expectedSha256 = await GitHubDigest.GetAsync(downloadService, asset.RepoUrl, asset.Tag, asset.Name, cancellationToken);
+            }
             await downloadService.DownloadFileAsync(new() { FileUrl = url, FilePath = fileName }, cancellationToken);
         }
         else

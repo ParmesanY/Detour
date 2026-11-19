@@ -100,10 +100,13 @@ public partial class ZapretManager
         var stagingDir = Path.Combine(RootDir, "staging");
         try
         {
-            version ??= await GetLatestVersionAsync(downloadService, cancellationToken);
+            // Release builds install the version on Detour's signed list; local builds the latest.
+            version ??= AppUpdateManager.IsConfigured
+                ? TrustedAssets.TagFor(await TrustedAssets.LoadAsync(downloadService, cancellationToken), RepoUrl, ".zip")
+                : await GetLatestVersionAsync(downloadService, cancellationToken);
             if (version.IsNullOrEmpty())
             {
-                return (false, "could not resolve the latest zapret release (GitHub unreachable?)");
+                return (false, AppUpdateManager.IsConfigured ? AppText.TrustedListUnavailable : "could not resolve the latest zapret release (GitHub unreachable?)");
             }
 
             var url = $"{RepoUrl}/releases/download/{version}/zapret-discord-youtube-{version}.zip";
@@ -114,6 +117,11 @@ public partial class ZapretManager
             if (!File.Exists(zipPath) || new FileInfo(zipPath).Length == 0)
             {
                 return (false, $"download failed: {downloadError ?? url}");
+            }
+            // winws runs elevated: refuse an archive whose hash differs from the one GitHub published.
+            if (await TrustedAssets.CheckAsync(downloadService, RepoUrl, version!, $"zapret-discord-youtube-{version}.zip", zipPath, cancellationToken) is { } digestError)
+            {
+                return (false, digestError);
             }
 
             await Report(progress, "Unpacking");

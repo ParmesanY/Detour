@@ -61,3 +61,7 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+# Signed files: the signature covers the exact bytes, so git must never convert their line endings.
+strategies/trusted-assets.json -text
+strategies/trusted-assets.json.sig -text

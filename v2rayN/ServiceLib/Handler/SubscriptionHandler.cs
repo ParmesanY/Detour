@@ -114,8 +114,8 @@ public class SubscriptionHandler(
         var ret = await ConfigHandler.AddBatchServers(_config, result, id, true);
         if (ret <= 0)
         {
-            Logging.SaveLog("FailedImportSubscription");
-            Logging.SaveLog(result);
+            // Never the body itself: it holds server keys (often base64, past the help archive's redaction).
+            Logging.SaveLog($"FailedImportSubscription: {result.Length} chars, starts with {DescribeStart(result)}");
         }
 
         // Update completion message
@@ -124,6 +124,25 @@ public class SubscriptionHandler(
             : $"{hashCode}{ResUI.MsgFailedImportSubscription}");
 
         return ret > 0;
+    }
+
+    /// <summary>What a failed subscription body looks like, without a single byte of it.</summary>
+    public static string DescribeStart(string s)
+    {
+        var t = s.TrimStart();
+        if (t.Length == 0)
+        {
+            return "nothing";
+        }
+        if (t[0] == '<')
+        {
+            return "'<' (an HTML page?)";
+        }
+        if (t[0] is '{' or '[')
+        {
+            return $"'{t[0]}' (JSON)";
+        }
+        return t.Take(64).All(c => char.IsAsciiLetterOrDigit(c) || c is '+' or '/' or '=' or '-' or '_') ? "base64-like text" : "other text";
     }
 
     private class SubscriptionHandlerProcessor : IDisposable

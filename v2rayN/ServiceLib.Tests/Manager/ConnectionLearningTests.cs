@@ -20,6 +20,11 @@ public class ConnectionLearningTests
     [Test]
     public async Task Collect_OnlyTargetProcess_DomainsAndPublicIps()
     {
+        // Windows paths and winws-only behaviour (Linux and macOS use tpws).
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
         var connections = new List<ConnectionItem>
         {
             Conn("Discord.exe", "cdn.discordapp.com"),

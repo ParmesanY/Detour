@@ -111,7 +111,9 @@ public class TgWsProxyManager
         var tmpPath = Utils.GetTempPath($"tgwsproxy-{Utils.GetGuid()}.exe");
         try
         {
-            version ??= await GetLatestVersionAsync(downloadService, cancellationToken);
+            version ??= AppUpdateManager.IsConfigured
+                ? TrustedAssets.TagFor(await TrustedAssets.LoadAsync(downloadService, cancellationToken), RepoUrl, AssetName(RuntimeInformation.OSArchitecture))
+                : await GetLatestVersionAsync(downloadService, cancellationToken);
             if (version.IsNullOrEmpty())
             {
                 return (false, "could not resolve the latest TG WS Proxy release (GitHub unreachable?)");
@@ -125,6 +127,10 @@ public class TgWsProxyManager
             if (!File.Exists(tmpPath) || new FileInfo(tmpPath).Length < MinExeSize)
             {
                 return (false, $"download failed: {downloadError ?? url}");
+            }
+            if (await TrustedAssets.CheckAsync(downloadService, RepoUrl, version!, AssetName(RuntimeInformation.OSArchitecture), tmpPath, cancellationToken) is { } digestError)
+            {
+                return (false, digestError);
             }
 
             var wasRunning = IsRunning;

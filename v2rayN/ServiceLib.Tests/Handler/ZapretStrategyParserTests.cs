@@ -29,6 +29,11 @@ public class ZapretStrategyParserTests
     [Test]
     public async Task Parse_GeneralBat_ExpandsPathsAndJoinsContinuationLines()
     {
+        // Windows paths and winws-only behaviour (Linux and macOS use tpws).
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
         var args = ZapretStrategyParser.Parse(GeneralBat, BinDir, ListsDir, "disabled", out var error);
 
         await args.Should().NotBeNull().Because(error);
@@ -44,6 +49,11 @@ public class ZapretStrategyParserTests
     [Test]
     public async Task Parse_AddsClientIpsetNextToEveryIpsetAll()
     {
+        // Windows paths and winws-only behaviour (Linux and macOS use tpws).
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
         var args = ZapretStrategyParser.Parse(GeneralBat, BinDir, ListsDir, "disabled", out _)!;
 
         var userIpset = $@"--ipset={ListsDir}\{ZapretStrategyParser.UserIpsetFile}";
