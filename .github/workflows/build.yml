@@ -128,7 +128,7 @@ jobs:
           if ($line -ne (Get-FileHash $a.FullName -Algorithm SHA256).Hash.ToLowerInvariant()) { throw 'sha256 file does not match' }
           Write-Host "OK: $($a.Name)"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Detour-${{ matrix.rid }}
           path: |
@@ -200,7 +200,7 @@ jobs:
             if (-not (Test-Path (Join-Path $x "Detour/$f"))) { throw "missing in archive: $f" }
           }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Detour-${{ matrix.rid }}
           path: |
