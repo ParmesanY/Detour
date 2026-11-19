@@ -3,6 +3,18 @@ namespace ServiceLib.Tests.Manager;
 public class KillSwitchTests
 {
     [Test]
+    public async Task AllowedPrograms_WalksEveryCoreWithoutThrowing()
+    {
+        // The client's own entry has no CoreExes; iterating it threw and the kill switch never engaged.
+        foreach (var core in CoreInfoManager.Instance.GetCoreInfo())
+        {
+            _ = CoreInfoManager.Instance.GetCoreExecFile(core, out _);
+        }
+        var programs = KillSwitchManager.AllowedPrograms();
+        await Assert.That(programs).Contains(Utils.GetExePath());
+    }
+
+    [Test]
     public async Task EngageScript_AllowsProgramsAndLan_ThenBlocksOutbound()
     {
         var script = KillSwitchManager.BuildEngageScript([@"C:\App\v2rayN.exe", @"C:\Apps\it's\xray.exe"]);

@@ -278,6 +278,7 @@ public class JsonUtils
 [JsonSerializable(typeof(List<FrozenNetwork>))]
 [JsonSerializable(typeof(PresetListManager.Cache))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
+[JsonSerializable(typeof(Dictionary<string, NetworkProfile>))]
 [JsonSerializable(typeof(Dictionary<string, object>))]
 [JsonSerializable(typeof(object))]
 [JsonSerializable(typeof(JsonElement))]

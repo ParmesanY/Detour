@@ -17,4 +17,7 @@ public static class AppEvents
 
     /// <summary>Regenerate core configs and restart cores (e.g. after a zapret→VPN switch).</summary>
     public static readonly EventChannel<RxVoid> CoreReloadRequested = new();
+
+    /// <summary>Files Detour had (WinDivert, winws, cores) are gone: most likely the antivirus took them.</summary>
+    public static readonly EventChannel<List<string>> FilesRemovedDetected = new();
 }

@@ -363,6 +363,8 @@ public partial class ZapretManager
         {
             return await StartTpwsAsync();
         }
+        // Files the antivirus took (WinDivert, winws) are reported to the user with the fix.
+        IntegrityCheck.Run();
         if (!IsInstalled)
         {
             return (false, "zapret is not installed");
@@ -693,6 +695,11 @@ public partial class ZapretManager
             item.SiteRecords = string.Empty;
         }
         await ConfigHandler.SaveConfig(config);
+        if (best is { Passed: > 0 })
+        {
+            // Back on this network later, this strategy comes back by itself.
+            NetworkProfiles.RememberCurrent(item);
+        }
         // Lists for the final choice; the cores route zapret rules differently with and without the record split.
         await ConnectionRulesManager.Instance.SyncZapretAsync(config);
         if (item.SiteRecords != original.SiteRecords)

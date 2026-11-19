@@ -205,6 +205,12 @@ public partial class MainWindow
               .Subscribe(async content => await DelegateSnackMsg(content))
               .DisposeWith(disposables);
 
+            AppEvents.FilesRemovedDetected
+              .AsObservable()
+              .ObserveOn(RxSchedulers.MainThreadScheduler)
+              .Subscribe(async missing => await OnFilesRemoved(missing))
+              .DisposeWith(disposables);
+
             AppEvents.AppExitRequested
               .AsObservable()
               .ObserveOn(RxSchedulers.MainThreadScheduler)
@@ -249,6 +255,30 @@ public partial class MainWindow
     {
         MainSnackbar.MessageQueue?.Enqueue(content);
         await Task.CompletedTask;
+    }
+
+    /// <summary>Files Detour had are gone (antivirus): explain, then exclude + re-download, or only re-download.</summary>
+    private async Task OnFilesRemoved(List<string> missing)
+    {
+        var names = string.Join("\n", missing.Select(m => "• " + Path.GetFileName(m)));
+        var answer = MessageBox.Show(this, string.Format(AppText.IntegrityText, names), AppText.IntegrityTitle,
+            MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+        if (answer == MessageBoxResult.Cancel)
+        {
+            return;
+        }
+        var notes = new List<string>();
+        if (answer == MessageBoxResult.Yes)
+        {
+            // Exclusion first: otherwise the antivirus takes the fresh copy again.
+            notes.Add(await IntegrityCheck.AddDefenderExclusionAsync() ?? AppText.IntegrityExclusionAdded);
+        }
+        var restored = await Task.Run(() => IntegrityCheck.RestoreAsync(missing));
+        if (restored.IsNotEmpty())
+        {
+            notes.Add(restored);
+        }
+        MessageBox.Show(this, string.Join("\n\n", notes), AppText.IntegrityTitle, MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void OnHotkeyHandler(EGlobalHotkey e)

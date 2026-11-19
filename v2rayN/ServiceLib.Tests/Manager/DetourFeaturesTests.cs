@@ -170,6 +170,16 @@ public class DetourFeaturesTests
         await Assert.That(ServiceServerResolver.Pick("auto", "main", "s1", all)).IsEqualTo("fi");
         await Assert.That(ServiceServerResolver.Pick("Австрия", "main", "s1", all)).IsNull(); // = main server
         await Assert.That(ServiceServerResolver.Pick("auto", "fi", "s1", all)).IsNull();
+
+        // What the help page promises about names.
+        await Assert.That(ServiceServerResolver.Pick("германия 1", "main", "s1", all)).IsEqualTo("de1"); // case, no flag
+        await Assert.That(ServiceServerResolver.Pick("Финляндия", "main", "s1", all)).IsEqualTo("fi"); // same subscription first
+        await Assert.That(ServiceServerResolver.Pick("Финляндия 9", "main", "s1", all)).IsEqualTo("other"); // then all
+        await Assert.That(ServiceServerResolver.Pick("Германия1", "main", "s1", all)).IsEqualTo("fi"); // spaces matter: not found → best
+        var unpinged = new List<ServiceServerResolver.Candidate> { new("main", "🇦🇹 Австрия 6", "s1", 0), new("de1", "🇩🇪 Германия 1", "s1", 0) };
+        await Assert.That(ServiceServerResolver.Pick("Германия", "main", "s1", unpinged)).IsEqualTo("de1"); // found, no ping needed
+        await Assert.That(ServiceServerResolver.Pick("Польша", "main", "s1", unpinged)).IsNull(); // not found, no pings → main
+        await Assert.That(ServiceServerResolver.Pick("авто", "main", "s1", unpinged)).IsNull();
     }
 
     [Test]

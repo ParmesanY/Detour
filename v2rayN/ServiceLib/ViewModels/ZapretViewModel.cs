@@ -93,6 +93,8 @@ public partial class ZapretViewModel : MyReactiveObject
             _config.ZapretItem.SiteRecords = string.Empty;
             RegistryNote = string.Empty;
             await ConfigHandler.SaveConfig(_config);
+            // A hand pick is this network's strategy from now on (netsh is slow: off the UI thread).
+            _ = Task.Run(() => NetworkProfiles.RememberCurrent(_config.ZapretItem));
             await RestartIfRunning();
             if (hadRecords)
             {

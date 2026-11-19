@@ -31,6 +31,12 @@ public sealed class NetworkResumeManager
     /// <summary>Raised (any thread) when the core should be reloaded; true = the physical card changed.</summary>
     public event Action<bool>? ReconnectRequested;
 
+    /// <summary>
+    /// Raised (any thread) when the network changed and the internet answers but no reconnect follows (no VPN in
+    /// use, or reconnecting is off). With a reconnect, ReconnectRequested's handler does the same work first.
+    /// </summary>
+    public event Action? NetworkSettled;
+
     public void Start()
     {
         if (_cts != null)
@@ -102,12 +108,12 @@ public sealed class NetworkResumeManager
         {
             return;
         }
-        if (AppManager.Instance.Config.ResumeReconnect == false || AppManager.Instance.Config.IndexId.IsNullOrEmpty())
-        {
-            _fingerprint = newFingerprint;
-            return;
-        }
-        if (DateTime.Now - _lastReconnect < MinBetweenReconnects)
+        // Another network (not just a wake-up): its zapret strategy may differ, VPN or not.
+        var networkChanged = newFingerprint != null && oldFingerprint != newFingerprint;
+        var reconnect = AppManager.Instance.Config.ResumeReconnect != false
+                        && AppManager.Instance.Config.IndexId.IsNotEmpty()
+                        && DateTime.Now - _lastReconnect >= MinBetweenReconnects;
+        if (!reconnect && !networkChanged)
         {
             _fingerprint = newFingerprint;
             return;
@@ -127,6 +133,12 @@ public sealed class NetworkResumeManager
 
         newFingerprint = Fingerprint();
         _fingerprint = newFingerprint;
+        if (!reconnect)
+        {
+            Logging.SaveLog($"{_tag}: network changed");
+            NetworkSettled?.Invoke();
+            return;
+        }
         _lastReconnect = DateTime.Now;
         var cardChanged = CardOf(oldFingerprint) != CardOf(newFingerprint);
         Logging.SaveLog($"{_tag}: {(slept ? "after sleep" : "network changed")}, reconnecting{(cardChanged ? " (new network card)" : "")}");

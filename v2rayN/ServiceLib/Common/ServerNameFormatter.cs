@@ -54,6 +54,26 @@ public static class ServerNameFormatter
         return last;
     }
 
+    /// <summary>
+    /// A server reached through a node in Russia ("🇷🇺🇸🇪 …", "🇷🇺 → 🇩🇪"): first flag RU, exit elsewhere. Under mobile
+    /// white lists such a relay on an allowed Russian IP is the one kind of server that can still get through.
+    /// </summary>
+    public static bool IsRussianRelay(string? remarks)
+    {
+        if (remarks.IsNullOrEmpty())
+        {
+            return false;
+        }
+        for (var i = 0; i < remarks!.Length - 3; i++)
+        {
+            if (TryReadFlag(remarks, i, out var first, out _))
+            {
+                return first == "RU" && ExitCountry(remarks) is { } exit && exit != "RU";
+            }
+        }
+        return false;
+    }
+
     private static bool TryReadFlag(string text, int index, out string? code, out int length)
     {
         code = null;

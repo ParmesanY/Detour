@@ -28,6 +28,7 @@ public sealed class FailoverManager
     private CancellationTokenSource? _cts;
     private int _failures;
     private bool _heldNotified;
+    private bool _whitelistNotified;
     private DateTime _quietUntil = DateTime.MinValue;
 
     /// <summary>Raised (any thread) with the server to switch to; the UI applies it like a manual pick.</summary>
@@ -107,6 +108,18 @@ public sealed class FailoverManager
 
         var now = DateTime.Now;
 
+        // Russian sites open directly, foreign ones don't even directly: a white list (mobile networks, by IP).
+        // Going through the server list then only burns time; only a relay on a Russian IP can get through.
+        var whitelist = await LooksLikeWhitelistAsync(token);
+        if (whitelist)
+        {
+            Logging.SaveLog($"{_tag}: Russian sites open directly, foreign ones don't: looks like a white list");
+        }
+        else
+        {
+            _whitelistNotified = false;
+        }
+
         // A new server mid-game means a new IP: the match drops and anti-fraud may ban the account.
         if (GameModeManager.Instance.HoldsServer)
         {
@@ -152,9 +165,23 @@ public sealed class FailoverManager
                 exs.TryGetValue(p.IndexId, out var ex) ? ex.Delay : 0,
                 exs.TryGetValue(p.IndexId, out var ex2) ? ex2.Sort : 0,
                 ServerNameFormatter.ExitCountry(p.Remarks),
-                frozen.Contains(p.IndexId)))
+                frozen.Contains(p.IndexId),
+                ServerNameFormatter.IsRussianRelay(p.Remarks)))
             .ToList();
-        var next = PickNext(candidates, config.IndexId, _tried.Keys, ServerNameFormatter.ExitCountry(current?.Remarks));
+        var next = whitelist
+            ? PickNextUnderWhitelist(candidates, config.IndexId, _tried.Keys)
+            : PickNext(candidates, config.IndexId, _tried.Keys, ServerNameFormatter.ExitCountry(current?.Remarks));
+        if (next == null && whitelist)
+        {
+            Logging.SaveLog($"{_tag}: white list and no Russian relay to try: pausing");
+            if (!_whitelistNotified)
+            {
+                _whitelistNotified = true;
+                NoticeManager.Instance.Enqueue(AppText.FailoverWhitelist);
+            }
+            _quietUntil = now + Window;
+            return;
+        }
         if (next == null)
         {
             Logging.SaveLog($"{_tag}: no other server to try");
@@ -170,7 +197,23 @@ public sealed class FailoverManager
         SwitchRequested?.Invoke(next, nextItem.Remarks);
     }
 
-    public record Candidate(string IndexId, int Delay, int Sort, string? Country = null, bool FrozenNetwork = false);
+    public record Candidate(string IndexId, int Delay, int Sort, string? Country = null, bool FrozenNetwork = false, bool RussianRelay = false);
+
+    /// <summary>Under a white list only relays on Russian IPs can work: the best of them, or null when there is none.</summary>
+    public static string? PickNextUnderWhitelist(IEnumerable<Candidate> candidates, string currentId, IEnumerable<string> recentlyTried) =>
+        PickNext(candidates.Where(c => c.RussianRelay), currentId, recentlyTried);
+
+    /// <summary>Foreign sites that are open in Russia normally; all of them failing directly while ya.ru opens = white list.</summary>
+    private static readonly string[] ForeignProbeUrls = ["https://www.google.com/generate_204", "https://github.com/", "https://www.wikipedia.org/"];
+
+    private static async Task<bool> LooksLikeWhitelistAsync(CancellationToken token)
+    {
+        var results = await Task.WhenAll(ForeignProbeUrls.Select(u => ZapretWatchdog.ProbeInternetAsync(u, token)));
+        return IsWhitelistPattern(russianOpens: true, results);
+    }
+
+    public static bool IsWhitelistPattern(bool russianOpens, IReadOnlyCollection<bool> foreignResults) =>
+        russianOpens && foreignResults.Count > 0 && foreignResults.All(ok => !ok);
 
     /// <summary>
     /// Next server: same exit country as the current one first (people pick a country for a reason:

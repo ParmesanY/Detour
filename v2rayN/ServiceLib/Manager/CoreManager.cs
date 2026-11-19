@@ -353,6 +353,10 @@ public class CoreManager
     private async Task<ProcessService?> RunProcess(CoreInfo? coreInfo, string configPath, bool displayLog, bool mayNeedSudo, bool isTunLaunch = false)
     {
         var fileName = CoreInfoManager.Instance.GetCoreExecFile(coreInfo, out var msg);
+        if (fileName.IsNullOrEmpty())
+        {
+            IntegrityCheck.Run(); // a core that was there is gone: tell the user it's likely the antivirus
+        }
         // AmneziaWG servers: the same sing-box config, run by the fork that understands "amnezia".
         if (coreInfo?.CoreType == ECoreType.sing_box && AmneziaCore.ConfigNeedsIt(configPath))
         {

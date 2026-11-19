@@ -33,7 +33,9 @@ public sealed class CoreInfoManager
     {
         var fileName = string.Empty;
         msg = string.Empty;
-        foreach (var name in coreInfo?.CoreExes)
+        // The v2rayN entry (the client itself) has no CoreExes: iterating null threw, and the kill switch, which
+        // walks every core, never engaged (found by the live kill switch test in CI).
+        foreach (var name in coreInfo?.CoreExes ?? [])
         {
             var vName = Utils.GetBinPath(Utils.GetExeName(name), coreInfo.CoreType.ToString());
             if (File.Exists(vName))

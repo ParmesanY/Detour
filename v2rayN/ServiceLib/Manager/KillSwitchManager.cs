@@ -125,7 +125,7 @@ public class KillSwitchManager
     }
 
     /// <summary>Core executables and the client itself may still reach the network to reconnect.</summary>
-    private static List<string> AllowedPrograms()
+    public static List<string> AllowedPrograms()
     {
         var list = new List<string> { Utils.GetExePath() };
         foreach (var coreInfo in CoreInfoManager.Instance.GetCoreInfo())
@@ -137,7 +137,7 @@ public class KillSwitchManager
             }
         }
         // TG WS Proxy goes direct by design; the user turned it on for exactly that.
-        if (AppManager.Instance.Config.TgWsProxyItem?.Enabled == true && File.Exists(TgWsProxyManager.ExePath))
+        if (AppManager.Instance.Config?.TgWsProxyItem?.Enabled == true && File.Exists(TgWsProxyManager.ExePath))
         {
             list.Add(TgWsProxyManager.ExePath);
         }

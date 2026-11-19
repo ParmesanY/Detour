@@ -427,6 +427,8 @@ public partial class MainWindowViewModel : MyReactiveObject
             RxSchedulers.MainThreadScheduler.Schedule(async () =>
             {
                 NoticeManager.Instance.Enqueue(AppText.ResumeReconnecting);
+                // A known network gets its own zapret strategy back (restarts winws itself when it changes).
+                await NetworkProfiles.ApplyForCurrentAsync(_config);
                 // winws is bound to the card index (--wf-iface): a new card needs a new winws.
                 if (cardChanged && ZapretManager.Instance.IsRunning
                     && ZapretManager.Instance.InterfaceIndex != ZapretManager.PhysicalInterfaceIndex())
@@ -434,6 +436,15 @@ public partial class MainWindowViewModel : MyReactiveObject
                     await ZapretManager.Instance.StartAsync();
                 }
                 await Reload();
+            });
+        NetworkResumeManager.Instance.NetworkSettled += () =>
+            RxSchedulers.MainThreadScheduler.Schedule(async () =>
+            {
+                await NetworkProfiles.ApplyForCurrentAsync(_config);
+                if (ZapretManager.Instance.IsRunning && ZapretManager.Instance.InterfaceIndex != ZapretManager.PhysicalInterfaceIndex())
+                {
+                    await ZapretManager.Instance.StartAsync();
+                }
             });
         NetworkResumeManager.Instance.Start();
         if (Utils.IsWindows())
@@ -452,6 +463,9 @@ public partial class MainWindowViewModel : MyReactiveObject
                 }
             });
         }
+
+        // Files the antivirus took since the last start (WinDivert, winws, cores): explain instead of failing silently.
+        _ = Task.Run(IntegrityCheck.Run);
 
         // zapret runs from the start, not only once a VPN core is up.
         if (ZapretManager.UsesTpws && _config.ZapretItem.Enabled && ZapretManager.Instance.IsInstalled)

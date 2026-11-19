@@ -487,6 +487,28 @@ public static class AppText
         "the release isn't signed yet. Try later or download the archive from the release page.");
     public static string UpdateBadSignature => T("подпись архива не совпала, обновление не установлено. Возможно, файл подменили: скачайте релиз вручную и сверьте SHA256SUMS.txt.",
         "the archive's signature didn't match, nothing was installed. The file may have been replaced: download the release by hand and check SHA256SUMS.txt.");
+    public static string IntegrityTitle => T("Антивирус удалил файлы Detour", "The antivirus removed Detour files");
+    public static string IntegrityText => T(
+        "Пропали файлы, которые были на месте:\n{0}\n\n" +
+        "Почти всегда это антивирус (Защитник Windows): WinDivert — подписанный драйвер перехвата пакетов, на нём работает zapret, это ложное срабатывание.\n\n" +
+        "Да — добавить папку bin в исключения Защитника (спросит права администратора) и скачать файлы заново.\n" +
+        "Нет — только скачать заново (антивирус может удалить их снова).\n" +
+        "Отмена — позже.",
+        "Files that were in place are gone:\n{0}\n\n" +
+        "Almost always this is the antivirus (Windows Defender): WinDivert is a signed packet driver zapret runs on, a false positive.\n\n" +
+        "Yes: add the bin folder to Defender's exclusions (asks for admin rights) and download the files again.\n" +
+        "No: only download them again (the antivirus may remove them again).\n" +
+        "Cancel: later.");
+    public static string IntegrityNoDefender => T(
+        "Защитник Windows не найден (стоит другой антивирус): добавьте папку bin Detour в его исключения вручную.",
+        "Windows Defender isn't there (another antivirus is): add Detour's bin folder to its exclusions by hand.");
+    public static string IntegrityExclusionFailed => T("Не удалось добавить исключение в Защитник Windows.", "Couldn't add the exclusion to Windows Defender.");
+    public static string IntegrityExclusionDeclined => T("Исключение не добавлено: запрос прав администратора отклонён.", "No exclusion added: the admin rights prompt was declined.");
+    public static string IntegrityExclusionAdded => T("Папка bin добавлена в исключения Защитника Windows.", "The bin folder was added to Windows Defender's exclusions.");
+    public static string IntegrityZapretRestored => T("zapret скачан заново.", "zapret was downloaded again.");
+    public static string IntegrityCoresHint => T(
+        "Ядро скачайте заново: Настройки → Проверить обновления → обновить ядро.",
+        "Download the core again: Settings → Check updates → update the core.");
     public static string TrustedListUnavailable => T(
         "не удалось получить подписанный список проверенных версий Detour (GitHub недоступен?). Без проверки программа не ставится; попробуйте с включённым VPN.",
         "couldn't get Detour's signed list of checked versions (GitHub unreachable?). Nothing is installed unchecked; try with the VPN on.");
@@ -519,6 +541,13 @@ public static class AppText
     public static string ResumeReconnectHint => T(
         "После сна компьютера или смены сети (другой Wi‑Fi, кабель, раздача с телефона) Detour дождётся интернета и переподключится сам.",
         "After the PC sleeps or the network changes (another Wi‑Fi, cable, phone hotspot), Detour waits for the internet and reconnects by itself.");
+    public static string FailoverWhitelist => T(
+        "Похоже на белые списки: российские сайты открываются, а зарубежные нет даже напрямую. Смена сервера тут не поможет — пробиться может только сервер через российский узел (в названии сначала флаг 🇷🇺). Автосмена на паузе 10 минут.",
+        "Looks like a white list: Russian sites open, foreign ones don't even directly. Switching servers won't help; only a server through a Russian relay (🇷🇺 flag first in the name) can get through. Auto switching paused for 10 minutes.");
+    public static string NetworkProfileApplied => T("Сеть «{0}»: вернул её стратегию zapret — {1}", "Network \"{0}\": its zapret strategy is back: {1}");
+    public static string NetworkProfileNew => T(
+        "Новая сеть «{0}». Если сайты через zapret не открываются, подберите стратегию на странице zapret: выбор запомнится для этой сети.",
+        "New network \"{0}\". If zapret sites don't open, pick a strategy on the zapret page: the choice is remembered for this network.");
     public static string ResumeReconnecting => T("Сеть поменялась или компьютер проснулся — переподключаюсь", "Network changed or the PC woke up — reconnecting");
     public static string AutoFailoverSwitched => T("Сервер не отвечал, переключаюсь на «{0}»", "Server stopped responding, switching to \"{0}\"");
 
