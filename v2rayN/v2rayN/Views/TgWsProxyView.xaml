@@ -157,6 +157,21 @@
                 Message="{x:Static resx:AppText.TgRoutingNote}"
                 Severity="Informational" />
 
+            <ui:InfoBar
+                Margin="0,8,0,0"
+                IsClosable="False"
+                IsOpen="{Binding StandaloneSecretDiffers}"
+                Message="{x:Static resx:AppText.TgStandaloneDiffers}"
+                Severity="Warning">
+                <ui:InfoBar.Content>
+                    <ui:Button
+                        Margin="0,0,0,8"
+                        Command="{Binding UseStandaloneSecretCmd}"
+                        Content="{x:Static resx:AppText.TgUseStandaloneSecret}"
+                        Icon="{ui:SymbolIcon Key24}" />
+                </ui:InfoBar.Content>
+            </ui:InfoBar>
+
             <!--  Progress  -->
             <StackPanel Margin="0,16,0,0" Orientation="Horizontal">
                 <ui:ProgressRing

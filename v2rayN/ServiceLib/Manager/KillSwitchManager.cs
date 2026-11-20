@@ -86,15 +86,16 @@ public class KillSwitchManager
             "Get-NetFirewallProfile | Select-Object Name,Enabled,DefaultOutboundAction | ConvertTo-Json -Compress");
         if (state.ExitCode != 0 || state.Output.IsNullOrEmpty())
         {
-            return AppText.KillSwitchFailed + " " + state.Output;
+            return AppText.KillSwitchFailed + " " + state.Error;
         }
+        // stdout alone: stderr glued to it (progress as CLIXML) broke the JSON and the release fell back to Allow.
         await File.WriteAllTextAsync(StateFile, state.Output);
 
         var result = await RunPowerShellAsync(BuildEngageScript(AllowedPrograms()));
         if (result.ExitCode != 0)
         {
             await ReleaseAsync();
-            return AppText.KillSwitchFailed + " " + result.Output;
+            return AppText.KillSwitchFailed + " " + result.Error;
         }
         if (state.Output.Contains("\"Enabled\":0") || state.Output.Contains("\"Enabled\":false", StringComparison.OrdinalIgnoreCase))
         {
@@ -120,7 +121,7 @@ public class KillSwitchManager
         }
         else
         {
-            Logging.SaveLog($"{_tag}: release failed: {result.Output}");
+            Logging.SaveLog($"{_tag}: release failed: {result.Error}");
         }
     }
 
@@ -219,7 +220,7 @@ public class KillSwitchManager
         return sb.Append('\'').ToString();
     }
 
-    private static async Task<(int ExitCode, string Output)> RunPowerShellAsync(string script)
+    private static async Task<(int ExitCode, string Output, string Error)> RunPowerShellAsync(string script)
     {
         var psi = new ProcessStartInfo
         {
@@ -234,12 +235,13 @@ public class KillSwitchManager
         psi.ArgumentList.Add("-ExecutionPolicy");
         psi.ArgumentList.Add("Bypass");
         psi.ArgumentList.Add("-EncodedCommand");
-        psi.ArgumentList.Add(Convert.ToBase64String(Encoding.Unicode.GetBytes(script)));
+        // No progress records: with redirected streams PowerShell writes them to stderr as "#< CLIXML …".
+        psi.ArgumentList.Add(Convert.ToBase64String(Encoding.Unicode.GetBytes("$ProgressPreference='SilentlyContinue'\n" + script)));
 
         using var proc = Process.Start(psi)!;
         var stdout = proc.StandardOutput.ReadToEndAsync();
         var stderr = proc.StandardError.ReadToEndAsync();
         await proc.WaitForExitAsync();
-        return (proc.ExitCode, ((await stdout) + (await stderr)).Trim());
+        return (proc.ExitCode, (await stdout).Trim(), (await stderr).Trim());
     }
 }

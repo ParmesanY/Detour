@@ -13,6 +13,17 @@ public record CoreConfigContext
 
     public Dictionary<string, string> CustomOutboundContent { get; init; } = new();
 
+    // Rule servers that are custom (full Xray JSON) profiles: local SOCKS port -> profile. Filled while
+    // building the pre-core context, then added to the main custom config (CustomConfigRuleServers).
+    public Dictionary<int, ProfileItem> CustomRuleServers { get; init; } = new();
+
+    // Rules with a server list ("= A; B"), sing-box only: rule outbound tag -> AllProxiesMap keys of the
+    // servers in order (null = the main server).
+    public Dictionary<string, List<string?>> RuleServerLists { get; init; } = new();
+
+    // Filled while generating: selector tag -> its member outbound tags in order (RuleServerFailover).
+    public Dictionary<string, List<string>> RuleServerSelectors { get; init; } = new();
+
     // Test ServerTestItem Map
     public Dictionary<string, string> ServerTestItemMap { get; init; } = new();
 

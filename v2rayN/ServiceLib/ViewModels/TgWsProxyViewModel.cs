@@ -7,6 +7,7 @@ public partial class TgWsProxyViewModel : MyReactiveObject
     public ReactiveCommand<RxVoid, RxVoid> StopCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> ConnectTelegramCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> NewSecretCmd { get; }
+    public ReactiveCommand<RxVoid, RxVoid> UseStandaloneSecretCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> ApplyPortCmd { get; }
     public ReactiveCommand<RxVoid, RxVoid> OpenLogCmd { get; }
 
@@ -16,6 +17,9 @@ public partial class TgWsProxyViewModel : MyReactiveObject
     [Reactive] public partial bool Enabled { get; set; }
     [Reactive] public partial string PortText { get; set; } = string.Empty;
     [Reactive] public partial string Link { get; set; } = string.Empty;
+
+    /// <summary>The user's own TG WS Proxy uses another secret: clients added to it get "wrong secret" from ours.</summary>
+    [Reactive] public partial bool StandaloneSecretDiffers { get; set; }
     [Reactive] public partial string VersionText { get; set; } = string.Empty;
     [Reactive] public partial string StateText { get; set; } = string.Empty;
     [Reactive] public partial string ProgressText { get; set; } = string.Empty;
@@ -33,6 +37,7 @@ public partial class TgWsProxyViewModel : MyReactiveObject
         StopCmd = ReactiveCommand.CreateFromTask(StopAsync, notBusy);
         ConnectTelegramCmd = ReactiveCommand.CreateFromTask(ConnectTelegramAsync, notBusy);
         NewSecretCmd = ReactiveCommand.CreateFromTask(NewSecretAsync, notBusy);
+        UseStandaloneSecretCmd = ReactiveCommand.CreateFromTask(UseStandaloneSecretAsync, notBusy);
         ApplyPortCmd = ReactiveCommand.CreateFromTask(ApplyPortAsync, notBusy);
         OpenLogCmd = ReactiveCommand.Create(() =>
         {
@@ -78,6 +83,9 @@ public partial class TgWsProxyViewModel : MyReactiveObject
             Enabled = item.Enabled;
             PortText = item.Port.ToString();
             Link = TgWsProxyManager.GetLink(_config) ?? string.Empty;
+            var standalone = TgWsProxyManager.StandaloneSecret(item.Port);
+            StandaloneSecretDiffers = standalone != null && TgWsProxyManager.IsValidSecret(item.Secret)
+                                      && !standalone.Equals(item.Secret, StringComparison.OrdinalIgnoreCase);
             VersionText = IsInstalled ? string.Format(AppText.TgInstalled, item.InstalledVersion ?? "?") : AppText.TgNotInstalled;
             RefreshState();
         }
@@ -158,6 +166,18 @@ public partial class TgWsProxyViewModel : MyReactiveObject
     private Task NewSecretAsync() => RunBusy(async () =>
     {
         _config.TgWsProxyItem.Secret = TgWsProxyManager.NewSecret();
+        await ConfigHandler.SaveConfig(_config);
+        await RestartIfRunning();
+        Refresh();
+    });
+
+    private Task UseStandaloneSecretAsync() => RunBusy(async () =>
+    {
+        if (TgWsProxyManager.StandaloneSecret(_config.TgWsProxyItem.Port) is not { } secret)
+        {
+            return;
+        }
+        _config.TgWsProxyItem.Secret = secret;
         await ConfigHandler.SaveConfig(_config);
         await RestartIfRunning();
         Refresh();

@@ -357,6 +357,17 @@ public partial class CoreConfigSingboxService
             item.OutboundTag = records ? Global.DirectTag : GenRoutingUserRuleOutbound(item.OutboundTag ?? Global.ProxyTag);
             var rules = _coreConfig.route.rules;
 
+            if (item.ProcessAndIp == true)
+            {
+                var both = new Rule4Sbox { outbound = item.OutboundTag, process_name = item.Process?.Select(p => Utils.GetExeName(p)).ToList() };
+                foreach (var ip in item.Ip ?? [])
+                {
+                    ParseV2Address(ip, both);
+                }
+                rules.Add(both);
+                return;
+            }
+
             var rule = new Rule4Sbox();
             if (item.OutboundTag == "block")
             {
@@ -599,8 +610,43 @@ public partial class CoreConfigSingboxService
             return outboundTag;
         }
 
-        var node = context.AllProxiesMap.GetValueOrDefault($"remark:{outboundTag}");
+        if (context.RuleServerLists.TryGetValue(outboundTag, out var listKeys))
+        {
+            return GenServerListSelector(outboundTag, listKeys);
+        }
 
+        return GenNodeOutbound(context.AllProxiesMap.GetValueOrDefault($"remark:{outboundTag}"));
+    }
+
+    /// <summary>
+    /// A rule's server list ("= A; B"): a selector over the servers in order, starting on the first.
+    /// RuleServerFailover switches it through the Clash API; switching drops the old connections.
+    /// </summary>
+    private string GenServerListSelector(string outboundTag, List<string?> keys)
+    {
+        var selectorTag = "servers: " + outboundTag[ServiceServerResolver.TagPrefix.Length..];
+        if (_coreConfig.outbounds.Any(o => o.tag == selectorTag))
+        {
+            return selectorTag;
+        }
+
+        var members = keys
+            .Select(k => k == null ? Global.ProxyTag : GenNodeOutbound(context.AllProxiesMap.GetValueOrDefault(k)))
+            .Distinct()
+            .ToList();
+        _coreConfig.outbounds.Add(new Outbound4Sbox
+        {
+            type = "selector",
+            tag = selectorTag,
+            outbounds = members,
+            interrupt_exist_connections = true,
+        });
+        context.RuleServerSelectors[selectorTag] = members;
+        return selectorTag;
+    }
+
+    private string GenNodeOutbound(ProfileItem? node)
+    {
         if (node == null
             || (!Global.SingboxSupportConfigType.Contains(node.ConfigType)
             && !node.ConfigType.IsGroupType()

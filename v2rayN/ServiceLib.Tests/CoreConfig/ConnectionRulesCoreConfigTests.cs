@@ -11,10 +11,11 @@ public class ConnectionRulesCoreConfigTests
         new() { Target = "ads.example.com", Mode = EConnectionMode.Block },
     ];
 
-    private static CoreConfigContext Context(ECoreType coreType)
+    private static CoreConfigContext Context(ECoreType coreType, bool tgWsProxy = false)
     {
         var config = CoreConfigTestFactory.CreateConfig(coreType);
         config.ConnectionRules = Rules();
+        config.TgWsProxyItem = new() { Enabled = tgWsProxy };
         CoreConfigTestFactory.BindAppManagerConfig(config);
         var node = CoreConfigTestFactory.CreateSocksNode(coreType, "n-main", "main");
         var context = CoreConfigTestFactory.CreateContext(config, node, coreType);
@@ -71,5 +72,35 @@ public class ConnectionRulesCoreConfigTests
         await zapretIdx.Should().BeGreaterThanOrEqualTo(0);
         await vpnIdx.Should().BeGreaterThanOrEqualTo(0);
         await (zapretIdx < regularIdx).Should().BeTrue();
+    }
+
+    // TG WS Proxy goes direct only to Telegram: DC1/DC5 go through Cloudflare, which is throttled when dialled
+    // directly from Russia (AyuGram on a DC1 account never connected). Process AND address in one rule.
+    [Test]
+    public async Task Singbox_TgWsProxyDirectOnlyToTelegram()
+    {
+        var result = new CoreConfigSingboxService(Context(ECoreType.sing_box, tgWsProxy: true)).GenerateClientConfigContent();
+
+        await result.Success.Should().BeTrue().Because(result.Msg);
+        var rules = JsonUtils.Deserialize<SingboxConfig>(result.Data!.ToString())!.route.rules;
+        var tg = rules.Where(r => r.process_name?.Contains(TgWsProxyManager.ExeName) == true).ToList();
+
+        await tg.Count.Should().BeEqualTo(1);
+        await tg[0].outbound.Should().BeEqualTo(Global.DirectTag);
+        await (tg[0].ip_cidr?.Contains("149.154.160.0/20") == true).Should().BeTrue();
+    }
+
+    [Test]
+    public async Task Xray_TgWsProxyDirectOnlyToTelegram()
+    {
+        var result = new CoreConfigV2rayService(Context(ECoreType.Xray, tgWsProxy: true)).GenerateClientConfigContent();
+
+        await result.Success.Should().BeTrue().Because(result.Msg);
+        var rules = JsonUtils.Deserialize<V2rayConfig>(result.Data!.ToString()!)!.routing.rules;
+        var tg = rules.Where(r => r.process?.Contains(TgWsProxyManager.ExeName) == true).ToList();
+
+        await tg.Count.Should().BeEqualTo(1);
+        await tg[0].outboundTag.Should().BeEqualTo(Global.DirectTag);
+        await (tg[0].ip?.Contains("149.154.160.0/20") == true).Should().BeTrue();
     }
 }

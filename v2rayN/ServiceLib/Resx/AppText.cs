@@ -712,12 +712,18 @@ public static class AppText
     public static string TgNewSecretHint => T(
         "Секрет защищает прокси от чужих программ на компьютере. После смены подключите Telegram заново.",
         "The secret keeps other programs on this computer off the proxy. Connect Telegram again after changing it.");
+    public static string TgStandaloneDiffers => T(
+        "У отдельно установленного TG WS Proxy другой секрет. Telegram-клиенты, добавленные к нему (AyuGram, Kotato и другие), получат от Detour «неверный секрет» и не подключатся. Возьмите его секрет, тогда они заработают; клиенты, подключённые через Detour, нужно будет подключить заново. Или добавьте в них ссылку из Detour.",
+        "Your separately installed TG WS Proxy uses another secret. Telegram clients added to it (AyuGram, Kotato and others) get \"wrong secret\" from Detour and don't connect. Take its secret and they work again; clients connected through Detour then need connecting again. Or add the Detour link to them.");
+    public static string TgUseStandaloneSecret => T("Взять его секрет", "Use its secret");
     public static string TgOpenLog => T("Журнал", "Log");
     public static string TgRoutingNote => T(
-        "Пока прокси включён, его трафик всегда идёт напрямую, мимо VPN, даже с kill switch. " +
+        "Пока прокси включён, его соединения с серверами Telegram идут напрямую, мимо VPN, даже с kill switch. " +
+        "Запасной путь через Cloudflare (для DC1 и DC5, у них нет WebSocket) идёт по общим правилам, обычно через VPN: напрямую Cloudflare в России режется. " +
         "Правило @telegram на сам Telegram Desktop больше не влияет: он ходит в локальный прокси. " +
         "Звонки и веб-версия Telegram по-прежнему идут по правилу @telegram.",
-        "While the proxy is on, its traffic always goes direct, bypassing the VPN, even with the kill switch. " +
+        "While the proxy is on, its connections to Telegram's servers go direct, bypassing the VPN, even with the kill switch. " +
+        "The fallback through Cloudflare (for DC1 and DC5, which have no WebSocket) follows the general rules, usually the VPN: Cloudflare is throttled when dialled directly in Russia. " +
         "The @telegram rule no longer affects Telegram Desktop itself: it talks to the local proxy. " +
         "Calls and Telegram Web still follow the @telegram rule.");
 }

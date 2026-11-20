@@ -26,6 +26,32 @@ public class TgWsProxyTests
     }
 
     [Test]
+    public async Task StandaloneSecret_SamePortOnly()
+    {
+        const string cfg = """{"port": 1443, "host": "127.0.0.1", "secret": "7C0137A77C0137A77C0137A77C0137A7"}""";
+
+        // Same port: clients added to that copy reach ours, so ours must answer with its secret.
+        await Assert.That(TgWsProxyManager.ParseStandaloneSecret(cfg, 1443)).IsEqualTo("7c0137a77c0137a77c0137a77c0137a7");
+        await Assert.That(TgWsProxyManager.ParseStandaloneSecret(cfg, 1444)).IsNull();
+        // No port in its config: the tray app's default.
+        await Assert.That(TgWsProxyManager.ParseStandaloneSecret("""{"secret": "7c0137a77c0137a77c0137a77c0137a7"}""", TgWsProxyManager.DefaultPort))
+            .IsEqualTo("7c0137a77c0137a77c0137a77c0137a7");
+    }
+
+    [Test]
+    [Arguments(null)]
+    [Arguments("")]
+    [Arguments("not json")]
+    [Arguments("[]")]
+    [Arguments("""{"port": 1443}""")]
+    [Arguments("""{"port": 1443, "secret": "short"}""")]
+    [Arguments("""{"port": "1443", "secret": 5}""")]
+    public async Task StandaloneSecret_BadConfig_IsNull(string? json)
+    {
+        await Assert.That(TgWsProxyManager.ParseStandaloneSecret(json, 1443)).IsNull();
+    }
+
+    [Test]
     public async Task BuildLink_UsesDdPrefix()
     {
         var link = TgWsProxyManager.BuildLink(1443, "3075abe65830f0325116bb0416cadf9f");
@@ -68,6 +94,8 @@ public class TgWsProxyTests
         var rule = TgWsProxyManager.DirectRule();
         await Assert.That(rule.OutboundTag).IsEqualTo(Global.DirectTag);
         await Assert.That(rule.Process!.Single()).IsEqualTo(TgWsProxyManager.ExeName);
+        await Assert.That(rule.ProcessAndIp == true).IsTrue();
+        await Assert.That(rule.Ip!).Contains("149.154.160.0/20");
         await Assert.That(rule.Remarks!.StartsWith(ConnectionRuleCompiler.RemarksPrefix)).IsTrue();
     }
 }

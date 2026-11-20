@@ -31,7 +31,9 @@ public class CoreConfigContextBuilder
     ///     Builds a <see cref="CoreConfigContext" /> for the given node, resolves its proxy map,
     ///     and processes outbound nodes referenced by routing rules.
     /// </summary>
-    public static async Task<CoreConfigContextBuilderResult> Build(Config config, ProfileItem node)
+    /// <param name="customMain">For the pre-core in front of a custom profile: that profile. Its rules may
+    /// then pick other custom profiles as their servers (<see cref="CustomConfigRuleServers"/>).</param>
+    public static async Task<CoreConfigContextBuilderResult> Build(Config config, ProfileItem node, ProfileItem? customMain = null)
     {
         var runCoreType = AppManager.Instance.GetCoreType(node, node.ConfigType);
         var coreType = runCoreType == ECoreType.sing_box ? ECoreType.sing_box : ECoreType.Xray;
@@ -108,10 +110,29 @@ public class CoreConfigContextBuilder
                 if (ruleItem.OutboundTag.StartsWith(ServiceServerResolver.TagPrefix, StringComparison.Ordinal))
                 {
                     // A connection rule with its own server ("servers per service").
-                    ruleOutboundNode = await ServiceServerResolver.ResolveAsync(ruleItem.OutboundTag, actNode);
+                    if (actNode.ConfigType == EConfigType.Custom)
+                    {
+                        // The custom config runs as is; its pre-core context resolves the rule servers.
+                        ruleItem.OutboundTag = Global.ProxyTag;
+                        continue;
+                    }
+                    var customMainXray = customMain != null && AppManager.Instance.GetCoreType(customMain, customMain.ConfigType) == ECoreType.Xray;
+                    if (context.RunCoreType == ECoreType.sing_box && ServiceServerResolver.IsList(ruleItem.OutboundTag))
+                    {
+                        // "= A; B": every server goes into the config behind a selector; RuleServerFailover
+                        // moves it down the list when the current one dies.
+                        await RegisterServerListAsync(context, ruleItem.OutboundTag, customMain ?? actNode, customMainXray);
+                        continue;
+                    }
+                    ruleOutboundNode = await ServiceServerResolver.ResolveAsync(ruleItem.OutboundTag, customMain ?? actNode, customMainXray);
                     if (ruleOutboundNode == null)
                     {
                         ruleItem.OutboundTag = Global.ProxyTag;
+                        continue;
+                    }
+                    if (ruleOutboundNode.ConfigType == EConfigType.Custom)
+                    {
+                        context.AllProxiesMap[$"remark:{ruleItem.OutboundTag}"] = await CustomRuleServerNodeAsync(context, ruleOutboundNode);
                         continue;
                     }
                 }
@@ -195,6 +216,88 @@ public class CoreConfigContextBuilder
     }
 
     /// <summary>
+    ///     Registers the servers of a rule's server list ("= A; B") in order. A server that can't be used is
+    ///     skipped; with none left the rule takes the main server.
+    /// </summary>
+    private static async Task RegisterServerListAsync(CoreConfigContext context, string outboundTag, ProfileItem main, bool allowCustom)
+    {
+        var keys = new List<string?>();
+        var members = await ServiceServerResolver.ResolveListAsync(outboundTag, main, allowCustom);
+        for (var i = 0; i < members.Count; i++)
+        {
+            var member = members[i];
+            if (member == null)
+            {
+                keys.Add(null); // the main server
+                continue;
+            }
+            var key = $"remark:{outboundTag}#{i}";
+            if (member.ConfigType == EConfigType.Custom)
+            {
+                context.AllProxiesMap[key] = await CustomRuleServerNodeAsync(context, member);
+                keys.Add(key);
+                continue;
+            }
+            var (actMember, result) = await ResolveNodeAsync(context, member, false);
+            if (!result.Success)
+            {
+                Logging.SaveLog($"ServiceServer: {member.Remarks} skipped: {string.Join("; ", result.Errors)}");
+                continue;
+            }
+            context.AllProxiesMap[key] = actMember;
+            keys.Add(key);
+        }
+        if (keys.Count > 0)
+        {
+            context.RuleServerLists[outboundTag] = keys;
+        }
+    }
+
+    /// <summary>
+    ///     A rule server that is a custom profile: a local SOCKS port that the main custom config will
+    ///     open for it (one port per server, shared by every rule picking it).
+    /// </summary>
+    private static async Task<ProfileItem> CustomRuleServerNodeAsync(CoreConfigContext context, ProfileItem server)
+    {
+        var port = context.CustomRuleServers.FirstOrDefault(kv => kv.Value.IndexId == server.IndexId).Key;
+        if (port == 0)
+        {
+            port = Utils.GetFreePort(AppManager.Instance.GetLocalPort(EInboundProtocol.socks) + 40 + context.CustomRuleServers.Count);
+            while (context.CustomRuleServers.ContainsKey(port))
+            {
+                port++;
+            }
+            context.CustomRuleServers[port] = server;
+        }
+
+        // The pre-core runs the TUN: the rule server's own domains must resolve directly, as the main's.
+        try
+        {
+            var path = File.Exists(server.Address) ? server.Address : Utils.GetConfigPath(server.Address);
+            if (File.Exists(path))
+            {
+                foreach (var domain in CustomConfigDomains.Extract(await File.ReadAllTextAsync(path)))
+                {
+                    context.ProtectDomainList.Add(domain);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logging.SaveLog("CoreConfigContextBuilder", ex);
+        }
+
+        return new ProfileItem
+        {
+            IndexId = $"detour-srv{port}",
+            ConfigType = EConfigType.SOCKS,
+            Address = Global.Loopback,
+            Port = port,
+            Remarks = server.Remarks,
+        };
+    }
+
+    /// <summary>
     ///     Builds the main <see cref="CoreConfigContext" /> for <paramref name="node" /> and, when
     ///     the main build succeeds, also builds the optional pre-socks context required for TUN
     ///     protection or pre-socks proxy chaining.
@@ -220,6 +323,7 @@ public class CoreConfigContextBuilder
                 IsTunEnabled = false,
                 // main core doesn't handle tun directly when pre-socks is used
                 ProtectDomainList = [.. mainResult.Context.ProtectDomainList, .. preResult.Context.ProtectDomainList],
+                CustomRuleServers = preResult.Context.CustomRuleServers,
             },
         };
         if (mainResult.Context.IsTunEnabled
@@ -252,7 +356,8 @@ public class CoreConfigContextBuilder
         var preSocksItem = ConfigHandler.GetPreSocksItem(config, node, coreType);
         if (preSocksItem != null)
         {
-            var preSocksResult = await Build(nodeContext.AppConfig, preSocksItem);
+            var preSocksResult = await Build(nodeContext.AppConfig, preSocksItem,
+                node.ConfigType == EConfigType.Custom ? node : null);
 
             var protectCoreTypeList = new HashSet<ECoreType>(nodeContext.ProtectCoreTypeList) { nodeContext.RunCoreType };
 

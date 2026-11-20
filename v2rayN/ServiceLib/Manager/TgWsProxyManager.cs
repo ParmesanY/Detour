@@ -67,6 +67,28 @@ public class TgWsProxyManager
     }
 
     /// <summary>
+    /// Secret of a TG WS Proxy config (the user's own install) listening on the same port, or null.
+    /// Telegram clients set up for that copy keep working only if ours answers with the same secret.
+    /// </summary>
+    public static string? ParseStandaloneSecret(string? json, int port)
+    {
+        try
+        {
+            if (json.IsNullOrEmpty() || JsonNode.Parse(json!) is not JsonObject cfg)
+            {
+                return null;
+            }
+            var theirPort = cfg["port"] is JsonValue p && p.TryGetValue<int>(out var n) ? n : DefaultPort;
+            var secret = cfg["secret"] is JsonValue s && s.TryGetValue<string>(out var str) ? str.ToLowerInvariant() : null;
+            return theirPort == port && IsValidSecret(secret) ? secret : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// The proxy's config.json with our host/port/secret, keeping its other settings.
     /// Its own update checks and Windows autostart are turned off: the client handles both.
     /// </summary>
@@ -169,13 +191,33 @@ public class TgWsProxyManager
 
     #region run
 
-    /// <summary>The secret from the settings, generated and saved on first use.</summary>
+    /// <summary>Config of a separately installed TG WS Proxy (its non-portable mode).</summary>
+    public static string StandaloneConfigPath =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TgWsProxy", "config.json");
+
+    /// <summary>Secret of the user's own TG WS Proxy on the same port, or null.</summary>
+    public static string? StandaloneSecret(int port)
+    {
+        try
+        {
+            return File.Exists(StandaloneConfigPath) ? ParseStandaloneSecret(File.ReadAllText(StandaloneConfigPath), port) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The secret from the settings, set on first use: the one of the user's own TG WS Proxy if there is one
+    /// (Telegram clients already added to it keep working), otherwise a new one.
+    /// </summary>
     public static async Task<string> EnsureSecretAsync(Config config)
     {
         var item = config.TgWsProxyItem;
         if (!IsValidSecret(item.Secret))
         {
-            item.Secret = NewSecret();
+            item.Secret = StandaloneSecret(item.Port) ?? NewSecret();
             await ConfigHandler.SaveConfig(config);
         }
         return item.Secret!;
@@ -381,9 +423,19 @@ public class TgWsProxyManager
 
     #region routing
 
+    /// <summary>Telegram's own networks (core.telegram.org/resources/cidr.txt): DCs and the WebSocket endpoints.</summary>
+    public static readonly string[] TelegramCidrs =
+    [
+        "91.105.192.0/23", "91.108.4.0/22", "91.108.8.0/22", "91.108.12.0/22", "91.108.16.0/22", "91.108.20.0/22",
+        "91.108.56.0/22", "95.161.64.0/20", "149.154.160.0/20", "185.76.151.0/24",
+        "2001:67c:4e8::/48", "2001:b28:f23c::/47", "2001:b28:f23f::/48", "2a0a:f280::/32",
+    ];
+
     /// <summary>
-    /// Core rule that keeps the proxy's own traffic off the VPN: it reaches Telegram directly over
-    /// WebSocket, that is the whole point. Placed before the user's rules.
+    /// Core rule that keeps the proxy's connections to Telegram off the VPN: it reaches Telegram directly over
+    /// WebSocket, that is the whole point. Only Telegram's addresses: for the DCs without a WebSocket endpoint
+    /// (DC1, DC5) it goes through Cloudflare, which is throttled when dialled directly from Russia, so that part
+    /// follows the user's rules (usually the VPN). Placed before the user's rules.
     /// </summary>
     public static RulesItem DirectRule()
     {
@@ -393,6 +445,8 @@ public class TgWsProxyManager
             Remarks = ConnectionRuleCompiler.RemarksPrefix + "TG WS Proxy",
             OutboundTag = Global.DirectTag,
             Process = [ExeName],
+            Ip = [.. TelegramCidrs],
+            ProcessAndIp = true,
             Enabled = true,
             RuleType = ERuleType.Routing,
         };

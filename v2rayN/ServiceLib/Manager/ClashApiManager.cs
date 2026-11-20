@@ -101,6 +101,14 @@ public sealed class ClashApiManager
         return await SendTestRequest(url);
     }
 
+    /// <summary>Delay through one outbound of the running sing-box, or -1 when it doesn't answer in time.</summary>
+    public async Task<int> ProbeDelay(string name, int timeoutMs)
+    {
+        var url = $"{ApiUrl}/proxies/{Utils.UrlEncode(name)}/delay?timeout={timeoutMs}&url=" +
+                  Utils.UrlEncode(AppManager.Instance.Config.SpeedTestItem.SpeedPingTestUrl);
+        return await SendTestRequest(url);
+    }
+
     private async Task<int> TestProviderProxyDelay(string name, string providerName)
     {
         var url =

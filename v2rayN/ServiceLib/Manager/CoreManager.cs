@@ -1,4 +1,4 @@
-namespace ServiceLib.Manager;
+﻿namespace ServiceLib.Manager;
 
 /// <summary>
 /// Core process processing class
@@ -125,6 +125,10 @@ public class CoreManager
         await WaitForProxyPort(preContext);
         await CoreStartPreService(preContext);
 
+        // Rules with a server list ("= A; B"): live switching through the sing-box selector.
+        var listContext = preContext?.RunCoreType == ECoreType.sing_box ? preContext : mainContext;
+        RuleServerFailover.Instance.Start(listContext.RuleServerSelectors);
+
         AppManager.Instance.RunningCoreType = preContext?.RunCoreType ?? mainContext.RunCoreType;
 
         // Routing now matches the connection rules; bring zapret lists and winws in line.
@@ -194,6 +198,7 @@ public class CoreManager
 
     public async Task CoreStop()
     {
+        RuleServerFailover.Instance.Stop();
         try
         {
             if (_linuxSudo)

@@ -59,6 +59,18 @@ public partial class CoreConfigV2rayService
                             continue;
                         }
 
+                        if (item.ProcessAndIp == true)
+                        {
+                            _coreConfig.routing.rules.Add(new()
+                            {
+                                type = "field",
+                                outboundTag = GenRoutingUserRuleOutbound(item.OutboundTag ?? Global.ProxyTag),
+                                ip = item.Ip,
+                                process = item.Process,
+                            });
+                            continue;
+                        }
+
                         var item2 = JsonUtils.Deserialize<RulesItem4Ray>(JsonUtils.Serialize(item));
                         GenRoutingUserRule(item2);
                     }

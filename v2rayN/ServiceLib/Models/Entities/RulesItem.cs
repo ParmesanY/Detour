@@ -15,4 +15,10 @@ public class RulesItem
     public bool Enabled { get; set; } = true;
     public string? Remarks { get; set; }
     public ERuleType? RuleType { get; set; }
+
+    /// <summary>
+    /// Process and IP must both match (one core rule). Otherwise each of Domain, Ip and Process is a rule of
+    /// its own (either matches). Only for rules the client adds itself; null in the user's routing.
+    /// </summary>
+    public bool? ProcessAndIp { get; set; }
 }

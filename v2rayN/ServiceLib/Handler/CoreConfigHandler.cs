@@ -18,7 +18,7 @@ public static class CoreConfigHandler
             result = node.CoreType switch
             {
                 ECoreType.mihomo => await new CoreConfigClashService(config, context.IsTunEnabled).GenerateClientCustomConfig(node, fileName),
-                _ => await GenerateClientCustomConfig(node, fileName)
+                _ => await GenerateClientCustomConfig(node, fileName, context.CustomRuleServers)
             };
         }
         else if (context.RunCoreType == ECoreType.sing_box)
@@ -41,7 +41,7 @@ public static class CoreConfigHandler
         return result;
     }
 
-    private static async Task<RetResult> GenerateClientCustomConfig(ProfileItem node, string? fileName)
+    private static async Task<RetResult> GenerateClientCustomConfig(ProfileItem node, string? fileName, Dictionary<int, ProfileItem>? ruleServers = null)
     {
         var ret = new RetResult();
         try
@@ -80,6 +80,27 @@ public static class CoreConfigHandler
                 if (!ReferenceEquals(fragmented, json))
                 {
                     await File.WriteAllTextAsync(fileName, fragmented);
+                }
+            }
+
+            // Detour: rule servers that are other custom profiles get their own SOCKS inbound in this config.
+            if (ruleServers is { Count: > 0 })
+            {
+                var servers = new List<(int, string)>();
+                foreach (var (port, server) in ruleServers)
+                {
+                    var path = File.Exists(server.Address) ? server.Address : Utils.GetConfigPath(server.Address);
+                    if (File.Exists(path))
+                    {
+                        servers.Add((port, await File.ReadAllTextAsync(path)));
+                        Logging.SaveLog($"ServiceServer: {server.Remarks} on 127.0.0.1:{port}");
+                    }
+                }
+                var json = await File.ReadAllTextAsync(fileName);
+                var withServers = CustomConfigRuleServers.Apply(json, servers);
+                if (!ReferenceEquals(withServers, json))
+                {
+                    await File.WriteAllTextAsync(fileName, withServers);
                 }
             }
 

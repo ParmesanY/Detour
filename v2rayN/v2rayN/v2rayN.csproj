@@ -20,7 +20,7 @@
 		<CETCompat>false</CETCompat>
 		<!-- Detour's own version (the assembly Version stays upstream's: subscriptions key on it).
 		     CI sets both from the tag / repository: -p:DetourVersion=1.2.0 -p:DetourRepo=owner/name -->
-		<DetourVersion Condition="'$(DetourVersion)' == ''">0.3.11</DetourVersion>
+		<DetourVersion Condition="'$(DetourVersion)' == ''">0.3.12</DetourVersion>
 		<DetourRepo Condition="'$(DetourRepo)' == ''"></DetourRepo>
 		<!-- Compressed single file: Detour.exe 180 → 76 MB on disk (the release zip stays about the same). -->
 		<EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>

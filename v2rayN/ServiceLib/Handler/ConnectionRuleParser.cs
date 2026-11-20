@@ -70,7 +70,23 @@ public static class ConnectionRuleParser
                 error = "no server after =, write a server name or auto";
                 return null;
             }
-            if (IsAutoServer(server))
+            var names = ServiceServerResolver.SplitList(server);
+            if (names.Count == 0)
+            {
+                error = "no server after =, write a server name or auto";
+                return null;
+            }
+            if (names.Count > 1)
+            {
+                if (names.Any(IsAutoServer))
+                {
+                    error = "auto can't be part of a server list";
+                    return null;
+                }
+                // "= A; B; C": in this order, the next one only when the current dies.
+                server = string.Join("; ", names);
+            }
+            else if (IsAutoServer(server))
             {
                 server = AutoServer;
             }
