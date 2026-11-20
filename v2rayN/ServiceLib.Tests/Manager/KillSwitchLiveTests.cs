@@ -6,7 +6,9 @@ namespace ServiceLib.Tests.Manager;
 /// The kill switch for real: changes the Windows Firewall. Runs only on a CI runner (DETOUR_LIVE_KILLSWITCH=1,
 /// elevated; job "killswitch" in build.yml) and does nothing anywhere else, never on a developer's PC.
 /// curl.exe stands for "any other program": it isn't on the allowed list (the test host itself is, as the client).
+/// Both tests change the same firewall and state file: never at the same time.
 /// </summary>
+[NotInParallel("killswitch-live")]
 public class KillSwitchLiveTests
 {
     private static bool Enabled => Environment.GetEnvironmentVariable("DETOUR_LIVE_KILLSWITCH") == "1"
