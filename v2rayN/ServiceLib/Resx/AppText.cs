@@ -171,11 +171,13 @@ public static class AppText
         "Detour Map — общая карта блокировок в России: что заблокировано, у какого провайдера, в каком регионе и каким способом. "
         + "Замеры присылают сами пользователи.\n\n"
         + "Что отправляется: результаты проверки ~40 сайтов (DNS, TCP, TLS, загрузка, QUIC), час замера, тип подключения и версия Detour. "
+        + "Раз в час, если VPN включён, — как он работал по типу протокола: например, «VLESS REALITY: 11 проверок прошли, 1 заморозилась». "
         + "Не отправляются: IP-адрес, имя компьютера, ваши сайты, серверы и подписки. Сервер по адресу соединения узнаёт только "
         + "провайдера и регион и сам адрес не хранит. Отчёт целиком виден ниже до и после отправки.",
         "Detour Map is a shared map of blocks in Russia: what is blocked, by which ISP, in which region and how. "
         + "Users send the measurements.\n\n"
         + "Sent: the results of checking ~40 sites (DNS, TCP, TLS, download, QUIC), the hour, the connection type and the Detour version. "
+        + "Once an hour while the VPN is on: how it did per protocol kind, e.g. \"VLESS REALITY: 11 checks passed, 1 froze\". "
         + "Not sent: your IP address, computer name, your sites, servers or subscriptions. From the connection the server learns only "
         + "the ISP and region, and does not store the address. The whole report is shown below before and after sending.");
     public static string BlockMapEnable => T("Помогать карте: замер раз в 6 часов", "Help the map: measure every 6 hours");

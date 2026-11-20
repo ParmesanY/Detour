@@ -57,7 +57,7 @@ public static class ServerFileImporter
     /// <summary>AmneziaWG obfuscation keys: the cores speak plain WireGuard only.</summary>
     public static bool HasAmneziaFields(string content)
     {
-        return Regex.IsMatch(content, @"^\s*(Jc|Jmin|Jmax|S1|S2|H1|H2|H3|H4|I1)\s*=", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        return Regex.IsMatch(content, @"^\s*(Jc|Jmin|Jmax|S1|S2|H1|H2|H3|H4|I1|HeaderProtectionKey)\s*=", RegexOptions.Multiline | RegexOptions.IgnoreCase);
     }
 
     public static async Task<Result> ImportAsync(Config config, string path, string? subid)

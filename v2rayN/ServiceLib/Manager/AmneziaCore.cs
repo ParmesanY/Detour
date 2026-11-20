@@ -22,16 +22,33 @@ public static class AmneziaCore
 
     private static readonly SemaphoreSlim _lock = new(1, 1);
 
-    /// <summary>.conf keys → JSON names; numbers where the fork expects numbers.</summary>
-    private static readonly (string Conf, string Json, bool Number)[] Keys =
+    private enum Kind { Number, Text, Flag }
+
+    /// <summary>
+    /// .conf keys → the fork's JSON names (option/wireguard.go of the pinned version). Numbers: a plain number, or
+    /// a range "100-200" (AWG 2.0 H1–H4, AWG 3.0 timers and padding) passed as a string. AWG 1.5's J1–J3 / Itime
+    /// aren't in the fork: the core refuses unknown fields, so they are left out.
+    /// </summary>
+    private static readonly (string Conf, string Json, Kind Kind)[] Keys =
     [
-        ("Jc", "jc", true), ("Jmin", "jmin", true), ("Jmax", "jmax", true),
-        ("S1", "s1", true), ("S2", "s2", true), ("S3", "s3", true), ("S4", "s4", true),
-        // AWG 2.0 allows ranges ("100-200") for H1–H4: numbers when plain, strings otherwise.
-        ("H1", "h1", true), ("H2", "h2", true), ("H3", "h3", true), ("H4", "h4", true),
-        ("I1", "i1", false), ("I2", "i2", false), ("I3", "i3", false), ("I4", "i4", false), ("I5", "i5", false),
-        ("J1", "j1", false), ("J2", "j2", false), ("J3", "j3", false), ("Itime", "itime", true),
+        ("Jc", "jc", Kind.Number), ("Jmin", "jmin", Kind.Number), ("Jmax", "jmax", Kind.Number),
+        ("S1", "s1", Kind.Number), ("S2", "s2", Kind.Number), ("S3", "s3", Kind.Number), ("S4", "s4", Kind.Number),
+        ("H1", "h1", Kind.Number), ("H2", "h2", Kind.Number), ("H3", "h3", Kind.Number), ("H4", "h4", Kind.Number),
+        ("I1", "i1", Kind.Text), ("I2", "i2", Kind.Text), ("I3", "i3", Kind.Text), ("I4", "i4", Kind.Text), ("I5", "i5", Kind.Text),
+        // AWG 3.0
+        ("HeaderProtectionKey", "header_protection_key", Kind.Text),
+        ("ContentPaddingAddition", "content_padding_addition", Kind.Number),
+        ("RekeyAfterTime", "rekey_after_time", Kind.Number), ("RekeyTimeout", "rekey_timeout", Kind.Number),
+        ("RejectAfterTime", "reject_after_time", Kind.Number), ("KeepaliveTimeout", "keepalive_timeout", Kind.Number),
+        ("MaxHandshakeAttempts", "max_handshake_attempts", Kind.Number),
+        // AWG 3.1
+        ("RandomTrailers", "random_trailers", Kind.Flag), ("DisableCookies", "disable_cookies", Kind.Flag),
     ];
+
+    private static readonly HashSet<string> JsonNames = Keys.Select(k => k.Json).ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>.conf keys that make a WireGuard config an AmneziaWG one.</summary>
+    public static IEnumerable<string> ConfKeys => Keys.Select(k => k.Conf);
 
     public static string Folder => Utils.GetBinPath("", "sing_box_amnezia");
 
@@ -44,13 +61,29 @@ public static class AmneziaCore
     public static string? FromConf(IReadOnlyDictionary<string, string> interfaceSection)
     {
         var obj = new JsonObject();
-        foreach (var (conf, json, number) in Keys)
+        var section = new Dictionary<string, string>(interfaceSection, StringComparer.OrdinalIgnoreCase);
+        foreach (var (conf, json, kind) in Keys)
         {
-            if (!interfaceSection.TryGetValue(conf, out var value) || value.IsNullOrEmpty())
+            if (!section.TryGetValue(conf, out var value) || value.IsNullOrEmpty())
             {
                 continue;
             }
-            obj[json] = number && long.TryParse(value, out var n) ? JsonValue.Create(n) : JsonValue.Create(value);
+            value = value.Trim();
+            switch (kind)
+            {
+                case Kind.Flag:
+                    if (value is "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase) || value.Equals("on", StringComparison.OrdinalIgnoreCase))
+                    {
+                        obj[json] = true;
+                    }
+                    break;
+                case Kind.Number:
+                    obj[json] = long.TryParse(value, out var n) ? JsonValue.Create(n) : JsonValue.Create(value);
+                    break;
+                default:
+                    obj[json] = value;
+                    break;
+            }
         }
         return obj.Count == 0 ? null : obj.ToJsonString();
     }
@@ -63,7 +96,16 @@ public static class AmneziaCore
         }
         try
         {
-            return JsonNode.Parse(stored!) as JsonObject;
+            if (JsonNode.Parse(stored!) is not JsonObject obj)
+            {
+                return null;
+            }
+            // Profiles imported by older builds may hold AWG 1.5 keys (j1, itime) the fork refuses: drop them.
+            foreach (var unknown in obj.Select(kv => kv.Key).Where(k => !JsonNames.Contains(k)).ToList())
+            {
+                obj.Remove(unknown);
+            }
+            return obj.Count == 0 ? null : obj;
         }
         catch (Exception ex)
         {

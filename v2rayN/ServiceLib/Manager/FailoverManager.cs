@@ -99,6 +99,7 @@ public sealed class FailoverManager
         if (alive && (++_ticks % BulkEvery == 0 || _failures > 0))
         {
             var (ok, received) = await ProbeBulkAsync(token);
+            TransportStats.Instance.Record(await CurrentKindAsync(config), ok ? TransportStats.Outcome.Ok : TransportStats.Outcome.Frozen);
             if (!ok)
             {
                 alive = false;
@@ -132,6 +133,11 @@ public sealed class FailoverManager
         }
 
         var now = DateTime.Now;
+        if (_failures == FailuresToSwitch)
+        {
+            // The internet works and the VPN doesn't: one failed check of this transport (once per episode).
+            TransportStats.Instance.Record(await CurrentKindAsync(config), TransportStats.Outcome.Fail);
+        }
 
         // Russian sites open directly, foreign ones don't even directly: a white list (mobile networks, by IP).
         // Going through the server list then only burns time; only a relay on a Russian IP can get through.
@@ -190,6 +196,7 @@ public sealed class FailoverManager
         }
         var currentHost = ServerHost(current);
         var currentAsn = ServerNetworkCheck.CachedAsn(current?.Address);
+        await TransportStats.Instance.RefreshHintsAsync(config, token);
         var candidates = group.Select(p => new Candidate(p.IndexId,
                 exs.TryGetValue(p.IndexId, out var ex) ? ex.Delay : 0,
                 exs.TryGetValue(p.IndexId, out var ex2) ? ex2.Sort : 0,
@@ -197,7 +204,8 @@ public sealed class FailoverManager
                 frozen.Contains(p.IndexId),
                 ServerNameFormatter.IsRussianRelay(p.Remarks),
                 currentHost != null && string.Equals(ServerHost(p), currentHost, StringComparison.OrdinalIgnoreCase),
-                currentAsn > 0 && ServerNetworkCheck.CachedAsn(p.Address) == currentAsn))
+                currentAsn > 0 && ServerNetworkCheck.CachedAsn(p.Address) == currentAsn,
+                TransportStats.Instance.Score(TransportStats.KindOf(p))))
             .ToList();
         var next = whitelist
             ? PickNextUnderWhitelist(candidates, config.IndexId, _tried.Keys)
@@ -229,7 +237,13 @@ public sealed class FailoverManager
     }
 
     public record Candidate(string IndexId, int Delay, int Sort, string? Country = null, bool FrozenNetwork = false, bool RussianRelay = false,
-        bool SameHost = false, bool SameNetwork = false);
+        bool SameHost = false, bool SameNetwork = false, double? TransportScore = null);
+
+    /// <summary>Detour Map: a transport that passes in fewer than this share of checks on this ISP goes later.</summary>
+    public const double PoorTransport = 0.5;
+
+    private static async Task<string> CurrentKindAsync(Config config)
+        => TransportStats.KindOf(await AppManager.Instance.GetProfileItem(config.IndexId));
 
     /// <summary>
     /// The server's host: the address, or for a custom (full JSON) profile the address of its proxy
@@ -289,7 +303,9 @@ public sealed class FailoverManager
             .OrderBy(c => c.SameHost ? 0 : 1)
             .ThenBy(c => country != null && c.Country == country ? 0 : 1)
             .ThenBy(c => c.FrozenNetwork ? 1 : 0)
+            .ThenBy(c => c.TransportScore < PoorTransport ? 1 : 0)
             .ThenBy(c => c.SameNetwork ? 1 : 0)
+            .ThenByDescending(c => c.TransportScore ?? PoorTransport)
             .ThenBy(c => c.Delay > 0 ? 0 : c.Delay == 0 ? 1 : 2)
             .ThenBy(c => c.Delay > 0 ? c.Delay : 0)
             .ThenBy(c => c.Sort)
