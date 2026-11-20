@@ -533,6 +533,16 @@ public static class AppText
     public static string GameModeHint => T(
         "Пока запущена игра, Detour не меняет сервер на ходу: новый IP посреди матча рвёт игру, а античиты и антифрод (Roblox, Riot) могут забанить аккаунт. Игра идёт по своему правилу: VPN, zapret или напрямую.",
         "While a game runs, Detour never switches servers on the fly: a new IP mid-match drops the game, and anti-cheat / anti-fraud (Roblox, Riot) may ban the account. The game keeps its own rule: VPN, zapret or direct.");
+    public static string RuleServerMain => T("основной сервер", "main server");
+    public static string RuleServerSwitched => T("{0}: {1} не отвечает, переключено на {2}", "{0}: {1} is down, switched to {2}");
+    public static string RuleServerLine => T("{0} → {1}", "{0} → {1}");
+    public static string RuleServerLineDown => T("{0} → {1} ({2} не отвечал)", "{0} → {1} ({2} was down)");
+    public static string FailoverFrozen => T(
+        "Сервер отвечает, но данные встают после {0} КБ — похоже на заморозку провайдером.",
+        "The server answers but data stops after {0} KB: looks like the ISP freezes it.");
+    public static string StallWatchClosed => T(
+        "Зависло соединение {0}: данные перестали приходить, пересоздаю его.",
+        "Connection {0} stalled (no data coming back): recreating it.");
     public static string GameModeActive => T("Игра: {0} — сервер закреплён", "Game: {0} — server pinned");
     public static string GameModeHeldServer => T(
         "Сервер не отвечает, но запущена {0}: не переключаю, чтобы не сменить IP посреди игры. Смените сервер вручную, если нужно.",

@@ -17,20 +17,41 @@ public sealed class RuleServerFailover
     private const int ProbeTimeoutMs = 5000;
 
     private CancellationTokenSource? _cts;
+    private List<ListState> _lists = [];
+
+    /// <summary>Raised (any thread) when the lists change: start, stop or a switch.</summary>
+    public event Action? StateChanged;
 
     /// <summary>The state of one list: members in order, the selected one and its failures in a row.</summary>
-    public sealed class ListState(string selector, List<string> members)
+    public sealed class ListState(string selector, List<string> members, List<string>? names = null)
     {
         public string Selector { get; } = selector;
         public List<string> Members { get; } = members;
+        public List<string> Names { get; } = names is { } n && n.Count == members.Count ? n : members;
         public int Current { get; set; }
         public int Failures { get; set; }
+        /// <summary>The server the list moved away from at the last switch.</summary>
+        public string? LastDown { get; set; }
+
+        /// <summary>The list as written in the rule ("A; B; C").</summary>
+        public string ListText => Selector.StartsWith(SelectorPrefix, StringComparison.Ordinal) ? Selector[SelectorPrefix.Length..] : Selector;
     }
 
-    public void Start(IReadOnlyDictionary<string, List<string>> selectors)
+    public const string SelectorPrefix = "servers: ";
+
+    public record Status(string ListText, string Current, string? LastDown);
+
+    public IReadOnlyList<Status> Snapshot()
+        => _lists.Select(l => new Status(l.ListText, l.Names[l.Current], l.LastDown)).ToList();
+
+    public void Start(IReadOnlyDictionary<string, List<string>> selectors, IReadOnlyDictionary<string, List<string>>? names = null)
     {
         Stop();
-        var lists = selectors.Where(s => s.Value.Count > 1).Select(s => new ListState(s.Key, s.Value)).ToList();
+        var lists = selectors.Where(s => s.Value.Count > 1)
+            .Select(s => new ListState(s.Key, s.Value, names?.GetValueOrDefault(s.Key)))
+            .ToList();
+        _lists = lists;
+        StateChanged?.Invoke();
         if (lists.Count == 0)
         {
             return;
@@ -44,9 +65,14 @@ public sealed class RuleServerFailover
     {
         _cts?.Cancel();
         _cts = null;
+        if (_lists.Count > 0)
+        {
+            _lists = [];
+            StateChanged?.Invoke();
+        }
     }
 
-    private static async Task RunAsync(List<ListState> lists, CancellationToken ct)
+    private async Task RunAsync(List<ListState> lists, CancellationToken ct)
     {
         try
         {
@@ -55,7 +81,13 @@ public sealed class RuleServerFailover
                 await Task.Delay(Interval, ct);
                 foreach (var list in lists)
                 {
-                    await CheckAsync(list, ProbeAsync, SelectAsync, ct);
+                    var from = list.Names[list.Current];
+                    if (await CheckAsync(list, ProbeAsync, SelectAsync, ct) != null)
+                    {
+                        NoticeManager.Instance.Enqueue(string.Format(AppText.RuleServerSwitched,
+                            RuleTargets(list.ListText), from, list.Names[list.Current]));
+                        StateChanged?.Invoke();
+                    }
                 }
             }
         }
@@ -66,6 +98,18 @@ public sealed class RuleServerFailover
         {
             Logging.SaveLog("RuleServerFailover", ex);
         }
+    }
+
+    /// <summary>The rules that use a server list ("@youtube, AyuGram.exe"), for messages.</summary>
+    public static string RuleTargets(string listText)
+    {
+        var names = ServiceServerResolver.SplitList(listText);
+        var targets = (AppManager.Instance.Config.ConnectionRules ?? [])
+            .Where(r => r.Server != null && ServiceServerResolver.SplitList(r.Server).SequenceEqual(names, StringComparer.Ordinal))
+            .Select(r => r.Target)
+            .Distinct()
+            .ToList();
+        return targets.Count > 0 ? string.Join(", ", targets) : listText;
     }
 
     /// <summary>One check of a list. Returns the member switched to, or null when nothing changed.</summary>
@@ -89,8 +133,9 @@ public sealed class RuleServerFailover
             {
                 continue;
             }
-            Logging.SaveLog($"RuleServerFailover: {list.Selector}: {list.Members[list.Current]} is down -> {list.Members[i]}");
+            Logging.SaveLog($"RuleServerFailover: {list.Selector}: {list.Names[list.Current]} is down -> {list.Names[i]}");
             await select(list.Selector, list.Members[i]);
+            list.LastDown = list.Names[list.Current];
             list.Current = i;
             list.Failures = 0;
             return list.Members[i];

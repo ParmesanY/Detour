@@ -127,7 +127,7 @@ public class CoreManager
 
         // Rules with a server list ("= A; B"): live switching through the sing-box selector.
         var listContext = preContext?.RunCoreType == ECoreType.sing_box ? preContext : mainContext;
-        RuleServerFailover.Instance.Start(listContext.RuleServerSelectors);
+        RuleServerFailover.Instance.Start(listContext.RuleServerSelectors, listContext.RuleServerNames);
 
         AppManager.Instance.RunningCoreType = preContext?.RunCoreType ?? mainContext.RunCoreType;
 

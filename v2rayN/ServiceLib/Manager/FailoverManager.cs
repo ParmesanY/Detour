@@ -29,6 +29,14 @@ public sealed class FailoverManager
     private int _failures;
     private bool _heldNotified;
     private bool _whitelistNotified;
+    private bool _frozenNotified;
+    private int _ticks;
+
+    /// <summary>A 64 KB download every 10 ticks (5 min): the TSPU freeze stops TCP after ~15-20 KB.</summary>
+    private const int BulkEvery = 10;
+    private const int BulkBytes = 64 * 1024;
+    private const string BulkProbeUrl = "https://speed.cloudflare.com/__down?bytes=65536";
+    private static readonly TimeSpan StallTimeout = TimeSpan.FromSeconds(10);
     private DateTime _quietUntil = DateTime.MinValue;
 
     /// <summary>Raised (any thread) with the server to switch to; the UI applies it like a manual pick.</summary>
@@ -86,10 +94,27 @@ public sealed class FailoverManager
             return;
         }
 
-        if (await ProbeProxyAsync(token))
+        var alive = await ProbeProxyAsync(token);
+        // A server the ISP freezes still answers small requests: every few ticks pull 64 KB too.
+        if (alive && (++_ticks % BulkEvery == 0 || _failures > 0))
+        {
+            var (ok, received) = await ProbeBulkAsync(token);
+            if (!ok)
+            {
+                alive = false;
+                Logging.SaveLog($"{_tag}: data stops after {received / 1024} KB through the VPN: frozen");
+                if (!_frozenNotified)
+                {
+                    _frozenNotified = true;
+                    NoticeManager.Instance.Enqueue(string.Format(AppText.FailoverFrozen, received / 1024));
+                }
+            }
+        }
+        if (alive)
         {
             _failures = 0;
             _heldNotified = false;
+            _frozenNotified = false;
             return;
         }
         _failures++;
@@ -155,18 +180,24 @@ public sealed class FailoverManager
         try
         {
             using var lookup = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-            frozen = await ServerNetworkCheck.FrozenServersAsync(group.Where(p => p.IndexId != config.IndexId), lookup.Token);
+            // The current server first: its AS is needed to prefer another network.
+            frozen = await ServerNetworkCheck.FrozenServersAsync(group.OrderBy(p => p.IndexId == config.IndexId ? 0 : 1), lookup.Token);
+            frozen.Remove(config.IndexId);
         }
         catch (OperationCanceledException)
         {
             frozen = [];
         }
+        var currentHost = ServerHost(current);
+        var currentAsn = ServerNetworkCheck.CachedAsn(current?.Address);
         var candidates = group.Select(p => new Candidate(p.IndexId,
                 exs.TryGetValue(p.IndexId, out var ex) ? ex.Delay : 0,
                 exs.TryGetValue(p.IndexId, out var ex2) ? ex2.Sort : 0,
                 ServerNameFormatter.ExitCountry(p.Remarks),
                 frozen.Contains(p.IndexId),
-                ServerNameFormatter.IsRussianRelay(p.Remarks)))
+                ServerNameFormatter.IsRussianRelay(p.Remarks),
+                currentHost != null && string.Equals(ServerHost(p), currentHost, StringComparison.OrdinalIgnoreCase),
+                currentAsn > 0 && ServerNetworkCheck.CachedAsn(p.Address) == currentAsn))
             .ToList();
         var next = whitelist
             ? PickNextUnderWhitelist(candidates, config.IndexId, _tried.Keys)
@@ -197,7 +228,33 @@ public sealed class FailoverManager
         SwitchRequested?.Invoke(next, nextItem.Remarks);
     }
 
-    public record Candidate(string IndexId, int Delay, int Sort, string? Country = null, bool FrozenNetwork = false, bool RussianRelay = false);
+    public record Candidate(string IndexId, int Delay, int Sort, string? Country = null, bool FrozenNetwork = false, bool RussianRelay = false,
+        bool SameHost = false, bool SameNetwork = false);
+
+    /// <summary>
+    /// The server's host: the address, or for a custom (full JSON) profile the address of its proxy
+    /// outbound. Two profiles with one host are one machine with different transports.
+    /// </summary>
+    public static string? ServerHost(ProfileItem? p)
+    {
+        if (p == null)
+        {
+            return null;
+        }
+        if (p.ConfigType != EConfigType.Custom)
+        {
+            return p.Address.IsNullOrEmpty() ? null : p.Address;
+        }
+        try
+        {
+            var path = File.Exists(p.Address) ? p.Address : Utils.GetConfigPath(p.Address);
+            return File.Exists(path) ? CustomConfigRuleServers.ProxyHost(File.ReadAllText(path)) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     /// <summary>Under a white list only relays on Russian IPs can work: the best of them, or null when there is none.</summary>
     public static string? PickNextUnderWhitelist(IEnumerable<Candidate> candidates, string currentId, IEnumerable<string> recentlyTried) =>
@@ -216,9 +273,12 @@ public sealed class FailoverManager
         russianOpens && foreignResults.Count > 0 && foreignResults.All(ok => !ok);
 
     /// <summary>
-    /// Next server: same exit country as the current one first (people pick a country for a reason:
-    /// a service that only works from there), then the rest. Within that: ones that answered the last
-    /// ping (delay &gt; 0) by delay, then untested ones in list order; failed pings (delay &lt; 0) last.
+    /// Next server: first the same machine over another transport (REALITY → XHTTP → Hysteria2…: a frozen
+    /// transport is often the only problem, and the IP stays). Then the same exit country as the current
+    /// one (people pick a country for a reason: a service that only works from there), then the rest.
+    /// Within that: not on a frozen hosting network, then another network (AS) than the current server's,
+    /// so a freeze of one cloud isn't hit again; then ones that answered the last ping (delay &gt; 0) by
+    /// delay, untested ones in list order, failed pings (delay &lt; 0) last.
     /// The current and recently tried servers are skipped.
     /// </summary>
     public static string? PickNext(IEnumerable<Candidate> candidates, string currentId, IEnumerable<string> recentlyTried, string? country = null)
@@ -226,14 +286,73 @@ public sealed class FailoverManager
         var skip = new HashSet<string>(recentlyTried) { currentId };
         return candidates
             .Where(c => !skip.Contains(c.IndexId))
-            .OrderBy(c => country != null && c.Country == country ? 0 : 1)
+            .OrderBy(c => c.SameHost ? 0 : 1)
+            .ThenBy(c => country != null && c.Country == country ? 0 : 1)
             .ThenBy(c => c.FrozenNetwork ? 1 : 0)
+            .ThenBy(c => c.SameNetwork ? 1 : 0)
             .ThenBy(c => c.Delay > 0 ? 0 : c.Delay == 0 ? 1 : 2)
             .ThenBy(c => c.Delay > 0 ? c.Delay : 0)
             .ThenBy(c => c.Sort)
             .Select(c => c.IndexId)
             .FirstOrDefault();
     }
+
+    /// <summary>
+    /// Downloads <see cref="BulkBytes"/> through the local proxy. Fails when no byte arrives for
+    /// <see cref="StallTimeout"/> after the response started: what a freeze looks like. A failure to
+    /// connect at all counts as alive here (the small probe judges that). Returns the bytes received.
+    /// </summary>
+    private static async Task<(bool Ok, long Received)> ProbeBulkAsync(CancellationToken token)
+    {
+        var port = AppManager.Instance.GetLocalPort(EInboundProtocol.socks);
+        long received = 0;
+        try
+        {
+            using var handler = new SocketsHttpHandler
+            {
+                Proxy = new WebProxy($"socks5://127.0.0.1:{port}"),
+                UseProxy = true,
+                ConnectTimeout = TimeSpan.FromSeconds(8),
+            };
+            using var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan };
+            using var headers = CancellationTokenSource.CreateLinkedTokenSource(token);
+            headers.CancelAfter(TimeSpan.FromSeconds(15));
+            using var resp = await client.GetAsync(BulkProbeUrl, HttpCompletionOption.ResponseHeadersRead, headers.Token);
+            if (!resp.IsSuccessStatusCode)
+            {
+                return (true, 0); // the test site itself refuses: no verdict
+            }
+            await using var stream = await resp.Content.ReadAsStreamAsync(token);
+            var buffer = new byte[16 * 1024];
+            while (received < BulkBytes)
+            {
+                using var stall = CancellationTokenSource.CreateLinkedTokenSource(token);
+                stall.CancelAfter(StallTimeout);
+                int n;
+                try
+                {
+                    n = await stream.ReadAsync(buffer, stall.Token);
+                }
+                catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                {
+                    return (false, received); // the response started, then the data stopped
+                }
+                if (n == 0)
+                {
+                    break;
+                }
+                received += n;
+            }
+            return (true, received);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
+        {
+            return (IsFrozen(received, BulkBytes) == false, received);
+        }
+    }
+
+    /// <summary>The body broke off after some data: a freeze. Nothing at all is a different failure.</summary>
+    public static bool IsFrozen(long received, long expected) => received > 0 && received < expected;
 
     private static async Task<bool> ProbeProxyAsync(CancellationToken token)
     {

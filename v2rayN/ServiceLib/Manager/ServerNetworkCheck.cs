@@ -105,7 +105,11 @@ public static class ServerNetworkCheck
                                         || (name.Length > 0 && (n.Patterns ?? []).Any(p => name.Contains(p.ToUpperInvariant(), StringComparison.Ordinal))));
     }
 
-    private static readonly ConcurrentDictionary<string, (bool Frozen, DateTime At)> _hostCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, (bool Frozen, int Asn, DateTime At)> _hostCache = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The AS of a server host from the last lookup (FrozenServersAsync), or 0 when unknown.</summary>
+    public static int CachedAsn(string? host)
+        => host != null && _hostCache.TryGetValue(host, out var v) ? v.Asn : 0;
 
     /// <summary>UDP protocols: the packet-count freeze is TCP only (so far).</summary>
     public static bool UsesUdp(ProfileItem p)
@@ -132,7 +136,7 @@ public static class ServerNetworkCheck
                 var network = ip != null ? await LookupAsync(ip, ct) : null;
                 if (network != null)
                 {
-                    _hostCache[host] = (network.Frozen != null, DateTime.UtcNow);
+                    _hostCache[host] = (network.Frozen != null, network.Asn, DateTime.UtcNow);
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)

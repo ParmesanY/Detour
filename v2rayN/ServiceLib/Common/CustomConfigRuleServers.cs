@@ -110,6 +110,18 @@ public static class CustomConfigRuleServers
         return result;
     }
 
+    /// <summary>The server address of a custom config's proxy outbound (first hop of its chain).</summary>
+    public static string? ProxyHost(string json)
+    {
+        if (Parse(json) is not JsonObject root || root["outbounds"] is not JsonArray outbounds
+            || ProxyOutbounds(outbounds).FirstOrDefault() is not { } proxy || proxy["settings"] is not JsonObject s)
+        {
+            return null;
+        }
+        var address = s["vnext"]?[0]?["address"] ?? s["servers"]?[0]?["address"] ?? s["address"];
+        return address?.ToString() is { Length: > 0 } a ? a : null;
+    }
+
     private static string? Via(JsonObject outbound)
         => outbound["streamSettings"]?["sockopt"]?["dialerProxy"]?.ToString() is { Length: > 0 } d ? d
             : outbound["proxySettings"]?["tag"]?.ToString() is { Length: > 0 } t ? t

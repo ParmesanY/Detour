@@ -24,6 +24,9 @@ public record CoreConfigContext
     // Filled while generating: selector tag -> its member outbound tags in order (RuleServerFailover).
     public Dictionary<string, List<string>> RuleServerSelectors { get; init; } = new();
 
+    // Selector tag -> server names for the UI, in the same order as RuleServerSelectors.
+    public Dictionary<string, List<string>> RuleServerNames { get; init; } = new();
+
     // Test ServerTestItem Map
     public Dictionary<string, string> ServerTestItemMap { get; init; } = new();
 

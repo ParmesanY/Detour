@@ -31,6 +31,14 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
     /// <summary>"Game: cs2.exe — server pinned" while game mode holds the server; empty otherwise.</summary>
     [Reactive] public partial string GameText { get; set; } = string.Empty;
 
+    /// <summary>Rules with a server list and the server each one is on now, one per line; empty without lists.</summary>
+    [Reactive] public partial string RuleServersText { get; set; } = string.Empty;
+
+    public static string FormatRuleServers(IEnumerable<RuleServerFailover.Status> lists, Func<string, string> targets)
+        => string.Join("\n", lists.Select(s => s.LastDown == null
+            ? string.Format(AppText.RuleServerLine, targets(s.ListText), s.Current)
+            : string.Format(AppText.RuleServerLineDown, targets(s.ListText), s.Current, s.LastDown)));
+
     [Reactive] public partial bool IsConnected { get; set; }
 
     /// <summary>true: whole computer via TUN; false: only apps that honour the system proxy.</summary>
@@ -165,6 +173,11 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
             _config.ResumeReconnect = v;
             await ConfigHandler.SaveConfig(_config);
         });
+        RuleServerFailover.Instance.StateChanged += () =>
+        {
+            var text = FormatRuleServers(RuleServerFailover.Instance.Snapshot(), RuleServerFailover.RuleTargets);
+            RxSchedulers.MainThreadScheduler.Schedule(() => RuleServersText = text);
+        };
         GameModeManager.Instance.StateChanged += game =>
             RxSchedulers.MainThreadScheduler.Schedule(() =>
                 GameText = game != null && _config.GameMode != false ? string.Format(AppText.GameModeActive, game) : string.Empty);

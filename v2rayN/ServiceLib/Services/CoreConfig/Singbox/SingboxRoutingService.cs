@@ -630,10 +630,14 @@ public partial class CoreConfigSingboxService
             return selectorTag;
         }
 
-        var members = keys
-            .Select(k => k == null ? Global.ProxyTag : GenNodeOutbound(context.AllProxiesMap.GetValueOrDefault(k)))
-            .Distinct()
+        var pairs = keys
+            .Select(k => k == null
+                ? (Tag: Global.ProxyTag, Name: AppText.RuleServerMain)
+                : (Tag: GenNodeOutbound(context.AllProxiesMap.GetValueOrDefault(k)), Name: context.AllProxiesMap.GetValueOrDefault(k)?.Remarks ?? k))
+            .DistinctBy(p => p.Tag)
             .ToList();
+        var members = pairs.Select(p => p.Tag).ToList();
+        context.RuleServerNames[selectorTag] = pairs.Select(p => p.Name).ToList();
         _coreConfig.outbounds.Add(new Outbound4Sbox
         {
             type = "selector",

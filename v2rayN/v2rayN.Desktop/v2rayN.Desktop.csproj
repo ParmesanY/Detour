@@ -10,7 +10,7 @@
 		<CETCompat>false</CETCompat>
 		<Product>Detour</Product>
 		<!-- Detour's own version and repository (self-update check); CI sets them from the tag. -->
-		<DetourVersion Condition="'$(DetourVersion)' == ''">0.3.12</DetourVersion>
+		<DetourVersion Condition="'$(DetourVersion)' == ''">0.4.0</DetourVersion>
 		<DetourRepo Condition="'$(DetourRepo)' == ''"></DetourRepo>
 	</PropertyGroup>
 

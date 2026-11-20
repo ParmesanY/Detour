@@ -422,6 +422,7 @@ public partial class MainWindowViewModel : MyReactiveObject
                 await ProfilesViewModel.SetDefaultServer(indexId);
             });
         FailoverManager.Instance.Start();
+        StallWatchManager.Instance.Start();
         GameModeManager.Instance.Start();
         NetworkResumeManager.Instance.ReconnectRequested += cardChanged =>
             RxSchedulers.MainThreadScheduler.Schedule(async () =>

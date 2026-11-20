@@ -260,6 +260,24 @@
             Message="{Binding GameText}"
             Severity="Informational" />
 
+        <!--  Rules with a server list ("= A; B"): the server each one is on now  -->
+        <TextBlock
+            Margin="2,8,0,0"
+            FontSize="10.5"
+            Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+            Text="{Binding RuleServersText}"
+            TextWrapping="Wrap">
+            <TextBlock.Style>
+                <Style BasedOn="{StaticResource DetourMono}" TargetType="TextBlock">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding RuleServersText}" Value="">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
+
         <ui:InfoBar
             Margin="0,8,0,0"
             IsClosable="False"
