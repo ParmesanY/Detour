@@ -89,7 +89,8 @@ public sealed class FailoverManager
     private async Task TickAsync(CancellationToken token)
     {
         var config = AppManager.Instance.Config;
-        if (!config.AutoFailover || config.IndexId.IsNullOrEmpty() || DateTime.Now < _quietUntil)
+        if (!config.AutoFailover || config.IndexId.IsNullOrEmpty() || DateTime.Now < _quietUntil
+            || config.EmergencyItem?.Active == true)
         {
             return;
         }
@@ -224,6 +225,7 @@ public sealed class FailoverManager
         if (next == null)
         {
             Logging.SaveLog($"{_tag}: no other server to try");
+            EmergencyModeManager.Instance.Offer();
             _quietUntil = now + Window;
             return;
         }

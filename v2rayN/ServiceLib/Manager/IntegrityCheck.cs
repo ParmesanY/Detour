@@ -36,6 +36,8 @@ public static class IntegrityCheck
             {
                 list.Add(TgWsProxyManager.ExePath);
             }
+            // Tor and lyrebird (emergency mode) are Go/C binaries antiviruses like to flag too.
+            list.AddRange(new[] { TorManager.ExePath, TorManager.TransportPath }.Where(File.Exists));
         }
         return list;
     }

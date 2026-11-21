@@ -37,6 +37,7 @@ public class Config
     public ZapretItem ZapretItem { get; set; }
     public TgWsProxyItem TgWsProxyItem { get; set; }
     public WarpItem WarpItem { get; set; }
+    public EmergencyItem EmergencyItem { get; set; }
     public BlockMapItem BlockMapItem { get; set; }
     public List<ConnectionRule> ConnectionRules { get; set; }
     public List<ConnectionRuleProfile> ConnectionRuleProfiles { get; set; }

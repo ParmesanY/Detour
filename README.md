@@ -66,6 +66,7 @@ Detour в фоне проверяет прямой путь и переводи�
 | **Свой сервер для сервиса** | `@youtube +vpn = Германия 1; Финляндия` — правило ходит через свой сервер и переключается между запасными, не трогая остальной VPN. |
 | **Автосмена сервера** | Ловит не только обрывы, но и «заморозку» провайдером, когда сервер отвечает, а данные встают после 16 КБ. |
 | **Сторож соединений** | Звонок Discord или игра, у которых перестали приходить данные, переоткрываются сами. |
+| **Аварийный режим** | Все серверы заблокированы — Detour пускает трафик через сеть Tor (Snowflake, мосты без настройки): медленно, но связь есть, чтобы оплатить новый сервер и остаться в мессенджерах. |
 | **TG WS Proxy** | Telegram Desktop и сторонние клиенты без VPN ([Flowseal/tg-ws-proxy](https://github.com/Flowseal/tg-ws-proxy)). |
 | **Сайты чинятся сами** | Сайт без правила не открывается — Detour сам проверит его напрямую, через zapret и через VPN и добавит правило. Для любого сайта есть и кнопка «Не открывается сайт?». |
 | **Любые подписки** | Формат v2rayN, полные конфиги Xray (Happ-подобные), ключи `vless://`, `hysteria2://`, WireGuard и AmneziaWG 2.0–3.1. |
@@ -201,10 +202,11 @@ Detour распространяется под **GPL-3.0** (см. [LICENSE](LICE
 | [zapret](https://github.com/bol-van/zapret), [сборка Flowseal](https://github.com/Flowseal/zapret-discord-youtube) | bol-van, Flowseal | MIT |
 | [WinDivert](https://github.com/basil00/WinDivert) | basil00 | LGPL-3.0 / GPL-2.0 |
 | [TG WS Proxy](https://github.com/Flowseal/tg-ws-proxy) | Flowseal | MIT |
+| [Tor](https://www.torproject.org), [lyrebird / Snowflake](https://gitlab.torproject.org/tpo/anti-censorship) — аварийный режим | The Tor Project | BSD-3 / GPL-3.0 (сборка Tor Expert Bundle) |
 | [WPF-UI](https://github.com/lepoco/wpfui) | lepo.co | MIT |
 | [Twemoji](https://github.com/twitter/twemoji) — флаги стран | Twitter | CC-BY 4.0 |
 
-zapret, TG WS Proxy и ядра не входят в исходники: программа скачивает их с официальных страниц релизов.
+zapret, TG WS Proxy, Tor и ядра не входят в исходники: сборка берёт их с официальных страниц релизов (Tor — с dist.torproject.org) и сверяет хеши.
 
 ---
 

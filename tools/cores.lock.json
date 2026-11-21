@@ -42,5 +42,12 @@
                                 "TgWsProxy_windows.exe":  "454205cbcf76f333934108d893b58a528373bce8096624e27f0b6dc16eea660f",
                                 "TgWsProxy_windows_arm64.exe":  "6db3e04c531060328339357d6f2cd805cbc4f8276b76d4e4223dcaa4c971dc64"
                             }
-             }
+             },
+    "tor":  {
+                "url":  "https://dist.torproject.org/torbrowser",
+                "tag":  "16.0.1",
+                "sha256":  {
+                               "tor-expert-bundle-windows-x86_64-16.0.1.tar.gz":  "9eed3c3ff1fe43df034ce360196c9ec95472560d77ff55614d0cd5120edea27b"
+                           }
+            }
 }

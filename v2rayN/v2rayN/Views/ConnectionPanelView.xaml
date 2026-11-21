@@ -260,6 +260,74 @@
             Message="{Binding GameText}"
             Severity="Informational" />
 
+        <!--  Emergency mode: offered when failover runs out of servers; the way back when the server answers again  -->
+        <ui:InfoBar
+            Margin="0,8,0,0"
+            IsClosable="False"
+            IsOpen="{Binding EmergencyOffered}"
+            Message="{x:Static resx:AppText.EmergencyOffer}"
+            Severity="Warning">
+            <ui:InfoBar.Content>
+                <StackPanel Margin="0,0,0,8" Orientation="Horizontal">
+                    <Button Command="{Binding EmergencyToggleCmd}" Content="{x:Static resx:AppText.EmergencyOn}" />
+                    <Button
+                        Margin="8,0,0,0"
+                        Command="{Binding EmergencyDismissCmd}"
+                        Content="{x:Static resx:ResUI.TbCancel}" />
+                </StackPanel>
+            </ui:InfoBar.Content>
+        </ui:InfoBar>
+        <ui:InfoBar
+            Margin="0,8,0,0"
+            IsClosable="False"
+            IsOpen="{Binding EmergencyServerBack}"
+            Message="{x:Static resx:AppText.EmergencyServerBack}"
+            Severity="Success">
+            <ui:InfoBar.Content>
+                <Button
+                    Margin="0,0,0,8"
+                    Command="{Binding EmergencyToggleCmd}"
+                    Content="{x:Static resx:AppText.EmergencyOff}" />
+            </ui:InfoBar.Content>
+        </ui:InfoBar>
+
+        <Expander Margin="0,8,0,0" Header="{x:Static resx:AppText.EmergencyTitle}">
+            <StackPanel Margin="4,4,4,8">
+                <TextBlock
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    Text="{x:Static resx:AppText.EmergencyHint}"
+                    TextWrapping="Wrap" />
+                <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
+                    <Button Command="{Binding EmergencyToggleCmd}" Content="{Binding EmergencyButtonText}" />
+                    <TextBlock
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        Style="{StaticResource DetourMono}"
+                        Text="{Binding EmergencyStatus}" />
+                </StackPanel>
+                <TextBlock
+                    Margin="0,14,0,4"
+                    FontWeight="SemiBold"
+                    Text="{x:Static resx:AppText.EmergencyBridgesLabel}" />
+                <TextBlock
+                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                    Text="{x:Static resx:AppText.EmergencyBridgesHint}"
+                    TextWrapping="Wrap" />
+                <TextBox
+                    MinHeight="64"
+                    Margin="0,6,0,0"
+                    AcceptsReturn="True"
+                    FontFamily="Consolas"
+                    Text="{Binding EmergencyBridges, UpdateSourceTrigger=PropertyChanged}"
+                    TextWrapping="NoWrap"
+                    VerticalScrollBarVisibility="Auto" />
+                <Button
+                    Margin="0,6,0,0"
+                    Command="{Binding EmergencySaveBridgesCmd}"
+                    Content="{x:Static resx:ResUI.TbConfirm}" />
+            </StackPanel>
+        </Expander>
+
         <!--  Rules with a server list ("= A; B"): the server each one is on now  -->
         <TextBlock
             Margin="2,8,0,0"

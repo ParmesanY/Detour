@@ -133,6 +133,31 @@ if ($isWin) {
     Set-Content -Path "$bin\zapret\tpws\.version" -Value $zp.tag -NoNewline -Encoding ascii
 }
 
+if ($isWin) {
+    # Emergency mode: Tor with Snowflake / WebTunnel (lyrebird). torproject.org is blocked in Russia, so it
+    # can't be downloaded on first use: it ships in the archive, from the Expert Bundle pinned in the lock.
+    Write-Host 'Tor (Expert Bundle)'
+    $tor = Pinned 'tor'
+    $torAsset = "tor-expert-bundle-windows-x86_64-$($tor.tag).tar.gz"
+    $torSha = $tor.sha256.$torAsset
+    if (-not $torSha) { throw "cores.lock.json: no hash for tor/$torAsset" }
+    Fetch "$($tor.url)/$($tor.tag)/$torAsset" "$tmp\tor.tar.gz" 1000000 $torSha
+    $x = Join-Path $tmp 'tor-src'
+    New-Item -ItemType Directory -Force $x | Out-Null
+    tar -xzf "$tmp\tor.tar.gz" -C $x
+    if ($LASTEXITCODE) { throw 'tar failed: tor bundle' }
+    New-Item -ItemType Directory -Force "$bin\tor" | Out-Null
+    # Only what a client needs: tor itself and lyrebird (snowflake, webtunnel, obfs4). No geoip (26 MB, only
+    # for country rules), no conjure-client, no tor-gencert.
+    foreach ($f in 'tor\tor.exe', 'tor\pluggable_transports\lyrebird.exe', 'tor\pluggable_transports\pt_config.json') {
+        if (-not (Test-Path "$x\$f")) { throw "tor bundle: $f not found" }
+        Copy-Item "$x\$f" "$bin\tor\" -Force
+    }
+    Copy-Item "$x\docs\tor.txt" "$bin\tor\LICENSE-tor.txt" -Force
+    Copy-Item "$x\docs\lyrebird.txt" "$bin\tor\LICENSE-lyrebird.txt" -Force
+    Set-Content -Path "$bin\tor\.version" -Value $tor.tag -NoNewline -Encoding ascii
+}
+
 $readme = if ($isWin) { 'release-readme.txt' } else { 'release-readme-unix.txt' }
 Copy-Item (Join-Path $PSScriptRoot $readme) (Join-Path $app $(if ($isWin) { 'ПРОЧТИ.txt' } else { 'README.txt' })) -Force
 
@@ -159,4 +184,4 @@ Remove-Item $tmp -Recurse -Force
 $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText("$zip.sha256", "$hash  $name`n")
 Write-Host "Done: $zip ($([math]::Round((Get-Item $zip).Length / 1MB)) MB)"
-Write-Host "Xray $($xr.tag), sing-box $($sb.tag), zapret $($zp.tag)"
+Write-Host "Xray $($xr.tag), sing-box $($sb.tag), zapret $($zp.tag)$(if ($isWin) { ", Tor $((Pinned 'tor').tag)" })"

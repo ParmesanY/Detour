@@ -78,6 +78,11 @@ public class TrustedAssetsTests
         var lockJson = JsonUtils.ParseJson(File.ReadAllText(Path.Combine(dir!, "tools", "cores.lock.json")))!.AsObject();
         foreach (var (_, pin) in lockJson)
         {
+            // Tor (no "repo": not on GitHub) only ships in the archive; the app never downloads it.
+            if (pin!["repo"] is null)
+            {
+                continue;
+            }
             foreach (var (name, hash) in pin!["sha256"]!.AsObject())
             {
                 var url = TrustedAssets.Url($"https://github.com/{pin["repo"]}", pin["tag"]!.ToString(), name);

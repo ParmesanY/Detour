@@ -236,6 +236,21 @@
                         </MenuItem.Header>
                     </MenuItem>
                     <MenuItem
+                        x:Name="menuEmergency"
+                        Height="{StaticResource MenuItemHeight}"
+                        AutomationProperties.Name="{x:Static resx:AppText.EmergencyTitle}">
+                        <MenuItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon
+                                    x:Name="menuEmergencyCheck"
+                                    Margin="{StaticResource MarginRight8}"
+                                    VerticalAlignment="Center"
+                                    Kind="Check" />
+                                <TextBlock Text="{x:Static resx:AppText.EmergencyTitle}" />
+                            </StackPanel>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem
                         x:Name="menuCopyProxyCmdToClipboard"
                         Height="{StaticResource MenuItemHeight}"
                         Header="{x:Static resx:ResUI.menuCopyProxyCmdToClipboard}" />

@@ -201,6 +201,7 @@ public static class ConfigHandler
             config.TgWsProxyItem.Port = TgWsProxyManager.DefaultPort;
         }
         config.WarpItem ??= new();
+        config.EmergencyItem ??= new();
         config.BlockMapItem ??= new();
         if (config.BlockMapItem.Net is not ("home" or "mobile"))
         {

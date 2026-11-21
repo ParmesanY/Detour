@@ -423,6 +423,8 @@ public partial class MainWindowViewModel : MyReactiveObject
             });
         FailoverManager.Instance.Start();
         SiteAutoFixManager.Instance.Start();
+        // The emergency mode was on when the app closed: the servers are probably still blocked.
+        _ = EmergencyModeManager.Instance.ResumeAsync();
         StallWatchManager.Instance.Start();
         GameModeManager.Instance.Start();
         NetworkResumeManager.Instance.ReconnectRequested += cardChanged =>

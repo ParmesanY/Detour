@@ -24,6 +24,11 @@ public class ConnectionRulesManager
         {
             compiled.RoutingRules.Insert(0, TgWsProxyManager.DirectRule());
         }
+        if (config.EmergencyItem?.Active == true)
+        {
+            // Tor reaches its bridges directly; torrents and Windows updates would eat its few Mbit/s.
+            compiled.RoutingRules.InsertRange(0, EmergencyModeManager.Rules());
+        }
         return compiled;
     }
 

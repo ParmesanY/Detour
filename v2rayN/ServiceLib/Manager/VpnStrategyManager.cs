@@ -284,6 +284,25 @@ public static class VpnStrategyManager
     }
 
     /// <summary>
+    /// Whether the selected server works again (a separate test core, the chosen disguise, a 64 KB download):
+    /// the emergency mode's way back. False when it can't be tested.
+    /// </summary>
+    public static async Task<bool> CheckCurrentServerAsync(Config config, CancellationToken ct)
+    {
+        var server = await CurrentServerAsync(config);
+        if (server == null)
+        {
+            return false;
+        }
+        var (profile, _, _, customJson) = server.Value;
+        var xray = Find(config.ZapretItem.VpnStrategy) is { UsesWinws: false } s ? s : null;
+        var result = customJson != null
+            ? await TestCustomAsync(customJson, xray, ct)
+            : await TestAsync(config, WithTransport(profile, xray), xray, ct);
+        return result.Works;
+    }
+
+    /// <summary>
     /// Tests the selected server: TCP reachability over the physical network card, then a separate test
     /// core per strategy (no strategy first) with a small request and a 64 KB download.
     /// </summary>

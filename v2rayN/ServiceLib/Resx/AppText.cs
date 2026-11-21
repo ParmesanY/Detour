@@ -542,6 +542,36 @@ public static class AppText
     public static string FailoverFrozen => T(
         "Сервер отвечает, но данные встают после {0} КБ — похоже на заморозку провайдером.",
         "The server answers but data stops after {0} KB: looks like the ISP freezes it.");
+    // Emergency mode (Tor)
+    public static string EmergencyTitle => T("Аварийный режим (Tor)", "Emergency mode (Tor)");
+    public static string EmergencyHint => T(
+        "Когда все ваши VPN-серверы заблокированы: то, что шло через VPN, пойдёт через сеть Tor. Медленно (1–5 Мбит/с), но хватит, чтобы оплатить новый сервер, обновить подписку и остаться в мессенджерах. zapret и «напрямую» работают как обычно; торренты и обновления Windows на это время блокируются.",
+        "When all your VPN servers are blocked: what went through the VPN goes through Tor. Slow (1–5 Mbit/s), but enough to pay for a new server, refresh a subscription and stay in messengers. zapret and direct work as usual; torrents and Windows updates are blocked meanwhile.");
+    public static string EmergencyOn => T("Включить аварийный режим", "Turn on emergency mode");
+    public static string EmergencyOff => T("Выключить аварийный режим", "Turn off emergency mode");
+    public static string EmergencyActive => T("Аварийный режим: трафик VPN идёт через Tor ({0})", "Emergency mode: VPN traffic goes through Tor ({0})");
+    public static string EmergencyConnecting => T("Подключаюсь к Tor… {0}%", "Connecting to Tor… {0}%");
+    public static string EmergencyOffer => T(
+        "Ни один сервер не отвечает. Включить аварийный режим? Трафик пойдёт через Tor: медленно, но связь будет.",
+        "No server answers. Turn on emergency mode? Traffic will go through Tor: slow, but connected.");
+    public static string EmergencyServerBack => T(
+        "Выбранный сервер снова работает — можно выключить аварийный режим.",
+        "The selected server works again: you can turn emergency mode off.");
+    public static string EmergencyBridgesLabel => T("Свои мосты (необязательно)", "Your own bridges (optional)");
+    public static string EmergencyBridgesHint => T(
+        "Пусто — Snowflake, работает без настройки. Если Snowflake не подключается, получите мосты WebTunnel у бота @GetBridgesBot в Telegram (команда /bridges) и вставьте сюда строки целиком.",
+        "Empty = Snowflake, works without setup. If Snowflake doesn't connect, get WebTunnel bridges from @GetBridgesBot in Telegram (/bridges) and paste the lines here.");
+    public static string EmergencyBridgesSaved => T("Мосты сохранены: {0}. Действуют со следующего включения.", "Bridges saved: {0}. They apply from the next start.");
+    public static string EmergencyKindSnowflake => "Snowflake";
+    public static string EmergencyKindUser => T("ваши мосты", "your bridges");
+    public static string TorNotInstalled => T(
+        "Tor не найден в папке bin\\tor: возможно, его удалил антивирус. Скачайте архив Detour заново.",
+        "Tor not found in bin\\tor: an antivirus may have removed it. Download the Detour archive again.");
+    public static string TorConnected => T("Подключено к сети Tor", "Connected to the Tor network");
+    public static string TorConnecting => T("Подключение к Tor уже идёт", "Already connecting to Tor");
+    public static string TorFailed => T(
+        "Не удалось подключиться к Tor (остановилось на {0}%). Попробуйте свои мосты WebTunnel от @GetBridgesBot.",
+        "Couldn't connect to Tor (stuck at {0}%). Try your own WebTunnel bridges from @GetBridgesBot.");
     public static string VpnDiagPause => T(
         "Пауза {0} с: частые подключения к одному серверу провайдер замораживает на 2 минуты",
         "Waiting {0} s: the ISP freezes a server for 2 minutes after frequent connections to it");

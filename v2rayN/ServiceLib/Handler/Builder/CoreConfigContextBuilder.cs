@@ -110,7 +110,7 @@ public class CoreConfigContextBuilder
                 if (ruleItem.OutboundTag.StartsWith(ServiceServerResolver.TagPrefix, StringComparison.Ordinal))
                 {
                     // A connection rule with its own server ("servers per service").
-                    if (actNode.ConfigType == EConfigType.Custom)
+                    if (actNode.ConfigType == EConfigType.Custom || config.EmergencyItem?.Active == true)
                     {
                         // The custom config runs as is; its pre-core context resolves the rule servers.
                         ruleItem.OutboundTag = Global.ProxyTag;
@@ -304,6 +304,11 @@ public class CoreConfigContextBuilder
     /// </summary>
     public static async Task<CoreConfigContextBuilderAllResult> BuildAll(Config config, ProfileItem node)
     {
+        // Emergency mode: Tor's local SOCKS port stands in for the (blocked) server.
+        if (config.EmergencyItem?.Active == true && TorManager.Instance.IsReady)
+        {
+            node = TorManager.Instance.LocalProxyNode();
+        }
         var mainResult = await Build(config, node);
         if (!mainResult.Success)
         {

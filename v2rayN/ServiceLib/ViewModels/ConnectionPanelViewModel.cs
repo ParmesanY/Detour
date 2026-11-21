@@ -27,6 +27,65 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
     [Reactive] public partial bool AutoFailover { get; set; }
     [Reactive] public partial bool GameMode { get; set; }
     [Reactive] public partial bool AutoFixSites { get; set; }
+
+    // Emergency mode (Tor)
+    [Reactive] public partial bool EmergencyActive { get; set; }
+    [Reactive] public partial bool EmergencyBusy { get; set; }
+    [Reactive] public partial bool EmergencyOffered { get; set; }
+    [Reactive] public partial bool EmergencyServerBack { get; set; }
+    [Reactive] public partial string EmergencyStatus { get; set; } = string.Empty;
+    [Reactive] public partial string EmergencyButtonText { get; set; } = string.Empty;
+    [Reactive] public partial string EmergencyBridges { get; set; } = string.Empty;
+    public ReactiveCommand<RxVoid, RxVoid> EmergencyToggleCmd { get; private set; } = null!;
+    public ReactiveCommand<RxVoid, RxVoid> EmergencySaveBridgesCmd { get; private set; } = null!;
+    public ReactiveCommand<RxVoid, RxVoid> EmergencyDismissCmd { get; private set; } = null!;
+
+    private void InitEmergency()
+    {
+        EmergencyBridges = _config.EmergencyItem.Bridges;
+        EmergencyToggleCmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            var mgr = EmergencyModeManager.Instance;
+            if (mgr.IsActive)
+            {
+                await mgr.DeactivateAsync();
+                return;
+            }
+            var progress = new Progress<int>(p => EmergencyStatus = string.Format(AppText.EmergencyConnecting, p));
+            var (_, msg) = await mgr.ActivateAsync(progress);
+            NoticeManager.Instance.Enqueue(msg);
+            RefreshEmergency();
+        }, this.WhenAnyValue(x => x.EmergencyBusy).Select(b => !b));
+        EmergencySaveBridgesCmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            var lines = TorManager.ParseBridges(EmergencyBridges);
+            _config.EmergencyItem.Bridges = string.Join(Environment.NewLine, lines);
+            EmergencyBridges = _config.EmergencyItem.Bridges;
+            await ConfigHandler.SaveConfig(_config);
+            NoticeManager.Instance.Enqueue(string.Format(AppText.EmergencyBridgesSaved, lines.Count));
+        });
+        EmergencyDismissCmd = ReactiveCommand.Create(() => EmergencyModeManager.Instance.DismissOffer());
+
+        EmergencyModeManager.Instance.StateChanged += () => RxSchedulers.MainThreadScheduler.Schedule(RefreshEmergency);
+        TorManager.Instance.StateChanged += () => RxSchedulers.MainThreadScheduler.Schedule(RefreshEmergency);
+        RefreshEmergency();
+    }
+
+    private void RefreshEmergency()
+    {
+        var mgr = EmergencyModeManager.Instance;
+        var tor = TorManager.Instance;
+        EmergencyActive = mgr.IsActive;
+        EmergencyBusy = mgr.IsConnecting;
+        EmergencyOffered = mgr.Offered && !mgr.IsActive;
+        EmergencyServerBack = mgr.ServerBack && mgr.IsActive;
+        EmergencyButtonText = mgr.IsActive ? AppText.EmergencyOff : AppText.EmergencyOn;
+        EmergencyStatus = mgr.IsConnecting
+            ? string.Format(AppText.EmergencyConnecting, tor.Progress)
+            : mgr.IsActive
+                ? string.Format(AppText.EmergencyActive, tor.BridgeKind == "user" ? AppText.EmergencyKindUser : AppText.EmergencyKindSnowflake)
+                : string.Empty;
+    }
     [Reactive] public partial bool ResumeReconnect { get; set; }
 
     /// <summary>"Game: cs2.exe — server pinned" while game mode holds the server; empty otherwise.</summary>
@@ -162,6 +221,7 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
             FailoverManager.Instance.NotifyReloaded();
             await ConfigHandler.SaveConfig(_config);
         });
+        InitEmergency();
         AutoFixSites = _config.AutoFixSites != false;
         this.WhenAnyValue(x => x.AutoFixSites).Skip(1).SubscribeAsync(async v =>
         {

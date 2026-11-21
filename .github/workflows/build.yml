@@ -134,7 +134,7 @@ jobs:
           $a = Get-ChildItem out -File | Where-Object { $_.Name -match '^Detour.*\.(zip|tar\.gz)$' } | Select-Object -First 1
           if ($a.Name.EndsWith('.zip')) { Expand-Archive $a.FullName $x } else { tar -xzf $a.FullName -C $x; if ($LASTEXITCODE) { throw 'tar failed' } }
           $win = '${{ matrix.rid }}' -eq 'win-x64'
-          $need = if ($win) { 'Detour.exe', 'bin/xray/xray.exe', 'bin/sing_box/sing-box.exe', 'bin/zapret/current/bin/winws.exe' }
+          $need = if ($win) { 'Detour.exe', 'bin/xray/xray.exe', 'bin/sing_box/sing-box.exe', 'bin/zapret/current/bin/winws.exe', 'bin/tor/tor.exe', 'bin/tor/lyrebird.exe' }
                   else { 'Detour', 'bin/xray/xray', 'bin/sing_box/sing-box', 'bin/zapret/tpws/tpws' }
           foreach ($f in $need + 'bin/geoip.dat', 'bin/geosite.dat') {
             if (-not (Test-Path (Join-Path $x "Detour/$f"))) { throw "missing in archive: $f" }

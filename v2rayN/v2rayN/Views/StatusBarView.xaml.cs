@@ -26,6 +26,22 @@ public partial class StatusBarView
             ShowWarpState();
             NoticeManager.Instance.Enqueue(ok ? $"WARP: {(on ? AppText.WarpRunning : AppText.WarpStopped)}" : $"WARP: {msg}");
         };
+        // Emergency mode (Tor) from the tray, same pattern.
+        void ShowEmergencyState() => menuEmergencyCheck.Visibility = EmergencyModeManager.Instance.IsActive ? Visibility.Visible : Visibility.Hidden;
+        ShowEmergencyState();
+        tbNotify.ContextMenu.Opened += (_, _) => ShowEmergencyState();
+        EmergencyModeManager.Instance.StateChanged += () => Dispatcher.BeginInvoke(ShowEmergencyState);
+        menuEmergency.Click += async (_, _) =>
+        {
+            if (EmergencyModeManager.Instance.IsActive)
+            {
+                await EmergencyModeManager.Instance.DeactivateAsync();
+                return;
+            }
+            NoticeManager.Instance.Enqueue(string.Format(AppText.EmergencyConnecting, 0));
+            var (_, msg) = await EmergencyModeManager.Instance.ActivateAsync();
+            NoticeManager.Instance.Enqueue(msg);
+        };
         txtRunningServerDisplay.PreviewMouseDown += txtRunningInfoDisplay_MouseDoubleClick;
         txtRunningInfoDisplay.PreviewMouseDown += txtRunningInfoDisplay_MouseDoubleClick;
 

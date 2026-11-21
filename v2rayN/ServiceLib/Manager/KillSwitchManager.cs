@@ -142,6 +142,14 @@ public class KillSwitchManager
         {
             list.Add(TgWsProxyManager.ExePath);
         }
+        // Emergency mode: Tor is the tunnel then, and it dials its bridges itself.
+        foreach (var tor in new[] { TorManager.ExePath, TorManager.TransportPath })
+        {
+            if (File.Exists(tor))
+            {
+                list.Add(tor);
+            }
+        }
         return list.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
