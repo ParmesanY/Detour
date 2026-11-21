@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" role="img" aria-labelledby="t d">
+  <title id="t">Detour</title>
+  <desc id="d">Каждое приложение и сайт идёт своим путём: через zapret, через VPN или напрямую.</desc>
+  <style>
+    :root { --bg:#0b0d10; --panel:#14171c; --line:#262b33; --ink:#e6e9ee; --muted:#6e7783; --accent:#4f8cff; --soft:#2a3a5c; --block:#3a414c; }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f6f7f9; --panel:#ffffff; --line:#dadde2; --ink:#14171c; --muted:#6a717c; --accent:#2a6ee0; --soft:#cfdcf6; --block:#c3c8d0; }
+    }
+    .bg { fill: var(--bg); }
+    .panel { fill: var(--panel); stroke: var(--line); stroke-width: 1; }
+    .ink { fill: var(--ink); }
+    .muted { fill: var(--muted); }
+    .accent { fill: var(--accent); }
+    .sans { font-family: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif; }
+    .mono { font-family: "Cascadia Mono", "JetBrains Mono", Consolas, Menlo, monospace; }
+    .route { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .vpn { stroke: var(--accent); }
+    .zapret { stroke: var(--accent); stroke-dasharray: 2 9; }
+    .direct { stroke: var(--muted); }
+    .grid { stroke: var(--line); stroke-width: 1; }
+    .chip { fill: var(--panel); stroke: var(--line); }
+    .obstacle { fill: var(--block); }
+    .end { fill: none; stroke: var(--accent); stroke-width: 2.5; }
+  </style>
+
+  <rect class="bg" width="1280" height="420"/>
+  <!-- faint grid -->
+  <g opacity="0.55">
+    <path class="grid" d="M640 0V420M720 0V420M800 0V420M880 0V420M960 0V420M1040 0V420M1120 0V420M1200 0V420"/>
+    <path class="grid" d="M600 60H1280M600 140H1280M600 220H1280M600 300H1280M600 380H1280"/>
+  </g>
+
+  <!-- the mark: a path around an obstacle -->
+  <g transform="translate(72 74)">
+    <rect x="0" y="0" width="76" height="76" rx="18" class="panel"/>
+    <path class="route vpn" d="M14 44H28V24H52V52H62"/>
+    <rect x="11" y="41" width="6" height="6" rx="1" class="end"/>
+    <rect x="59" y="49" width="6" height="6" rx="1" class="end"/>
+    <rect x="35" y="33" width="10" height="10" class="obstacle"/>
+  </g>
+
+  <text x="168" y="128" class="ink sans" font-size="56" font-weight="600" letter-spacing="-1">Detour</text>
+  <text x="72" y="206" class="ink sans" font-size="28" font-weight="500">Каждому сервису — свой путь.</text>
+  <text x="72" y="246" class="muted sans" font-size="20">VPN-клиент для Windows со встроенным zapret:</text>
+  <text x="72" y="274" class="muted sans" font-size="20">что идёт через VPN, что через zapret, что напрямую —</text>
+  <text x="72" y="302" class="muted sans" font-size="20">решают правила, а не вы вручную.</text>
+  <text x="72" y="360" class="muted mono" font-size="14" letter-spacing="1">WINDOWS · MACOS · LINUX (БЕТА) · GPL-3.0</text>
+
+  <!-- routes: apps on the left, the internet on the right -->
+  <g class="mono" font-size="14">
+    <!-- YouTube: zapret -->
+    <g transform="translate(660 92)">
+      <rect class="chip" width="132" height="36" rx="6"/>
+      <text x="16" y="23" class="ink">youtube.com</text>
+    </g>
+    <path class="route zapret" d="M792 110H900V96H1150"/>
+    <text x="916" y="84" class="accent" font-size="13">zapret · без сервера</text>
+
+    <!-- Discord: zapret then VPN -->
+    <g transform="translate(660 192)">
+      <rect class="chip" width="132" height="36" rx="6"/>
+      <text x="16" y="23" class="ink">Discord.exe</text>
+    </g>
+    <path class="route zapret" d="M792 210H880"/>
+    <path class="route vpn" d="M880 210V176H1000V210H1150"/>
+    <rect x="922" y="198" width="22" height="22" class="obstacle"/>
+    <text x="1010" y="196" class="accent" font-size="13">zapret → VPN</text>
+
+    <!-- Bank: direct -->
+    <g transform="translate(660 292)">
+      <rect class="chip" width="132" height="36" rx="6"/>
+      <text x="16" y="23" class="ink">gosuslugi.ru</text>
+    </g>
+    <path class="route direct" d="M792 310H1150"/>
+    <text x="916" y="298" class="muted" font-size="13">напрямую</text>
+
+    <!-- the internet -->
+    <circle cx="1170" cy="96" r="6" class="accent"/>
+    <circle cx="1170" cy="210" r="6" class="accent"/>
+    <circle cx="1170" cy="310" r="6" class="muted"/>
+    <text x="1150" y="372" class="muted" font-size="12" letter-spacing="1">ИНТЕРНЕТ</text>
+  </g>
+</svg>

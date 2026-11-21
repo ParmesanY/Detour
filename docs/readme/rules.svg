@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" role="img" aria-labelledby="t d">
+  <title id="t">Как Detour раскладывает трафик</title>
+  <desc id="d">Приложения и сайты проходят через список правил; каждое правило отправляет трафик через zapret, через VPN-сервер, напрямую или блокирует его.</desc>
+  <style>
+    :root { --bg:#0b0d10; --panel:#14171c; --head:#181c22; --line:#262b33; --ink:#e6e9ee; --muted:#6e7783; --accent:#4f8cff; --warn:#c27c2c; }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f6f7f9; --panel:#ffffff; --head:#f2f4f7; --line:#dadde2; --ink:#14171c; --muted:#6a717c; --accent:#2a6ee0; --warn:#b8660f; }
+    }
+    .bg { fill: var(--bg); }
+    .panel { fill: var(--panel); stroke: var(--line); }
+    .head { fill: var(--head); }
+    .ink { fill: var(--ink); }
+    .muted { fill: var(--muted); }
+    .accent { fill: var(--accent); }
+    .warn { fill: var(--warn); }
+    .sans { font-family: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif; }
+    .mono { font-family: "Cascadia Mono", "JetBrains Mono", Consolas, Menlo, monospace; }
+    .wire { fill: none; stroke: var(--line); stroke-width: 2; }
+    .vpn { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; }
+    .zap { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 2 7; stroke-linecap: round; stroke-linejoin: round; }
+    .dir { fill: none; stroke: var(--muted); stroke-width: 2.5; stroke-linejoin: round; }
+    .blk { fill: none; stroke: var(--warn); stroke-width: 2.5; stroke-linecap: round; }
+    .sep { stroke: var(--line); }
+    .check { fill: var(--bg); stroke: var(--accent); stroke-width: 2; }
+  </style>
+
+  <rect class="bg" width="1280" height="420"/>
+
+  <!-- sources, one row per rule: 101 155 209 263 317 -->
+  <text x="48" y="52" class="muted mono" font-size="12" letter-spacing="1.5">ПРИЛОЖЕНИЯ И САЙТЫ</text>
+  <g class="mono" font-size="14">
+    <g transform="translate(48 82)"><rect class="panel" width="176" height="38" rx="6"/><text x="16" y="24" class="ink">youtube.com</text></g>
+    <g transform="translate(48 136)"><rect class="panel" width="176" height="38" rx="6"/><text x="16" y="24" class="ink">Discord.exe</text></g>
+    <g transform="translate(48 190)"><rect class="panel" width="176" height="38" rx="6"/><text x="16" y="24" class="ink">chatgpt.com</text></g>
+    <g transform="translate(48 244)"><rect class="panel" width="176" height="38" rx="6"/><text x="16" y="24" class="ink">sberbank.ru</text></g>
+    <g transform="translate(48 298)"><rect class="panel" width="176" height="38" rx="6"/><text x="16" y="24" class="ink">doubleclick.net</text></g>
+  </g>
+  <path class="wire" d="M224 101H280M224 155H280M224 209H280M224 263H280M224 317H280"/>
+
+  <!-- rules -->
+  <g transform="translate(280 36)">
+    <rect class="panel" width="452" height="310" rx="10"/>
+    <path class="head" d="M1 10a9 9 0 0 1 9-9h432a9 9 0 0 1 9 9v31H1z"/>
+    <path class="sep" d="M0 42H452"/>
+    <text x="20" y="27" class="muted mono" font-size="12" letter-spacing="1.5">ПРАВИЛА · СВЕРХУ ВНИЗ</text>
+  </g>
+  <g class="mono" font-size="15">
+    <text x="300" y="106"><tspan class="ink">@youtube</tspan><tspan class="accent"> +zapret</tspan></text>
+    <text x="300" y="160"><tspan class="ink">Discord.exe</tspan><tspan class="accent"> +zapret+vpn</tspan></text>
+    <text x="300" y="214"><tspan class="ink">@openai</tspan><tspan class="accent"> +vpn</tspan><tspan class="muted"> = США; Финляндия</tspan></text>
+    <text x="300" y="268"><tspan class="ink">@russia</tspan><tspan class="muted"> +direct</tspan></text>
+    <text x="300" y="322"><tspan class="ink">@ads</tspan><tspan class="warn"> +block</tspan></text>
+  </g>
+
+  <!-- routes -->
+  <path class="zap" d="M732 101H900"/>
+  <!-- zapret+vpn: a check decides; zapret once it passes, VPN until then -->
+  <path class="wire" d="M732 155H776"/>
+  <path class="zap" d="M804 155H844V121H900"/>
+  <path class="vpn" d="M790 169V197H820"/>
+  <polygon class="check" points="790,141 804,155 790,169 776,155"/>
+  <text x="790" y="160" class="accent mono" font-size="13" font-weight="700" text-anchor="middle">?</text>
+  <text x="852" y="146" class="accent mono" font-size="11">проходит</text>
+  <text x="798" y="188" class="accent mono" font-size="11">нет</text>
+  <path class="vpn" d="M732 209H820V197H900"/>
+  <path class="dir" d="M732 263H820V283H900"/>
+  <path class="blk" d="M732 317H812M806 309l12 16M818 309l-12 16"/>
+
+  <!-- destinations -->
+  <g class="sans">
+    <g transform="translate(900 82)">
+      <rect class="panel" width="332" height="58" rx="8"/>
+      <text x="18" y="25" class="ink" font-size="17" font-weight="600">zapret</text>
+      <text x="18" y="45" class="muted" font-size="13">обход DPI на вашей сетевой карте, без сервера</text>
+    </g>
+    <g transform="translate(900 168)">
+      <rect class="panel" width="332" height="58" rx="8"/>
+      <text x="18" y="25" class="ink" font-size="17" font-weight="600">VPN-сервер</text>
+      <text x="18" y="45" class="muted" font-size="13">основной или свой у правила, со списком запасных</text>
+    </g>
+    <g transform="translate(900 254)">
+      <rect class="panel" width="332" height="58" rx="8"/>
+      <text x="18" y="25" class="ink" font-size="17" font-weight="600">напрямую</text>
+      <text x="18" y="45" class="muted" font-size="13">российские сайты и банки: без VPN и без пинга</text>
+    </g>
+    <text x="832" y="322" class="warn mono" font-size="12" letter-spacing="1.5">БЛОК</text>
+  </g>
+
+  <text x="48" y="388" class="muted sans" font-size="15">◇ Discord.exe +zapret+vpn: Detour проверяет, проходит ли Discord через zapret. Пока не проходит — он идёт через VPN.</text>
+</svg>

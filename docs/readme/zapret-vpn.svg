@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 40 1280 290" role="img" aria-labelledby="t d">
+  <title id="t">Режим zapret → VPN</title>
+  <desc id="d">Сервис начинает через VPN; Detour проверяет прямой путь через zapret и переводит сервис туда после двух удачных проверок; если zapret перестал помогать, сервис возвращается на VPN, а Detour подбирает новую стратегию.</desc>
+  <style>
+    :root { --bg:#0b0d10; --panel:#14171c; --line:#262b33; --ink:#e6e9ee; --muted:#6e7783; --accent:#4f8cff; --warn:#c27c2c; }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f6f7f9; --panel:#ffffff; --line:#dadde2; --ink:#14171c; --muted:#6a717c; --accent:#2a6ee0; --warn:#b8660f; }
+    }
+    .bg { fill: var(--bg); }
+    .panel { fill: var(--panel); stroke: var(--line); }
+    .ink { fill: var(--ink); }
+    .muted { fill: var(--muted); }
+    .accent { fill: var(--accent); }
+    .warn { fill: var(--warn); }
+    .sans { font-family: "Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif; }
+    .mono { font-family: "Cascadia Mono", "JetBrains Mono", Consolas, Menlo, monospace; }
+    .lane { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 5; }
+    .vpn { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .zap { fill: none; stroke: var(--accent); stroke-width: 4; stroke-dasharray: 2 9; stroke-linecap: round; stroke-linejoin: round; }
+    .ok { fill: var(--bg); stroke: var(--accent); stroke-width: 2; }
+    .bad { fill: var(--bg); stroke: var(--warn); stroke-width: 2; }
+    .tick { fill: none; stroke: var(--accent); stroke-width: 2; }
+    .cross { stroke: var(--warn); stroke-width: 2; }
+  </style>
+
+  <rect class="bg" width="1280" height="330"/>
+
+  <!-- lanes -->
+  <text x="48" y="124" class="ink mono" font-size="14">zapret</text>
+  <text x="48" y="214" class="ink mono" font-size="14">VPN</text>
+  <path class="lane" d="M140 119H1232M140 209H1232"/>
+
+  <!-- the service's path over time -->
+  <path class="vpn" d="M140 209H430"/>
+  <path class="zap" d="M430 209V119H840"/>
+  <path class="vpn" d="M840 119V209H1010"/>
+  <path class="zap" d="M1010 209V119H1232"/>
+
+  <!-- checks of the direct path -->
+  <g>
+    <circle cx="300" cy="119" r="7" class="ok"/>
+    <circle cx="390" cy="119" r="7" class="ok"/>
+    <path d="M296 119l3 3 6-6M386 119l3 3 6-6" class="tick"/>
+    <circle cx="820" cy="119" r="7" class="bad"/>
+    <path d="M816 115l8 8M824 115l-8 8" class="cross"/>
+  </g>
+
+  <!-- captions -->
+  <g class="sans" font-size="14">
+    <text x="140" y="262" class="muted">1. Старт через VPN:</text>
+    <text x="140" y="282" class="muted">сервис работает сразу</text>
+    <text x="300" y="92" class="accent" font-size="13">проверка прямого пути ×2</text>
+    <text x="470" y="262" class="muted">2. zapret проходит — сервис</text>
+    <text x="470" y="282" class="muted">идёт мимо VPN, на полной скорости</text>
+    <text x="760" y="92" class="warn" font-size="13">провайдер сменил блокировку</text>
+    <text x="850" y="262" class="muted">3. Назад на VPN, а Detour</text>
+    <text x="850" y="282" class="muted">в фоне подбирает новую стратегию</text>
+    <text x="1030" y="92" class="accent" font-size="13">новая стратегия работает</text>
+  </g>
+</svg>
