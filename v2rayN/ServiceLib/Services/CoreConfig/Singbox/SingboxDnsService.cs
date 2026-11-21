@@ -659,11 +659,15 @@ public partial class CoreConfigSingboxService
         servers ??= [];
         if (!servers.Any(s => s.tag == Global.SingboxCoreDNSTag))
         {
+            // The endpoint that answered last over the physical card (DirectDns): DoH by IP, or DNS over TCP
+            // when the ISP breaks DoH to Google/Cloudflare.
+            var core = DirectDns.CoreEndpoint;
             servers.Add(new Server4Sbox
             {
                 tag = Global.SingboxCoreDNSTag,
-                type = "https",
-                server = Global.CoreDirectDoHServer,
+                type = core.Kind == DirectDns.Kind.Doh ? "https" : "tcp",
+                server = core.Ip.ToString(),
+                server_port = core.Kind == DirectDns.Kind.Tcp ? 53 : null,
             });
         }
         return servers;

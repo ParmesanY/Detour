@@ -291,13 +291,6 @@ public class ZapretWatchdog
         }
     }
 
-    /// <summary>DNS-over-HTTPS endpoints addressed by IP, so resolving needs no DNS itself.</summary>
-    private static readonly string[] _dohUrls =
-    [
-        "https://1.1.1.1/dns-query?type=A&name=",
-        "https://8.8.8.8/resolve?type=A&name=",
-    ];
-
     /// <summary>
     /// IPv4 addresses of <paramref name="host" /> for a direct connection. The system resolver is no
     /// good here: under TUN it returns fake IPs that only work inside the tunnel, and without TUN it
@@ -310,30 +303,12 @@ public class ZapretWatchdog
         {
             return [literal];
         }
-        foreach (var doh in _dohUrls)
+        // DoH to several providers, then DNS over TCP (DirectDns): DoH to Google/Cloudflare alone broke on
+        // several ISPs in 08.2026.
+        var ips = await DirectDns.ResolveAsync(host, localAddress, ct);
+        if (ips.Length > 0)
         {
-            try
-            {
-                using var handler = new SocketsHttpHandler
-                {
-                    UseProxy = false,
-                    ConnectCallback = (ctx, c) => new ValueTask<Stream>(ConnectBoundAsync(
-                        [IPAddress.Parse(ctx.DnsEndPoint.Host)], ctx.DnsEndPoint.Port, localAddress, c)),
-                };
-                using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(5) };
-                using var req = new HttpRequestMessage(HttpMethod.Get, doh + Uri.EscapeDataString(host));
-                req.Headers.Accept.ParseAdd("application/dns-json");
-                using var resp = await client.SendAsync(req, ct);
-                var ips = ParseDohAnswer(await resp.Content.ReadAsStringAsync(ct));
-                if (ips.Length > 0)
-                {
-                    return ips;
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                // next resolver
-            }
+            return ips;
         }
         var system = await Dns.GetHostAddressesAsync(host, AddressFamily.InterNetwork, ct);
         return system.Where(a => !IsFakeIp(a)).ToArray();

@@ -290,7 +290,10 @@ public partial class CoreConfigV2rayService
         {
             // VPN server names: a foreign DoH by IP, sent direct (tagged as direct DNS). The usual
             // direct resolver is Russian (Yandex) and returns nothing for VPN providers' domains.
-            AddDnsServers([$"https://{Global.CoreDirectDoHServer}/dns-query"], context.ProtectDomainList, true);
+            // The endpoint that answered last (DirectDns), then DNS over TCP as Xray's own fallback.
+            var core = DirectDns.CoreEndpoint;
+            var coreAddress = core.Kind == DirectDns.Kind.Doh ? $"https://{core.Ip}/dns-query" : $"tcp://{core.Ip}:53";
+            AddDnsServers(coreAddress.StartsWith("tcp") ? [coreAddress] : [coreAddress, $"tcp://{core.Ip}:53"], context.ProtectDomainList, true);
         }
 
         if (simpleDNSItem.FakeIP == true)

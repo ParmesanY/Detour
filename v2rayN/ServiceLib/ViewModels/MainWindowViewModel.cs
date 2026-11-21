@@ -438,6 +438,8 @@ public partial class MainWindowViewModel : MyReactiveObject
                 }
                 await Reload();
             });
+        // Another network, another ISP: which DNS gets through past it is checked again.
+        NetworkResumeManager.Instance.NetworkSettled += () => _ = DirectDns.EnsureProbedAsync(force: true);
         NetworkResumeManager.Instance.NetworkSettled += () =>
             RxSchedulers.MainThreadScheduler.Schedule(async () =>
             {

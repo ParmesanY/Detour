@@ -197,19 +197,8 @@ public static class ServerNetworkCheck
 
     private static async Task<string?> TxtAsync(string name, CancellationToken ct)
     {
-        var local = ZapretWatchdog.PhysicalIPv4Address();
-        using var handler = new SocketsHttpHandler
-        {
-            UseProxy = false,
-            ConnectCallback = (ctx, c) => new ValueTask<Stream>(ZapretWatchdog.ConnectBoundAsync(
-                [IPAddress.Parse(ctx.DnsEndPoint.Host)], ctx.DnsEndPoint.Port, local, c)),
-        };
-        using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(6) };
-        using var req = new HttpRequestMessage(HttpMethod.Get, $"https://1.1.1.1/dns-query?type=TXT&name={Uri.EscapeDataString(name)}");
-        req.Headers.Accept.ParseAdd("application/dns-json");
-        using var resp = await client.SendAsync(req, ct);
-        var json = JsonNode.Parse(await resp.Content.ReadAsStringAsync(ct));
-        return (json?["Answer"] as JsonArray)?.Select(a => a?["data"]?.GetValue<string>()).FirstOrDefault(d => d.IsNotEmpty());
+        // Cloudflare's DoH alone broke on several ISPs (08.2026): the same cascade as every direct lookup.
+        return await DirectDns.TxtAsync(name, ZapretWatchdog.PhysicalIPv4Address(), ct);
     }
 
     // ---- ICMP ----

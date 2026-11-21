@@ -84,6 +84,16 @@ public class CoreManager
 
         var node = mainContext.Node;
         var fileName = Utils.GetBinConfigPath(Global.CoreConfigFileName);
+        // Which direct DNS gets past this ISP decides the cores' core-dns (VPN server names under TUN).
+        try
+        {
+            using var probe = new CancellationTokenSource(TimeSpan.FromSeconds(6));
+            await DirectDns.EnsureProbedAsync(ct: probe.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // keep the last known endpoint
+        }
         var result = await CoreConfigHandler.GenerateClientConfig(mainContext, fileName);
         if (result.Success != true)
         {
