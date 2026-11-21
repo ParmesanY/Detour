@@ -50,6 +50,9 @@ public class Config
     /// <summary>Reload the core after sleep or a network change (null = on).</summary>
     public bool? ResumeReconnect { get; set; }
 
+    /// <summary>A site that keeps failing on its path gets checked on the others and a rule (null = on).</summary>
+    public bool? AutoFixSites { get; set; }
+
     /// <summary>While a game runs, never switch servers on the fly (null = on).</summary>
     public bool? GameMode { get; set; }
 

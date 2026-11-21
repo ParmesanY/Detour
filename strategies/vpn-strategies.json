@@ -64,32 +64,38 @@
     "Transport": "mux"
   },
   {
+    "Name": "xmux 2",
+    "Description": "Для XHTTP: не больше 2 соединений к серверу. Против поведенческой заморозки: когда к одному адресу открывают больше 3 соединений почти разом, провайдер замораживает их на 2 минуты. Только для этого сервера.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "xmux2"
+  },
+  {
     "Name": "xmux",
-    "Description": "Для XHTTP: соединения к серверу сменяются раньше, чем провайдер успевает заморозить поток после ~16 КБ. Только для этого сервера.",
+    "Description": "Для XHTTP: 1–2 соединения, которые сменяются раньше, чем провайдер успевает заморозить поток после ~16 КБ. Только для этого сервера.",
     "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
     "Transport": "xmux"
   },
   {
     "Name": "xmux 3",
-    "Description": "Для XHTTP: не больше 3 соединений к серверу. Против заморозки, когда к одному адресу открывают много соединений сразу.",
+    "Description": "Для XHTTP: не больше 3 соединений к серверу. Только для этого сервера.",
     "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
     "Transport": "xmux3"
   },
   {
-    "Name": "xmux 6",
-    "Description": "Для XHTTP: ровно 6 соединений к серверу (значение по умолчанию в Xray с лета 2026).",
-    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
-    "Transport": "xmux6"
-  },
-  {
     "Name": "отпечаток firefox",
-    "Description": "Рукопожатие как у Firefox. На части сетей отпечаток Chrome зависает, а Firefox проходит. Только для этого сервера.",
+    "Description": "Рукопожатие как у Firefox. Отпечаток Chrome (133) ТСПУ с 2026 года проверяет строже, Firefox проходит мягче. Только для этого сервера.",
     "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
     "Transport": "fp:firefox"
   },
   {
+    "Name": "отпечаток edge",
+    "Description": "Рукопожатие как у Edge. Тоже проходит мягче Chrome. Только для этого сервера.",
+    "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
+    "Transport": "fp:edge"
+  },
+  {
     "Name": "отпечаток chrome",
-    "Description": "Рукопожатие как у Chrome. Только для этого сервера.",
+    "Description": "Рукопожатие как у Chrome. С 2026 года под подозрением у ТСПУ, пробуется после Firefox и Edge. Только для этого сервера.",
     "Packets": "", "Lengths": "", "Delays": "", "MaxSplit": "0",
     "Transport": "fp:chrome"
   },

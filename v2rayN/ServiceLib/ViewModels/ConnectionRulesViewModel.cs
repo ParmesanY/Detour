@@ -88,6 +88,14 @@ public partial class ConnectionRulesViewModel : MyReactiveObject
         InitCheck();
         RefreshProfiles();
         Load();
+        // A rule Detour added by itself: show it, unless the user is in the middle of an edit.
+        SiteAutoFixManager.Instance.RulesChanged += () => RxSchedulers.MainThreadScheduler.Schedule(() =>
+        {
+            if (!IsDirty)
+            {
+                Load();
+            }
+        });
     }
 
     private void RefreshProfiles()

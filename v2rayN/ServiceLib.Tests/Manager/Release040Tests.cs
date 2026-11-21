@@ -78,4 +78,20 @@ public class Release040Tests
         await Assert.That(FailoverManager.IsFrozen(0, 65_536)).IsFalse();
         await Assert.That(FailoverManager.IsFrozen(65_536, 65_536)).IsFalse();
     }
+
+    [Test]
+    public async Task StrategyPicker_PausesAndCoolsDownAfterAFreeze()
+    {
+        var ok = new VpnStrategyResult(null, true, true, 300);
+        var frozen = new VpnStrategyResult(null, true, false, 0, 18_000);
+        var noHandshake = new VpnStrategyResult(null, false, false, 0);
+        await Assert.That(VpnStrategyManager.PauseAfter(ok)).IsEqualTo(TimeSpan.FromSeconds(15));
+        await Assert.That(VpnStrategyManager.PauseAfter(noHandshake)).IsEqualTo(TimeSpan.FromSeconds(15));
+        await Assert.That(VpnStrategyManager.PauseAfter(frozen)).IsEqualTo(TimeSpan.FromSeconds(125));
+        // no more than 2 XHTTP connections, Firefox/Edge before Chrome
+        var names = VpnStrategyManager.Strategies.Select(x => x.Name).ToList();
+        await Assert.That(names).DoesNotContain("xmux 6");
+        await Assert.That(names.IndexOf("отпечаток firefox")).IsLessThan(names.IndexOf("отпечаток chrome"));
+        await Assert.That(names.IndexOf("отпечаток edge")).IsLessThan(names.IndexOf("отпечаток chrome"));
+    }
 }

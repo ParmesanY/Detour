@@ -350,6 +350,16 @@
                     <StackPanel
                         Margin="0,0,20,0"
                         Orientation="Horizontal"
+                        ToolTip="{x:Static resx:AppText.AutoFixSitesHint}">
+                        <ui:ToggleSwitch IsChecked="{Binding AutoFixSites}" />
+                        <TextBlock
+                            Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            Text="{x:Static resx:AppText.AutoFixSites}" />
+                    </StackPanel>
+                    <StackPanel
+                        Margin="0,0,20,0"
+                        Orientation="Horizontal"
                         ToolTip="{x:Static resx:AppText.GameModeHint}">
                         <ui:ToggleSwitch IsChecked="{Binding GameMode}" />
                         <TextBlock

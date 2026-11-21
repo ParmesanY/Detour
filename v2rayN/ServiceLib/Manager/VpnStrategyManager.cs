@@ -95,26 +95,28 @@ public static class VpnStrategyManager
         // Settings of the server itself, saved for this server only.
         new("mux", "Мультиплексирование: много запросов идут внутри одного соединения, новых рукопожатий меньше. Не для XTLS-Vision. Только для этого сервера.",
             "", "", "", Transport: "mux"),
-        new("xmux", "Для XHTTP: соединения к серверу сменяются раньше, чем провайдер успевает заморозить поток после ~16 КБ. Только для этого сервера.",
+        // ТСПУ (06.2026) freezes a SNI after >3 near-simultaneous handshakes (habr.com/ru/articles/1047442), so
+        // XHTTP keeps at most 2 connections; "xmux 6" (more handshakes) was dropped in 0.4.3.
+        new("xmux 2", "Для XHTTP: не больше 2 соединений к серверу. Против поведенческой заморозки: когда к одному адресу открывают больше 3 соединений почти разом, провайдер замораживает их на 2 минуты. Только для этого сервера.",
+            "", "", "", Transport: "xmux2"),
+        new("xmux", "Для XHTTP: 1–2 соединения, которые сменяются раньше, чем провайдер успевает заморозить поток после ~16 КБ. Только для этого сервера.",
             "", "", "", Transport: "xmux"),
-        // ТСПУ (2026) freezes a SNI after >3 near-simultaneous handshakes; whether 3 or 6 connections works better differs by ISP.
-        new("xmux 3", "Для XHTTP: не больше 3 соединений к серверу. Против заморозки, когда к одному адресу открывают много соединений сразу.",
+        new("xmux 3", "Для XHTTP: не больше 3 соединений к серверу. Только для этого сервера.",
             "", "", "", Transport: "xmux3"),
-        new("xmux 6", "Для XHTTP: ровно 6 соединений к серверу (значение по умолчанию в Xray с лета 2026).",
-            "", "", "", Transport: "xmux6"),
-        // TLS fingerprint of the handshake: some networks time out on one browser's fingerprint and pass another.
-        new("отпечаток firefox", "Рукопожатие как у Firefox. На части сетей отпечаток Chrome зависает, а Firefox проходит. Только для этого сервера.",
+        // TLS fingerprint of the handshake: since 2026 ТСПУ targets Chrome 133 / Safari / iOS (Xray-core #7131), Firefox and Edge pass softer.
+        new("отпечаток firefox", "Рукопожатие как у Firefox. Отпечаток Chrome (133) ТСПУ с 2026 года проверяет строже, Firefox проходит мягче. Только для этого сервера.",
             "", "", "", Transport: "fp:firefox"),
-        new("отпечаток chrome", "Рукопожатие как у Chrome. Только для этого сервера.", "", "", "", Transport: "fp:chrome"),
+        new("отпечаток edge", "Рукопожатие как у Edge. Тоже проходит мягче Chrome. Только для этого сервера.", "", "", "", Transport: "fp:edge"),
+        new("отпечаток chrome", "Рукопожатие как у Chrome. С 2026 года под подозрением у ТСПУ, пробуется после Firefox и Edge. Только для этого сервера.", "", "", "", Transport: "fp:chrome"),
         new("отпечаток safari", "Рукопожатие как у Safari. Только для этого сервера.", "", "", "", Transport: "fp:safari"),
         new("отпечаток qq", "Рукопожатие как у браузера QQ. Только для этого сервера.", "", "", "", Transport: "fp:qq"),
         new("отпечаток random", "Случайный браузерный отпечаток при каждом подключении. Только для этого сервера.", "", "", "", Transport: "fp:random"),
     ];
 
     /// <summary>XHTTP connection rotation: short-lived connections that stay under the 16 KB freeze.</summary>
-    private const string XmuxJson = """{"maxConnections":"4-8","cMaxReuseTimes":"2-4","hMaxRequestTimes":"8-16","hMaxReusableSecs":"10-20"}""";
+    private const string XmuxJson = """{"maxConnections":"1-2","cMaxReuseTimes":"2-4","hMaxRequestTimes":"8-16","hMaxReusableSecs":"10-20"}""";
 
-    private static readonly Regex _transport = new(@"^(mux|xmux[36]?|fp:(chrome|firefox|safari|ios|android|edge|360|qq|random|randomized))$");
+    private static readonly Regex _transport = new(@"^(mux|xmux[236]?|fp:(chrome|firefox|safari|ios|android|edge|360|qq|random|randomized))$");
 
     private static bool HasTls(ProfileItem profile)
         => profile.StreamSecurity == Global.StreamSecurity || profile.StreamSecurity == Global.StreamSecurityReality;
@@ -126,7 +128,7 @@ public static class VpnStrategyManager
         "mux" => profile.ConfigType is EConfigType.VLESS or EConfigType.VMess or EConfigType.Trojan or EConfigType.Shadowsocks
                  && (profile.GetProtocolExtra().Flow ?? "").Length == 0
                  && profile.GetNetwork() != nameof(ETransport.xhttp),
-        "xmux" or "xmux3" or "xmux6" => profile.GetNetwork() == nameof(ETransport.xhttp),
+        "xmux" or "xmux2" or "xmux3" or "xmux6" => profile.GetNetwork() == nameof(ETransport.xhttp),
         { } fp when fp.StartsWith("fp:", StringComparison.Ordinal) => HasTls(profile)
                                                                   && !fp[3..].Equals(profile.Fingerprint ?? "", StringComparison.OrdinalIgnoreCase),
         _ => false,
@@ -138,6 +140,7 @@ public static class VpnStrategyManager
 
     private static string XmuxFor(string transport) => transport switch
     {
+        "xmux2" => """{"maxConnections":2}""",
         "xmux3" => """{"maxConnections":3}""",
         "xmux6" => """{"maxConnections":6}""",
         _ => XmuxJson,
@@ -315,9 +318,20 @@ public static class VpnStrategyManager
             var candidates = Strategies.Where(s => (!s.UsesWinws || zapretRunning)
                                                    // custom JSON: no server settings to change or check
                                                    && (customJson != null ? !s.UsesTransport : Fits(s, profile)));
+            // ТСПУ (06.2026) freezes a SNI for ~120 s after >3 handshakes to it within a minute, and longer when
+            // the client keeps retrying (habr.com/ru/articles/1047442). Trying variants back to back is exactly
+            // that: every variant after the first freeze would fail for nothing. So: a pause between variants,
+            // a cool-down after a freeze, and the first variant that fully works ends the search.
+            VpnStrategyResult? previous = null;
             foreach (var strategy in new VpnStrategy?[] { null }.Concat(candidates))
             {
                 ct.ThrowIfCancellationRequested();
+                if (previous != null)
+                {
+                    var pause = PauseAfter(previous);
+                    progress?.Report(string.Format(AppText.VpnDiagPause, (int)pause.TotalSeconds));
+                    await Task.Delay(pause, ct);
+                }
                 progress?.Report(string.Format(AppText.VpnDiagTrying, strategy?.Name ?? AppText.VpnStrategyOff));
                 if (strategy is { UsesWinws: true } || _winwsOverride != null)
                 {
@@ -329,8 +343,9 @@ public static class VpnStrategyManager
                     ? await TestCustomAsync(customJson, xray, ct)
                     : await TestAsync(config, WithTransport(profile, strategy), xray, ct);
                 results.Add(result with { Strategy = strategy });
-                // Without a strategy it already works: nothing to pick.
-                if (strategy == null && result.Works)
+                previous = result;
+                // It works (without a strategy, or with this one): more handshakes would only risk a freeze.
+                if (result.Works)
                 {
                     break;
                 }
@@ -363,6 +378,16 @@ public static class VpnStrategyManager
     }
 
     /// <summary>Pure decision part, kept separate for tests. A frozen hosting network adds its note to any failure.</summary>
+    /// <summary>
+    /// How long to wait before the next variant: 15 s keeps it at ≤ 3-4 handshakes a minute to one server; after
+    /// a freeze (the handshake passed, the data stopped) or a failed handshake right after one, 125 s for the
+    /// freeze to run out, or the next variants would be measured inside it.
+    /// </summary>
+    public static TimeSpan PauseAfter(VpnStrategyResult previous)
+        => previous.FrozenAtBytes > 0 || (previous.Handshake && !previous.BigTransfer)
+            ? TimeSpan.FromSeconds(125)
+            : TimeSpan.FromSeconds(15);
+
     public static VpnDiagnosisReport Summarize(bool reachable, List<VpnStrategyResult> results, bool pingOk = false,
         ServerNetwork? network = null)
     {

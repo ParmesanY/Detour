@@ -26,6 +26,7 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
     [Reactive] public partial bool KillSwitchEngaged { get; set; }
     [Reactive] public partial bool AutoFailover { get; set; }
     [Reactive] public partial bool GameMode { get; set; }
+    [Reactive] public partial bool AutoFixSites { get; set; }
     [Reactive] public partial bool ResumeReconnect { get; set; }
 
     /// <summary>"Game: cs2.exe — server pinned" while game mode holds the server; empty otherwise.</summary>
@@ -159,6 +160,12 @@ public partial class ConnectionPanelViewModel : MyReactiveObject
         {
             _config.AutoFailover = v;
             FailoverManager.Instance.NotifyReloaded();
+            await ConfigHandler.SaveConfig(_config);
+        });
+        AutoFixSites = _config.AutoFixSites != false;
+        this.WhenAnyValue(x => x.AutoFixSites).Skip(1).SubscribeAsync(async v =>
+        {
+            _config.AutoFixSites = v;
             await ConfigHandler.SaveConfig(_config);
         });
         GameMode = _config.GameMode != false;

@@ -30,6 +30,9 @@ public sealed class StallWatchManager
 
     private CancellationTokenSource? _cts;
     private readonly Detector _detector = new();
+
+    /// <summary>Every poll's connections (worker thread), for other watchers (SiteAutoFixManager): one poll for all.</summary>
+    public event Action<DateTime, IReadOnlyList<ConnectionItem>>? ConnectionsPolled;
     private DateTime _lastNotice = DateTime.MinValue;
 
     public void Start()
@@ -67,6 +70,14 @@ public sealed class StallWatchManager
                     continue;
                 }
                 var now = DateTime.Now;
+                try
+                {
+                    ConnectionsPolled?.Invoke(now, connections);
+                }
+                catch (Exception ex)
+                {
+                    Logging.SaveLog(_tag, ex);
+                }
                 foreach (var c in _detector.Observe(now, connections.Select(ToSample)))
                 {
                     var what = c.Host.IsNullOrEmpty() ? c.Id : c.Host;

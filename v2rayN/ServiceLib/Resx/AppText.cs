@@ -542,6 +542,19 @@ public static class AppText
     public static string FailoverFrozen => T(
         "Сервер отвечает, но данные встают после {0} КБ — похоже на заморозку провайдером.",
         "The server answers but data stops after {0} KB: looks like the ISP freezes it.");
+    public static string VpnDiagPause => T(
+        "Пауза {0} с: частые подключения к одному серверу провайдер замораживает на 2 минуты",
+        "Waiting {0} s: the ISP freezes a server for 2 minutes after frequent connections to it");
+    public static string AutoFixSites => T("Чинить сайты сами", "Fix sites by itself");
+    public static string AutoFixSitesHint => T(
+        "Если сайт без правила раз за разом не открывается, Detour проверит его напрямую, через zapret и через VPN и сам добавит правило. Ваши правила не меняет — только подсказывает. Работает в режиме «весь компьютер».",
+        "When a site without a rule keeps failing, Detour checks it directly, through zapret and through the VPN and adds a rule itself. Your own rules are never changed, only suggested. Works in whole-computer mode.");
+    public static string AutoFixApplied => T(
+        "{0} не открывался — добавлено правило «{1}» (вверху списка на странице «Правила», там же его можно убрать).",
+        "{0} didn't open: added the rule \"{1}\" (at the top of the Rules page, where it can be removed).");
+    public static string AutoFixSuggest => T(
+        "{0} не открывается по вашему правилу «{1}». Проверка показала, что подойдёт «{2}» — поменяйте правило на странице «Правила».",
+        "{0} doesn't open with your rule ({1}). The check suggests: {2}; change the rule on the Rules page.");
     public static string StallWatchClosed => T(
         "Зависло соединение {0}: данные перестали приходить, пересоздаю его.",
         "Connection {0} stalled (no data coming back): recreating it.");
